@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Pilón | Tienda Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1a237e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pilón Shop">
+    <link rel="apple-touch-icon" href="/icon-192.png">     
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo">SHOPPING <span>PILÓN</span></div>
+        <button class="cart-btn" id="cart-btn" aria-label="Ver carrito">
+            <i class="fas fa-shopping-bag"></i>
+            <span class="cart-badge" id="cart-count">0</span>
+        </button>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <p class="hero-subtitle">Bienvenido a</p>
+            <h1>Tu Mercado<br>en <em>Pilón</em></h1>
+            <p class="hero-desc">Directo del vendedor a tu casa.</p>
+            <a href="vender.html" class="btn-primary">
+                <i class="fas fa-store"></i> Quiero vender aquí
+            </a>
+        </div>
+    </section>
+
+    <section class="section-title">
+        <h2>Productos disponibles</h2>
+        <p>Toca un producto para ver los detalles</p>
+    </section>
+
+    <main class="product-grid" id="grid" aria-label="Catálogo de productos"></main>
+
+    <div id="toast-container"></div>
+
+    <!-- Modal carrito -->
+    
+    <div id="cart-modal" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i class="fas fa-shopping-bag"></i> Tu Pedido</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cart-items"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="total-row">
+                    <span>Total:</span>
+                    <strong>$<span id="cart-total">0</span> CUP</strong>
+                </div>
+                <button class="btn-whatsapp" id="btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> Confirmar pedido
+                </button>
+                <button class="btn-clear" id="btn-clear">
+                    <i class="fas fa-trash"></i> Vaciar carrito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal detalle producto -->
+    <div id="modal-detalle" class="modal-overlay" hidden>
+        <div class="detalle-box">
+            <button class="detalle-btn-cerrar" id="detalle-btn-cerrar">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="detalle-img-wrap">
+                <img id="detalle-img" src="" alt="">
+            </div>
+            <div class="detalle-scroll">
+                <div class="detalle-info">
+                    <div class="detalle-vendedor">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="detalle-vendedor"></span>
+                    </div>
+                    <div class="detalle-nombre" id="detalle-nombre"></div>
+                    <div class="detalle-precio">$<span id="detalle-precio"></span> CUP</div>
+                    <span class="detalle-stock" id="detalle-stock"></span>
+                    <div id="detalle-variantes"></div>
+                </div>
+
+                <div class="detalle-actions">
+                    <button class="detalle-btn-add" id="detalle-btn-add">
+                        <i class="fas fa-cart-plus"></i> Añadir al carrito
+                    </button>
+                </div>
+
+                <!-- Reseñas -->
+                <div class="resenas-section">
+                    <h3 class="resenas-titulo">
+                        <i class="fas fa-star"></i> Reseñas
+                        <span class="resenas-count" id="resenas-count"></span>
+                    </h3>
+
+                    <div class="resena-form">
+                        <input type="text" id="resena-nombre" placeholder="Tu nombre" maxlength="30">
+                        <div class="estrellas-input" id="estrellas-input">
+                            <i class="fas fa-star" data-val="1"></i>
+                            <i class="fas fa-star" data-val="2"></i>
+                            <i class="fas fa-star" data-val="3"></i>
+                            <i class="fas fa-star" data-val="4"></i>
+                            <i class="fas fa-star" data-val="5"></i>
+                        </div>
+                        <textarea id="resena-texto" placeholder="Escribe tu opinión..." maxlength="200" rows="3"></textarea>
+                        <button class="btn-enviar-resena" id="btn-enviar-resena">
+                            <i class="fas fa-paper-plane"></i> Publicar reseña
+                        </button>
+                    </div>
+
+                    <div id="resenas-lista"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+    <div class="footer-top">
+        <div class="footer-brand">
+            <div class="footer-logo">SHOPPING <span>PILÓN</span></div>
+            <p class="footer-desc">El mercado digital de Pilón. Compra y vende desde casa, rápido y seguro.</p>
+            <a href="https://wa.me/5356195243" class="footer-wa" target="_blank">
+                <i class="fab fa-whatsapp"></i> Escríbenos
+            </a>
+        </div>
+        <div class="footer-links">
+            <h4>Navegación</h4>
+            <a href="index.html"><i class="fas fa-home"></i> Inicio</a>
+            <a href="vender.html"><i class="fas fa-store"></i> Vender aquí</a>
+            <a href="https://wa.me/5356195243" target="_blank"><i class="fas fa-headset"></i> Soporte</a>
+        </div>
+        <div class="footer-info">
+            <h4>Información</h4>
+            <p><i class="fas fa-map-marker-alt"></i> Pilón, Granma, Cuba</p>
+            <p><i class="fas fa-clock"></i> Lun–Sáb: 8am – 8pm</p>
+            <p><i class="fab fa-whatsapp"></i> +53 561 95243</p>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>© 2026 Shopping Pilón — Todos los derechos reservados</p>
+        <p>Hecho con <i class="fas fa-heart" style="color:#e53935"></i> en Pilón, Cuba</p>
+    </div>
+</footer>
+
+    
+    <script type="module" src="js/app.js"></script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('Service Worker registrado', reg))
+      .catch(err => console.error('Error al registrar SW', err));
+  }
+</script>
+</body>
+</html>

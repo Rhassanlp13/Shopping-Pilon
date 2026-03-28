@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vender en Shopping Pilón</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+    <style>
+        :root {
+            --primary: #1a237e;
+            --accent: #ff9800;
+            --whatsapp: #25d366;
+            --danger: #e53935;
+            --bg: #f5f5f7;
+            --white: #ffffff;
+            --text: #1c1c2e;
+            --text-muted: #777;
+            --border: #e0e0e0;
+            --transition: 0.25s ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: var(--primary);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--white);
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .btn-back {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color var(--transition);
+        }
+
+        .btn-back:hover {
+            color: var(--white);
+        }
+
+        .page-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #283593 100%);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--white);
+        }
+
+        .page-hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-hero h1 em {
+            color: var(--accent);
+            font-style: normal;
+        }
+
+        .page-hero p {
+            opacity: 0.8;
+            font-size: 1rem;
+        }
+
+        .gratis-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.8rem;
+        }
+
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .form-container {
+            max-width: 480px;
+            margin: 0 auto 3rem;
+            padding: 0 1.5rem;
+        }
+
+        .form-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid #ebebf0;
+        }
+
+        .info-box {
+            background: #e8eaf6;
+            border-left: 3px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .info-box i {
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--bg);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-section-title i {
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .form-group label .req {
+            color: var(--danger);
+            margin-left: 2px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            color: var(--text);
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08);
+            background: var(--white);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Upload de foto */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 14px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color var(--transition), background var(--transition);
+            background: var(--bg);
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: #f0f2ff;
+        }
+
+        .upload-area.has-file {
+            border-color: var(--whatsapp);
+            border-style: solid;
+            background: #f0fff4;
+        }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .upload-text strong {
+            color: var(--primary);
+        }
+
+        .upload-hint {
+            font-size: 0.75rem;
+            color: #bbb;
+            margin-top: 4px;
+        }
+
+        .img-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-top: 1rem;
+            display: none;
+            border: 2px solid var(--whatsapp);
+        }
+
+        .img-preview.visible {
+            display: block;
+        }
+
+        /* Nota importante */
+        .nota-box {
+            background: #fff8e1;
+            border-left: 3px solid var(--accent);
+            border-radius: 0 10px 10px 0;
+            padding: 12px 16px;
+            font-size: 0.82rem;
+            color: #795548;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .btn-enviar {
+            width: 100%;
+            background: var(--whatsapp);
+            color: var(--white);
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform var(--transition), box-shadow var(--transition);
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-enviar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(37, 211, 102, 0.4);
+        }
+
+        .form-note {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+
+        .field-error {
+            font-size: 0.78rem;
+            color: var(--danger);
+            margin-top: 4px;
+            display: none;
+        }
+
+        .form-group.error input,
+        .form-group.error textarea {
+            border-color: var(--danger);
+        }
+
+        .form-group.error .field-error {
+            display: block;
+        }
+
+        .upload-area.error {
+            border-color: var(--danger);
+        }
+
+        .btn-enviar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">SHOPPING <span>PILÓN</span></a>
+        <a href="index.html" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </nav>
+
+    <div class="page-hero">
+        <h1>Vende en <em>Pilón</em></h1>
+        <p>Llega a más clientes sin moverte de casa</p>
+        <div class="gratis-badge">
+            <i class="fas fa-gift"></i> 100% gratis por tiempo limitado
+        </div>
+    </div>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-num">1</div>
+            <span>Rellena el formulario</span>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <span>Selecciona la foto</span>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <span>Envía el mensaje con la foto por WhatsApp</span>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <div class="form-card">
+
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                <span>Completa tus datos y selecciona la foto. Al hacer clic en "Enviar", se abrirá WhatsApp con el
+                    mensaje listo. Solo tienes que adjuntar la foto manualmente y enviar.</span>
+            </div>
+
+            <!-- Datos del vendedor -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-user"></i> Tus datos
+                </div>
+                <div class="form-row">
+                    <div class="form-group" id="g-nombre">
+                        <label>Tu nombre <span class="req">*</span></label>
+                        <input type="text" id="nombre" placeholder="Ej: María López">
+                        <div class="field-error">Escribe tu nombre</div>
+                    </div>
+                    <div class="form-group" id="g-telefono">
+                        <label>Tu teléfono <span class="req">*</span></label>
+                        <input type="tel" id="telefono" placeholder="Ej: 53561234">
+                        <div class="field-error">Escribe tu teléfono</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nota adicional (opcional)</label>
+                    <textarea id="nota"
+                        placeholder="Ej: colores disponibles, tallas, detalles del producto..."></textarea>
+                </div>
+            </div>
+
+            <!-- Foto del producto -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-camera"></i> Foto del producto
+                </div>
+
+                <div class="nota-box">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Selecciona una foto clara. Luego tendrás que adjuntarla manualmente en WhatsApp.</span>
+                </div>
+
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="foto-input" accept="image/*">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <div class="upload-text"><strong>Toca aquí</strong> para seleccionar la foto</div>
+                    <div class="upload-hint">JPG, PNG o WEBP — máx. 10MB</div>
+                </div>
+
+                <img id="img-preview" class="img-preview" alt="Vista previa">
+            </div>
+
+            <button class="btn-enviar" id="btn-enviar">
+                <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
+            </button>
+
+            <p class="form-note">
+                <i class="fas fa-lock" style="color:var(--accent)"></i>
+                Tus datos solo se usan para publicar tu producto.
+            </p>
+
+        </div>
+    </div>
+
+    <script>
+        const nombreInput = document.getElementById('nombre');
+        const telefonoInput = document.getElementById('telefono');
+        const notaTextarea = document.getElementById('nota');
+        const fotoInput = document.getElementById('foto-input');
+        const uploadArea = document.getElementById('upload-area');
+        const imgPreview = document.getElementById('img-preview');
+        const btnEnviar = document.getElementById('btn-enviar');
+
+        let fotoSeleccionada = false;
+
+        // Previsualización de la imagen
+        fotoInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+
+            fotoSeleccionada = true;
+            const reader = new FileReader();
+            reader.onload = e => {
+                imgPreview.src = e.target.result;
+                imgPreview.classList.add('visible');
+                uploadArea.classList.add('has-file');
+                uploadArea.querySelector('.upload-text').innerHTML = `<strong>${file.name}</strong>`;
+                uploadArea.querySelector('.upload-hint').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+                uploadArea.classList.remove('error');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Envío del formulario
+        btnEnviar.addEventListener('click', () => {
+            const nombre = nombreInput.value.trim();
+            const telefono = telefonoInput.value.trim();
+            const nota = notaTextarea.value.trim();
+
+            let valido = true;
+            if (!nombre) {
+                document.getElementById('g-nombre').classList.add('error');
+                valido = false;
+            } else {
+                document.getElementById('g-nombre').classList.remove('error');
+            }
+            if (!telefono) {
+                document.getElementById('g-telefono').classList.add('error');
+                valido = false;
+            } else {
+                document.getElementById('g-telefono').classList.remove('error');
+            }
+            if (!fotoSeleccionada) {
+                uploadArea.classList.add('error');
+                valido = false;
+            } else {
+                uploadArea.classList.remove('error');
+            }
+
+            if (!valido) return;
+
+            // Construir mensaje de WhatsApp
+            let texto = `🛍️ *Nueva solicitud de vendedor — Shopping Pilón*\n\n`;
+            texto += `👤 *Nombre:* ${nombre}\n`;
+            texto += `📞 *Teléfono:* ${telefono}\n`;
+            if (nota) texto += `📝 *Nota:* ${nota}\n`;
+            texto += `\n📸 *Foto:* (adjunta la foto manualmente al enviar este mensaje)\n`;
+            texto += `_Enviado desde Shopping Pilón_`;
+
+            // Abrir WhatsApp
+            window.open(`https://wa.me/5356195243?text=${encodeURIComponent(texto)}`, '_blank');
+
+            // Mostrar mensaje de éxito
+            alert('✅ WhatsApp abierto. Por favor, adjunta la foto que seleccionaste y envía el mensaje.');
+        });
+
+        // Quitar error al escribir
+        document.querySelectorAll('input, textarea').forEach(el => {
+            el.addEventListener('input', () => {
+                el.closest('.form-group')?.classList.remove('error');
+            });
+        });
+    </script>
+
+</body>
+
+</html>
