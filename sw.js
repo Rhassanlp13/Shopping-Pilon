@@ -1,7 +1,10 @@
-const CACHE_NAME = 'shopping-pilon-v8';
+const CACHE_NAME = 'shopping-pilon-v9';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/admin.html',
+  '/vender.html',
+  '/confirmar.html',
   '/style.css',
   '/js/app.js',
   '/js/ui.js',
@@ -10,9 +13,15 @@ const urlsToCache = [
   '/js/supabase.js',
   '/js/config.js',
   '/js/admin.js',
-  '/admin.html',
-  '/vender.html',
-  '/confirmar.html',
+  '/js/confirmar.js',
+  '/js/modules/cart-ui.js',
+  '/js/modules/detalle-ui.js',
+  '/js/modules/lightbox.js',
+  '/js/modules/productos-ui.js',
+  '/js/modules/resenas-ui.js',
+  '/js/modules/toast.js',
+  '/js/modules/whatsapp.js',
+  '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
@@ -26,8 +35,11 @@ self.addEventListener('install', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  // Para admin.html, admin.js y confirmar.html: siempre red primero
-  if (url.pathname === '/admin.html' || url.pathname === '/js/admin.js' || url.pathname === '/confirmar.html') {
+  // Para admin.html, admin.js, confirmar.html y confirmar.js: siempre red primero
+  if (url.pathname === '/admin.html' ||
+    url.pathname === '/js/admin.js' ||
+    url.pathname === '/confirmar.html' ||
+    url.pathname === '/js/confirmar.js') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
@@ -46,6 +58,8 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+    ))
   );
 });
