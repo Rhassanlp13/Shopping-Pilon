@@ -5,7 +5,18 @@ let pedidos = [];
 let editandoId = null;
 let borrandoId = null;
 
-// Obtiene el usuario actual sin causar bloqueos
+// ========== ESCAPE HTML (XSS protection) ==========
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ========== Obtener usuario actual ==========
 async function getCurrentUser(maxRetries = 2) {
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -22,9 +33,32 @@ async function getCurrentUser(maxRetries = 2) {
     throw new Error('No se pudo obtener el usuario');
 }
 
+// ========== Verificar rol vendedor ==========
+async function verificarRolVendedor() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return false;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+        if (error || data?.role !== 'seller') {
+            toast('Acceso denegado. Solo vendedores pueden usar el panel.', 'error');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 2000);
+            return false;
+        }
+        return true;
+    } catch (err) {
+        toast('Error verificando permisos', 'error');
+        return false;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('✅ DOM cargado');
-
     const loginWrap = document.getElementById('login-wrap');
     const shell = document.getElementById('shell');
 
@@ -33,19 +67,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) {
-            loginWrap.style.display = 'none';
-            shell.classList.add('visible');
-            iniciar();
+            const esVendedor = await verificarRolVendedor();
+            if (esVendedor) {
+                loginWrap.style.display = 'none';
+                shell.classList.add('visible');
+                iniciar();
+            }
         }
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
-            loginWrap.style.display = 'none';
-            shell.classList.add('visible');
-            iniciar();
+            const esVendedor = await verificarRolVendedor();
+            if (esVendedor) {
+                loginWrap.style.display = 'none';
+                shell.classList.add('visible');
+                iniciar();
+            }
         } else {
             loginWrap.style.display = 'flex';
             shell.classList.remove('visible');
@@ -162,28 +202,28 @@ function renderTabla(filtro = '') {
     }
 
     tablaDiv.innerHTML = `
-         <table>
+        <table>
             <thead>
-                 <tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
+                <tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
             </thead>
             <tbody>
                 ${lista.map(p => {
-        const stockBadge = p.stock <= 0 ? `<span class="badge badge-out">Agotado</span>` : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`;
-        const varBadge = p.variantes?.length > 0 ? `<span class="badge badge-variant">${p.variantes.length} var.</span>` : '<span style="color:#bbb">—</span>';
-        const ofertaBadge = p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es-CU')}</span>` : '<span style="color:#bbb">—</span>';
-        return `
-                         <tr>
-                            <td><img src="${p.imagen}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'" alt="${p.nombre}"><span><div class="prod-name">${p.nombre}</div><div class="prod-vendedor">${p.vendedor}</div></span></td>
+                    const stockBadge = p.stock <= 0 ? `<span class="badge badge-out">Agotado</span>` : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`;
+                    const varBadge = p.variantes?.length > 0 ? `<span class="badge badge-variant">${p.variantes.length} var.</span>` : '<span style="color:#bbb">—</span>';
+                    const ofertaBadge = p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es-CU')}</span>` : '<span style="color:#bbb">—</span>';
+                    return `
+                        <tr>
+                            <td><img src="${escapeHtml(p.imagen)}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'" alt="${escapeHtml(p.nombre)}"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
                             <td>$${Number(p.precio).toLocaleString('es-CU')} CUP</td>
                             <td>${stockBadge}</td>
                             <td>${ofertaBadge}</td>
                             <td>${varBadge}</td>
-                            <td><div class="actions"><button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button><button class="act-btn del" data-del="${p.id}" data-nombre="${p.nombre}"><i class="fas fa-trash"></i></button></div></td>
-                         </tr>
+                            <td><div class="actions"><button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button><button class="act-btn del" data-del="${p.id}" data-nombre="${escapeHtml(p.nombre)}"><i class="fas fa-trash"></i></button></div></td>
+                        </tr>
                     `;
-    }).join('')}
+                }).join('')}
             </tbody>
-         </table>
+        </table>
     `;
 
     document.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => abrirEditar(btn.dataset.edit)));
@@ -219,24 +259,24 @@ function renderPedidos() {
     }
 
     tablaDiv.innerHTML = `
-         <table>
+        <table>
             <thead>
-                 <tr><th>Cliente</th><th>Teléfono</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Productos</th><th>Acciones</th></tr>
+                <tr><th>Cliente</th><th>Teléfono</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Productos</th><th>Acciones</th></tr>
             </thead>
             <tbody>
                 ${pedidos.map(p => `
-                     <tr>
-                        <td>${p.cliente_nombre}</td>
-                        <td>${p.cliente_telefono}</td>
+                    <tr>
+                        <td>${escapeHtml(p.cliente_nombre)}</td>
+                        <td>${escapeHtml(p.cliente_telefono)}</td>
                         <td>${new Date(p.created_at).toLocaleString()}</td>
                         <td>$${Number(p.total).toLocaleString('es-CU')}</td>
                         <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
-                        <td><ul>${p.productos.map(prod => `<li>${prod.nombre} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es-CU')}</li>`).join('')}</ul></td>
+                        <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es-CU')}</li>`).join('')}</ul></td>
                         <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${p.id}">Confirmar</button>` : '—'}</td>
-                     </tr>
+                    </tr>
                 `).join('')}
             </tbody>
-         </table>
+        </table>
     `;
 
     document.querySelectorAll('.confirmar-pedido').forEach(btn => {
@@ -247,7 +287,6 @@ function renderPedidos() {
 async function confirmarPedido(pedidoId) {
     const pedido = pedidos.find(p => p.id === pedidoId);
     if (!pedido) return;
-
     const productos = pedido.productos;
 
     try {
@@ -271,7 +310,6 @@ async function confirmarPedido(pedidoId) {
                 await supabase.from('productos').update({ stock: product.stock - item.cantidad }).eq('id', item.id);
             }
         }
-
         await supabase.from('pedidos').update({ status: 'confirmado', confirmed_at: new Date().toISOString() }).eq('id', pedidoId);
         toast('Pedido confirmado y stock actualizado', 'ok');
         cargarPedidos();
@@ -300,22 +338,22 @@ async function cargarResenas() {
         }
 
         tablaResenas.innerHTML = `
-             <table>
+            <table>
                 <thead>
-                     <tr><th>Autor</th><th>Estrellas</th><th>Opinión</th><th>Fecha</th><th></th></tr>
+                    <tr><th>Autor</th><th>Estrellas</th><th>Opinión</th><th>Fecha</th><th></th></tr>
                 </thead>
                 <tbody>
                     ${data.map(r => `
-                         <tr>
-                            <td><strong>${r.nombre}</strong></td>
+                        <tr>
+                            <td><strong>${escapeHtml(r.nombre)}</strong></td>
                             <td style="color:#ff9800;letter-spacing:2px">${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</td>
-                            <td style="max-width:220px;font-size:0.85rem">${r.texto}</td>
+                            <td style="max-width:220px;font-size:0.85rem">${escapeHtml(r.texto)}</td>
                             <td style="font-size:0.8rem;color:var(--muted);white-space:nowrap">${new Date(r.fecha).toLocaleDateString('es-CU', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                             <td><button class="act-btn del" data-del-resena="${r.id}"><i class="fas fa-trash"></i></button></td>
-                         </tr>
+                        </tr>
                     `).join('')}
                 </tbody>
-             </table>
+            </table>
         `;
 
         document.querySelectorAll('[data-del-resena]').forEach(btn => {
@@ -393,8 +431,8 @@ function agregarFilaVariante(v = {}) {
     div.innerHTML = `
         <button class="btn-rm-variante" title="Eliminar variante"><i class="fas fa-times"></i></button>
         <div class="variante-fila">
-            <div><div class="variante-label">Nombre</div><input type="text" placeholder="Ej: Rojo, Talla M..." value="${v.nombre ?? ''}" data-campo="nombre"></div>
-            <div><div class="variante-label">URL de foto</div><input type="url" placeholder="https://foto.jpg" value="${v.imagen ?? ''}" data-campo="imagen"></div>
+            <div><div class="variante-label">Nombre</div><input type="text" placeholder="Ej: Rojo, Talla M..." value="${escapeHtml(v.nombre ?? '')}" data-campo="nombre"></div>
+            <div><div class="variante-label">URL de foto</div><input type="url" placeholder="https://foto.jpg" value="${escapeHtml(v.imagen ?? '')}" data-campo="imagen"></div>
         </div>
         <div class="variante-fila">
             <div><div class="variante-label">Precio (CUP)</div><input type="number" placeholder="Precio" value="${v.precio ?? ''}" data-campo="precio" min="0"></div>
@@ -466,16 +504,11 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
 
     try {
         if (editandoId) {
-            const { error } = await supabase
-                .from('productos')
-                .update(datos)
-                .eq('id', editandoId);
+            const { error } = await supabase.from('productos').update(datos).eq('id', editandoId);
             if (error) throw error;
             toast('Producto actualizado', 'ok');
         } else {
-            const { error } = await supabase
-                .from('productos')
-                .insert([datos]);
+            const { error } = await supabase.from('productos').insert([datos]);
             if (error) throw error;
             toast('Producto creado', 'ok');
         }
@@ -512,10 +545,7 @@ document.getElementById('borrar-confirmar').addEventListener('click', async () =
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
     try {
-        const { error } = await supabase
-            .from('productos')
-            .delete()
-            .eq('id', borrandoId);
+        const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
         if (error) throw error;
         modalBorrar.setAttribute('hidden', '');
         toast('Producto eliminado', 'ok');

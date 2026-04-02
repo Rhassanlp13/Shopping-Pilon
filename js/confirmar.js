@@ -13,32 +13,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingDiv.style.display = 'none';
         pedidoInfoDiv.style.display = 'block';
         pedidoInfoDiv.innerHTML = '<p style="color:red;">Error: No se especificó un pedido.</p>';
-        return; // Exit if no pedidoId
+        return;
     }
 
+    // Verificar autenticación
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+        loadingDiv.style.display = 'none';
+        pedidoInfoDiv.style.display = 'block';
+        pedidoInfoDiv.innerHTML = '<p style="color:red;">Debes iniciar sesión para confirmar este pedido.</p>';
+        return;
+    }
+    const userId = session.user.id;
+
     try {
+        // Obtener el pedido y verificar que pertenece al vendedor
         const { data: p, error } = await supabase
-            .from('pedidos_con_productos')
-            .select()
+            .from('pedidos')
+            .select('*')
             .eq('id', pedidoId)
             .single();
 
         if (error) throw error;
-        if (!p) throw new Error('Pedido no encontrado o acceso denegado.');
+        if (!p) throw new Error('Pedido no encontrado.');
+        if (p.vendedor_id !== userId) {
+            throw new Error('No tienes permiso para ver este pedido.');
+        }
 
         loadingDiv.style.display = 'none';
         pedidoInfoDiv.style.display = 'block';
 
         let productosHtml = '<div class="productos"><h3>Productos:</h3>';
         p.productos.forEach(prod => {
-            productosHtml += `<div class="producto-item"><span>${prod.nombre} x${prod.cantidad}</span><span>$${(prod.precio * prod.cantidad).toLocaleString('es-CU')}</span></div>`;
+            productosHtml += `<div class="producto-item"><span>${escapeHtml(prod.nombre)} x${prod.cantidad}</span><span>$${(prod.precio * prod.cantidad).toLocaleString('es-CU')}</span></div>`;
         });
         productosHtml += `</div><div class="total">Total: $${p.total.toLocaleString('es-CU')}</div>`;
 
         pedidoInfoDiv.innerHTML = `
             <div class="pedido-info">
-                <p><strong>Cliente:</strong> ${p.cliente_nombre}</p>
-                <p><strong>Teléfono:</strong> ${p.cliente_telefono}</p>
+                <p><strong>Cliente:</strong> ${escapeHtml(p.cliente_nombre)}</p>
+                <p><strong>Teléfono:</strong> ${escapeHtml(p.cliente_telefono)}</p>
                 <p><strong>Fecha:</strong> ${new Date(p.created_at).toLocaleString()}</p>
                 ${productosHtml}
             </div>
@@ -76,3 +90,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         pedidoInfoDiv.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
     }
 });
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
