@@ -30,7 +30,6 @@ async function getCurrentUser(maxRetries = 2) {
     throw new Error('No se pudo obtener el usuario');
 }
 
-// Obtener rol del usuario
 async function getUserRole(userId) {
     const { data, error } = await supabase
         .from('profiles')
@@ -50,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const user = await getCurrentUser();
             const role = await getUserRole(user.id);
-            if (role !== 'seller' && role !== 'admin') {
+            // Permitir 'seller', 'admin' y 'administrativo'
+            if (role !== 'seller' && role !== 'admin' && role !== 'administrativo') {
                 toast('Acceso denegado. Solo vendedores o administradores pueden usar el panel.', 'error');
                 setTimeout(() => window.location.href = '/index.html', 2000);
                 return;
@@ -130,7 +130,7 @@ async function cargarProductos() {
     try {
         const user = await getCurrentUser();
         let query = supabase.from('productos').select('*');
-        if (currentUserRole !== 'admin') {
+        if (currentUserRole !== 'admin' && currentUserRole !== 'administrativo') {
             query = query.eq('seller_id', user.id);
         }
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -187,13 +187,28 @@ function renderTabla(filtro = '') {
         const ofertaBadge = p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es-CU')}</span>` : '<span style="color:#bbb">—</span>';
         return `
                         <tr>
-                            
+                            <td>
+                                <img src="${esc(p.imagen)}" class="prod-thumb" alt="${esc(p.nombre)}">
+                                <span>
+                                    <div class="prod-name">${esc(p.nombre)}</div>
+                                    <div class="prod-vendedor">${esc(p.vendedor)}</div>
+                                </span>
+                            </td>
                             <td>$${Number(p.precio).toLocaleString('es-CU')} CUP</td>
                             <td>${stockBadge}</td>
                             <td>${ofertaBadge}</td>
                             <td>${varBadge}</td>
-                            <td><div class="actions"><button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button><button class="act-btn del" data-del="${p.id}" data-nombre="${esc(p.nombre)}"><i class="fas fa-trash"></i></button></div></td>
-                        </tr>`;
+                            <td>
+                                <div class="actions">
+                                    <button class="act-btn" data-edit="${esc(p.id)}">
+                                        <i class="fas fa-pen"></i> Editar
+                                    </button>
+                                    <button class="act-btn del" data-del="${esc(p.id)}" data-nombre="${esc(p.nombre)}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </td>`;
     }).join('')}
             </tbody>
         </table>
@@ -208,7 +223,7 @@ async function cargarPedidos() {
     try {
         const user = await getCurrentUser();
         let query = supabase.from('pedidos').select('*');
-        if (currentUserRole !== 'admin') {
+        if (currentUserRole !== 'admin' && currentUserRole !== 'administrativo') {
             query = query.eq('vendedor_id', user.id);
         }
         const { data, error } = await query.order('created_at', { ascending: false });
