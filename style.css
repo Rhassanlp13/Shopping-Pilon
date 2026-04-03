@@ -329,7 +329,6 @@ body {
         transform: translateY(30px);
         opacity: 0;
     }
-
     to {
         transform: translateY(0);
         opacity: 1;
@@ -754,7 +753,6 @@ body {
     from {
         opacity: 0;
     }
-
     to {
         opacity: 1;
     }
@@ -859,13 +857,11 @@ body {
         align-items: center;
         padding: 1rem;
     }
-
     .detalle-box {
         border-radius: 20px;
         height: auto;
         max-height: 88vh;
     }
-
     .detalle-img-wrap {
         height: 300px;
         max-height: 300px;
@@ -1017,7 +1013,6 @@ body {
     0% {
         background-position: -400px 0;
     }
-
     100% {
         background-position: 400px 0;
     }
@@ -1285,7 +1280,6 @@ body {
     .variante-card {
         width: 60px;
     }
-
     .variante-imagen {
         width: 56px;
         height: 56px;
@@ -1335,55 +1329,121 @@ body {
     font-weight: bold;
 }
 
-/* Auth modal */
+/* Auth modal - Diseño profesional */
 .auth-box {
-    max-width: 400px;
+    max-width: 420px;
     width: calc(100% - 2rem);
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--white);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease;
 }
 
 .auth-tabs {
     display: flex;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 1rem;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem 0;
+    background: var(--white);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .tab-btn {
-    flex: 1;
-    background: none;
+    flex: 0 0 auto;
+    background: transparent;
     border: none;
-    padding: 0.8rem;
+    padding: 0.75rem 1.5rem;
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: #6c757d;
     cursor: pointer;
-    transition: all var(--transition);
+    transition: all 0.2s ease;
+    border-radius: 40px;
+    font-family: 'DM Sans', sans-serif;
 }
 
 .tab-btn.active {
     color: var(--primary);
-    border-bottom: 2px solid var(--primary);
+    background: rgba(26, 35, 126, 0.08);
+    position: relative;
+}
+
+.tab-btn:hover:not(.active) {
+    color: var(--primary);
+    background: rgba(26, 35, 126, 0.05);
 }
 
 .auth-form {
-    display: none;
+    padding: 1.5rem;
 }
 
-.auth-form.active {
+.auth-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.auth-form .form-group label {
     display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.auth-form .form-group input,
+.auth-form .form-group select {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    background: #f8f9fa;
+    border: 1.5px solid #e9ecef;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s ease;
+    outline: none;
+    color: var(--text);
+}
+
+.auth-form .form-group input:focus,
+.auth-form .form-group select:focus {
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
 }
 
 .auth-error {
-    color: var(--danger);
+    background: #fff5f5;
+    color: #e53e3e;
+    border-left: 3px solid #e53e3e;
+    padding: 0.75rem;
+    border-radius: 10px;
     font-size: 0.8rem;
     margin-bottom: 1rem;
-    background: #ffebee;
-    padding: 6px 10px;
-    border-radius: 6px;
 }
 
 .auth-submit {
     width: 100%;
+    background: linear-gradient(135deg, var(--primary) 0%, #283593 100%);
+    color: white;
+    border: none;
+    padding: 0.9rem;
+    border-radius: 40px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(26, 35, 126, 0.2);
     margin-top: 0.5rem;
+}
+
+.auth-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(26, 35, 126, 0.3);
+}
+
+.auth-submit:active {
+    transform: translateY(1px);
 }
 
 .user-btn {
@@ -1442,20 +1502,22 @@ body {
         width: calc(100% - 1rem);
         border-radius: 20px;
     }
-
     .auth-tabs {
         padding: 0.75rem 1rem 0;
     }
-
     .tab-btn {
         padding: 0.5rem 1rem;
         font-size: 0.85rem;
     }
-
     .auth-form {
         padding: 1.25rem;
+        display: none;
     }
+     
 
+.auth-form.active {
+    display: block;
+}
     .auth-form .form-group input {
         padding: 0.7rem 0.9rem;
     }

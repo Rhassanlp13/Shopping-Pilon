@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Pedido</title>
+</head>
+<body>
+    <h3>Resultado de obtener_pedido</h3>
+    <pre id="output">Cargando...</pre>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        const supabase = createClient(
+            'https://cbusrojcmjbgfydpyffe.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNidXNyb2pjbWpiZ2Z5ZHB5ZmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMjI0NDcsImV4cCI6MjA4OTY5ODQ0N30.DIBaBedFSLz5aEplmJgCmPvwKu1xn2JN6mDAjjljFbQ'
+        );
+        const urlParams = new URLSearchParams(location.search);
+        const pedidoId = urlParams.get('pedido');
+        const out = document.getElementById('output');
+        if (!pedidoId) {
+            out.innerText = 'No se especificó pedido en la URL. Ejemplo: ?pedido=0a57af66-c2a3-477e-86b4-ee9535abb8c5';
+        } else {
+            supabase.rpc('obtener_pedido', { pedido_id: pedidoId }).then(res => {
+                out.innerText = JSON.stringify(res, null, 2);
+            }).catch(err => {
+                out.innerText = 'ERROR: ' + err.message;
+            });
+        }
+    </script>
+</body>
+</html>
