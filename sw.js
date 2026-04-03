@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shopping-pilon-v17';
+const CACHE_NAME = 'shopping-pilon-v18';
 
 const urlsToCache = [
   '/',
@@ -43,19 +43,19 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // 1. Excluir imágenes de postimg.cc (si no cargan, no cachear)
+  // Excluir imágenes de postimg.cc
   if (url.hostname === 'i.postimg.cc') {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // 2. Excluir TODAS las peticiones a Supabase (API y auth)
-  if (url.hostname === 'cbusrojcmjbgfydpyffe.supabase.co') {
+  // Excluir TODAS las peticiones a Supabase (API y Auth)
+  if (url.hostname === 'xistchuskgnmjrzlntve.supabase.co') {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // 3. Archivos críticos del panel: network-first
+  // Archivos críticos del panel: network-first
   const critical = ['/admin.html', '/js/admin.js', '/confirmar.html', '/js/confirmar.js'];
   if (critical.includes(url.pathname)) {
     event.respondWith(
@@ -70,7 +70,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 4. Resto: cache-first (solo assets estáticos)
+  // Resto: cache-first con fallback a red
   event.respondWith(
     caches.match(event.request).then(response => response || fetch(event.request))
   );
