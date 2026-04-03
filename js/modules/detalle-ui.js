@@ -1,4 +1,3 @@
-// detalle-ui.js — Modal de detalle de producto y selector de variantes
 import { carrito } from '../carrito.js';
 import { abrirLightbox, cerrarLightbox } from './lightbox.js';
 import { mostrarToast } from './toast.js';
@@ -22,10 +21,10 @@ export const detalleUI = {
         if (!p) return;
 
         this.productoActualId = id;
-        this.varianteActual   = null;
+        this.varianteActual = null;
 
-        const modal       = document.getElementById('modal-detalle');
-        const precioBase  = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
+        const modal = document.getElementById('modal-detalle');
+        const precioBase = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
         const descuentoBase = (p.enoferta && p.preciooferta)
             ? Math.round((1 - p.preciooferta / p.precio) * 100)
             : null;
@@ -34,20 +33,20 @@ export const detalleUI = {
             cerrarLightbox();
             this.varianteActual = variante;
 
-            const precio          = variante ? (variante.precio ?? p.precio) : precioBase;
-            const stockVal        = variante ? (variante.stock ?? p.stock) : p.stock;
-            const imagenUrl       = variante ? (variante.imagen ?? p.imagen) : p.imagen;
-            const enC             = carrito.cantidadDe(id, variante ? p.variantes.indexOf(variante) : null);
-            const agotado         = stockVal <= 0 || enC >= stockVal;
+            const precio = variante ? (variante.precio ?? p.precio) : precioBase;
+            const stockVal = variante ? (variante.stock ?? p.stock) : p.stock;
+            const imagenUrl = variante ? (variante.imagen ?? p.imagen) : p.imagen;
+            const enC = carrito.cantidadDe(id, variante ? p.variantes.indexOf(variante) : null);
+            const agotado = stockVal <= 0 || enC >= stockVal;
 
             const img = document.getElementById('detalle-img');
-            img.style.opacity   = '0';
+            img.style.opacity = '0';
             img.style.transform = 'scale(0.97)';
             setTimeout(() => {
                 img.src = esc(imagenUrl);
                 img.style.transition = 'opacity .25s, transform .25s';
-                img.style.opacity    = '1';
-                img.style.transform  = 'scale(1)';
+                img.style.opacity = '1';
+                img.style.transform = 'scale(1)';
             }, 150);
 
             const precioEl = document.getElementById('detalle-precio');
@@ -63,36 +62,33 @@ export const detalleUI = {
             const stockEl = document.getElementById('detalle-stock');
             if (stockVal <= 0) {
                 stockEl.textContent = 'Agotado';
-                stockEl.className   = 'detalle-stock agotado';
+                stockEl.className = 'detalle-stock agotado';
             } else if (stockVal <= 3) {
                 stockEl.textContent = `¡Solo quedan ${stockVal}!`;
-                stockEl.className   = 'detalle-stock low';
+                stockEl.className = 'detalle-stock low';
             } else {
                 stockEl.textContent = `${stockVal} disponibles`;
-                stockEl.className   = 'detalle-stock ok';
+                stockEl.className = 'detalle-stock ok';
             }
 
             const btnAdd = document.getElementById('detalle-btn-add');
-            btnAdd.disabled  = agotado;
+            btnAdd.disabled = agotado;
             btnAdd.innerHTML = agotado
                 ? '<i class="fas fa-times-circle"></i> Sin stock'
                 : '<i class="fas fa-cart-plus"></i> Añadir al carrito';
         };
 
-        // Info base
         const detalleImg = document.getElementById('detalle-img');
-        detalleImg.src        = esc(p.imagen);
-        detalleImg.alt        = esc(p.nombre);
+        detalleImg.src = esc(p.imagen);
+        detalleImg.alt = esc(p.nombre);
         detalleImg.style.cursor = 'pointer';
-        // Limpiar listener previo clonando el nodo
         const newImg = detalleImg.cloneNode(true);
         detalleImg.parentNode.replaceChild(newImg, detalleImg);
         newImg.addEventListener('click', () => abrirLightbox(newImg.src));
 
         document.getElementById('detalle-vendedor').textContent = p.vendedor;
-        document.getElementById('detalle-nombre').textContent   = p.nombre;
+        document.getElementById('detalle-nombre').textContent = p.nombre;
 
-        // Variantes
         const contenedor = document.getElementById('detalle-variantes');
         contenedor.innerHTML = `
             <div class="variantes-titulo">
@@ -104,13 +100,12 @@ export const detalleUI = {
 
         const crearCard = (imagen, nombre, precio, stock, index, esBase) => {
             const card = document.createElement('div');
-            card.className    = 'variante-card';
+            card.className = 'variante-card';
             card.dataset.index = index;
             if (esBase) card.classList.add('selected');
             card.innerHTML = `
                 <div class="variante-imagen">
-                    <img src="${esc(imagen)}" alt="${esc(nombre)}"
-                         onerror="this.src='https://placehold.co/80x80?text=?'">
+                    <img src="${esc(imagen)}" alt="${esc(nombre)}">
                 </div>
                 <div class="variante-info">
                     <div class="variante-nombre">${esc(nombre)}</div>
@@ -121,7 +116,6 @@ export const detalleUI = {
             return card;
         };
 
-        // Opción base
         const baseCard = crearCard(p.imagen, p.nombre, p.precio, p.stock, -1, true);
         baseCard.addEventListener('click', () => {
             if (baseCard.classList.contains('selected')) return;
@@ -132,7 +126,6 @@ export const detalleUI = {
         });
         grid.appendChild(baseCard);
 
-        // Variantes adicionales
         if (p.variantes?.length > 0) {
             p.variantes.forEach((v, i) => {
                 const card = crearCard(v.imagen || p.imagen, v.nombre, v.precio, v.stock, i, false);
@@ -148,7 +141,6 @@ export const detalleUI = {
         }
         contenedor.style.display = 'block';
 
-        // Botón agregar — clonar para limpiar listeners previos
         const btnAdd = document.getElementById('detalle-btn-add');
         const newBtn = btnAdd.cloneNode(true);
         btnAdd.parentNode.replaceChild(newBtn, btnAdd);
