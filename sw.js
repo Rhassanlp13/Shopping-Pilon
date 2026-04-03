@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shopping-pilon-v14';
+const CACHE_NAME = 'shopping-pilon-v15';
 
 const urlsToCache = [
   '/',
