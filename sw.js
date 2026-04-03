@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shopping-pilon-v15';
+const CACHE_NAME = 'shopping-pilon-v16';
 
 const urlsToCache = [
   '/',
@@ -37,22 +37,21 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Excluir imágenes de postimg.cc del caché (evita errores de conexión)
+  // Excluir imágenes de postimg.cc del caché (para evitar servir versiones rotas)
   if (url.hostname === 'i.postimg.cc') {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Archivos críticos: network-first
-  if (url.pathname === '/admin.html' ||
-      url.pathname === '/js/admin.js' ||
-      url.pathname === '/confirmar.html' ||
-      url.pathname === '/js/confirmar.js') {
+  // Archivos críticos: network-first (siempre intentar red, luego caché)
+  const critical = ['/admin.html', '/js/admin.js', '/confirmar.html', '/js/confirmar.js'];
+  if (critical.includes(url.pathname)) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
@@ -77,4 +76,5 @@ self.addEventListener('activate', event => {
       keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
     ))
   );
+  self.clients.claim();
 });
