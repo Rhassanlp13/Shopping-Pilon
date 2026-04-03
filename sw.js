@@ -43,13 +43,13 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Excluir imágenes de postimg.cc
+  // Excluir imágenes de postimg.cc (si las usas)
   if (url.hostname === 'i.postimg.cc') {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Excluir TODAS las peticiones a Supabase (API y Auth)
+  // Excluir TODAS las peticiones a tu nuevo proyecto Supabase
   if (url.hostname === 'xistchuskgnmjrzlntve.supabase.co') {
     event.respondWith(fetch(event.request));
     return;
