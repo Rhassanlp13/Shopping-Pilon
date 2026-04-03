@@ -4,7 +4,6 @@ import { mostrarToast } from './modules/toast.js';
 let currentUser = null;
 let currentRole = null;
 
-// Escapar HTML para evitar XSS en el menú desplegable
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -16,14 +15,12 @@ function escapeHtml(str) {
 }
 
 export async function initAuth() {
-    // Obtener sesión actual
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
         currentUser = session.user;
         await loadUserRole();
         updateUIForLoggedIn();
     }
-    // Escuchar cambios de autenticación
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN') {
             currentUser = session.user;
@@ -40,27 +37,36 @@ export async function initAuth() {
 async function loadUserRole() {
     if (!currentUser) return;
 
-    // Usamos maybeSingle() para evitar error 406 cuando no hay filas
-    const { data, error } = await supabase
+    // Intentar obtener el rol
+    let { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', currentUser.id)
         .maybeSingle();
 
-    // Si no existe el perfil (data es null) o error de tipo "no rows"
-    if (error || !data) {
+    // Si hay un error de servidor (500) o de conexión, no intentamos crear el perfil
+    if (error) {
+        console.error('Error al consultar perfil:', error);
+        // Mostrar un mensaje amigable
+        mostrarToast('Error al verificar tu cuenta. Intenta recargar la página.', 'error');
+        currentRole = 'customer'; // fallback
+        return;
+    }
+
+    // Si no existe el perfil, lo creamos
+    if (!data) {
         console.log('Perfil no encontrado, creando uno por defecto...');
-        // Crear perfil con rol 'customer'
         const { error: insertError } = await supabase
             .from('profiles')
-            .insert([{
+            .upsert({
                 id: currentUser.id,
                 email: currentUser.email,
                 role: 'customer'
-            }]);
+            }, { onConflict: 'id' }); // ← upsert evita el error 409
+
         if (insertError) {
             console.error('Error al crear perfil:', insertError);
-            currentRole = 'customer'; // fallback
+            currentRole = 'customer';
         } else {
             currentRole = 'customer';
             console.log('Perfil creado exitosamente');
@@ -68,15 +74,16 @@ async function loadUserRole() {
         return;
     }
 
-    // Si existe, asignamos el rol
-    currentRole = data.role || 'customer';
+    // Perfil existe, asignamos el rol (normalizamos 'administrativo' a 'admin')
+    let role = data.role;
+    if (role === 'administrativo') role = 'admin';  // ← compatibilidad
+    currentRole = role || 'customer';
 }
 
 function updateUIForLoggedIn() {
     const userBtn = document.getElementById('user-btn');
     if (userBtn) {
         userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
-        // Eliminar dropdown previo si existe
         const existingDropdown = userBtn.parentNode.querySelector('.user-dropdown');
         if (existingDropdown) existingDropdown.remove();
 
@@ -85,7 +92,7 @@ function updateUIForLoggedIn() {
         userMenu.innerHTML = `
             <div class="user-email">${escapeHtml(currentUser.email)}</div>
             <a href="#" id="profile-link">Mi perfil</a>
-            ${currentRole === 'seller' ? '<a href="/admin.html" id="admin-link">Panel de vendedor</a>' : ''}
+            ${(currentRole === 'seller' || currentRole === 'admin') ? '<a href="/admin.html" id="admin-link">Panel de vendedor</a>' : ''}
             <button id="logout-btn">Cerrar sesión</button>
         `;
         userBtn.parentNode.style.position = 'relative';
@@ -106,7 +113,6 @@ function updateUIForLoggedIn() {
             });
         }
     }
-    // Ocultar botón de login/registro si hay uno
     const authBtn = document.getElementById('auth-btn');
     if (authBtn) authBtn.style.display = 'none';
 }
@@ -117,7 +123,7 @@ function updateUIForLoggedOut() {
         userBtn.innerHTML = `<i class="fas fa-user"></i>`;
         const dropdown = userBtn.parentNode.querySelector('.user-dropdown');
         if (dropdown) dropdown.remove();
-        // Reemplazar event listener para abrir modal
+        // Reemplazar event listener
         userBtn.replaceWith(userBtn.cloneNode(true));
         const newUserBtn = document.getElementById('user-btn');
         if (newUserBtn) newUserBtn.addEventListener('click', () => openAuthModal());
@@ -129,7 +135,6 @@ export function openAuthModal(preselectedRole = null) {
     if (!modal) return;
     modal.removeAttribute('hidden');
 
-    // Limpiar formularios
     document.getElementById('login-email').value = '';
     document.getElementById('login-password').value = '';
     document.getElementById('reg-email').value = '';
@@ -140,7 +145,6 @@ export function openAuthModal(preselectedRole = null) {
     document.getElementById('login-error').style.display = 'none';
     document.getElementById('register-error').style.display = 'none';
 
-    // Si se pide rol vendedor, mostrar pestaña de registro y seleccionar 'seller'
     if (preselectedRole === 'seller') {
         switchTab('register');
         if (roleSelect) roleSelect.value = 'seller';
@@ -163,7 +167,6 @@ function switchTab(tabId) {
     document.getElementById(`${tabId}-form`).classList.add('active');
 }
 
-// Login
 async function handleLogin() {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
@@ -192,7 +195,6 @@ async function handleLogin() {
     }
 }
 
-// Register
 async function handleRegister() {
     const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
@@ -219,7 +221,6 @@ async function handleRegister() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
     errorDiv.style.display = 'none';
     try {
-        // 1. Crear usuario en auth
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -228,12 +229,13 @@ async function handleRegister() {
         if (error) throw error;
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
-        // 2. Crear perfil manualmente
+
+        // Usar upsert para evitar duplicados
         const { error: profileError } = await supabase
             .from('profiles')
-            .insert([{ id: user.id, email, role }]);
+            .upsert({ id: user.id, email, role }, { onConflict: 'id' });
         if (profileError) console.error('Error al crear perfil:', profileError);
-        // 3. Iniciar sesión automáticamente
+
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
         closeAuthModal();
@@ -268,7 +270,6 @@ export function bindAuthEvents() {
     if (loginBtn) loginBtn.addEventListener('click', handleLogin);
     if (registerBtn) registerBtn.addEventListener('click', handleRegister);
     if (userBtn && !currentUser) userBtn.addEventListener('click', openAuthModal);
-    // Para cerrar el modal con Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
     });
