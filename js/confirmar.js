@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { escapeHtml } from './utils/escape.js'; // NUEVO
 
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(location.search);
@@ -16,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Verificar autenticación
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
         loadingDiv.style.display = 'none';
@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userId = session.user.id;
 
     try {
-        // Obtener el pedido y verificar que pertenece al vendedor
         const { data: p, error } = await supabase
             .from('pedidos')
             .select('*')
@@ -91,12 +90,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+// ELIMINADA la función escapeHtml local
