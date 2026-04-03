@@ -1,15 +1,7 @@
 // cart-ui.js — Modal del carrito
 import { carrito } from '../carrito.js';
 import { mostrarToast } from './toast.js';
-
-function esc(str) {
-    return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+import { escapeHtml } from '../utils/escape.js'; // NUEVO
 
 export const cartUI = {
     modal: null,
@@ -62,15 +54,15 @@ export const cartUI = {
         this.itemsEl.innerHTML = items.map(item => {
             const puedeAumentar = item.cantidad < item.stockDisponible;
             return `
-                <div class="cart-item" data-id="${esc(item.id)}" data-variant="${esc(item.variantId ?? '')}">
+                <div class="cart-item" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">
                     <div class="cart-item-info">
-                        <div class="cart-item-name">${esc(item.nombre)}${esc(item.variantNombre)}</div>
+                        <div class="cart-item-name">${escapeHtml(item.nombre)}${escapeHtml(item.variantNombre)}</div>
                         <div class="cart-item-price">$${(item.precio * item.cantidad).toLocaleString('es-CU')} CUP</div>
                     </div>
                     <div class="qty-control">
-                        <button class="qty-btn btn-disminuir" data-id="${esc(item.id)}" data-variant="${esc(item.variantId ?? '')}">−</button>
+                        <button class="qty-btn btn-disminuir" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">−</button>
                         <span class="qty-num">${item.cantidad}</span>
-                        <button class="qty-btn btn-aumentar" data-id="${esc(item.id)}" data-variant="${esc(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button>
+                        <button class="qty-btn btn-aumentar" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button>
                     </div>
                 </div>`;
         }).join('');
