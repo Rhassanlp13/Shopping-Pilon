@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { escapeHtml } from './utils/escape.js'; // NUEVO: importar escape compartido
 
 let productos = [];
 let pedidos = [];
@@ -6,14 +7,7 @@ let editandoId = null;
 let borrandoId = null;
 let iniciado = false;
 
-function esc(str) {
-    return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+// ELIMINADA la función esc() que estaba aquí
 
 async function getCurrentUser(maxRetries = 2) {
     for (let i = 0; i < maxRetries; i++) {
@@ -49,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const user = await getCurrentUser();
             const role = await getUserRole(user.id);
-            // Permitir 'seller', 'admin' y 'administrativo'
             if (role !== 'seller' && role !== 'admin' && role !== 'administrativo') {
                 toast('Acceso denegado. Solo vendedores o administradores pueden usar el panel.', 'error');
                 setTimeout(() => window.location.href = '/index.html', 2000);
@@ -188,27 +181,27 @@ function renderTabla(filtro = '') {
         return `
                         <tr>
                             <td>
-                                <img src="${esc(p.imagen)}" class="prod-thumb" alt="${esc(p.nombre)}">
+                                <img src="${escapeHtml(p.imagen)}" class="prod-thumb" alt="${escapeHtml(p.nombre)}">
                                 <span>
-                                    <div class="prod-name">${esc(p.nombre)}</div>
-                                    <div class="prod-vendedor">${esc(p.vendedor)}</div>
+                                    <div class="prod-name">${escapeHtml(p.nombre)}</div>
+                                    <div class="prod-vendedor">${escapeHtml(p.vendedor)}</div>
                                 </span>
-                            </td>
-                            <td>$${Number(p.precio).toLocaleString('es-CU')} CUP</td>
-                            <td>${stockBadge}</td>
-                            <td>${ofertaBadge}</td>
-                            <td>${varBadge}</td>
+                            </div>
+                            <td>$${Number(p.precio).toLocaleString('es-CU')} CUP</div>
+                            <td>${stockBadge}</div>
+                            <td>${ofertaBadge}</div>
+                            <td>${varBadge}</div>
                             <td>
                                 <div class="actions">
-                                    <button class="act-btn" data-edit="${esc(p.id)}">
+                                    <button class="act-btn" data-edit="${escapeHtml(p.id)}">
                                         <i class="fas fa-pen"></i> Editar
                                     </button>
-                                    <button class="act-btn del" data-del="${esc(p.id)}" data-nombre="${esc(p.nombre)}">
+                                    <button class="act-btn del" data-del="${escapeHtml(p.id)}" data-nombre="${escapeHtml(p.nombre)}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
-                            </td>
-                        </td>`;
+                            </div>
+                        </tr>`;
     }).join('')}
             </tbody>
         </table>
@@ -251,13 +244,13 @@ function renderPedidos() {
             <tbody>
                 ${pedidos.map(p => `
                     <tr>
-                        <td>${esc(p.cliente_nombre)}</td>
-                        <td>${esc(p.cliente_telefono)}</td>
-                        <td>${new Date(p.created_at).toLocaleString()}</td>
-                        <td>$${Number(p.total).toLocaleString('es-CU')}</td>
-                        <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
-                        <td><ul>${(p.productos ?? []).map(prod => `<li>${esc(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es-CU')}</li>`).join('')}</ul></td>
-                        <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${p.id}">Confirmar</button>` : '—'}</td>
+                        <td>${escapeHtml(p.cliente_nombre)}</div>
+                        <td>${escapeHtml(p.cliente_telefono)}</div>
+                        <td>${new Date(p.created_at).toLocaleString()}</div>
+                        <td>$${Number(p.total).toLocaleString('es-CU')}</div>
+                        <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></div>
+                        <td><ul>${(p.productos ?? []).map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es-CU')}</li>`).join('')}</ul></div>
+                        <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</div>
                     </tr>`).join('')}
             </tbody>
         </table>
@@ -291,15 +284,15 @@ async function cargarResenas() {
         }
         tablaResenas.innerHTML = `
             <table>
-                <thead><tr><th>Autor</th><th>Estrellas</th><th>Opinión</th><th>Fecha</th><th></th></tr></thead>
+                <thead><tr><th>Autor</th><th>Estrellas</th><th>Opinión</th><th>Fecha</th><th></th></thead>
                 <tbody>
                     ${data.map(r => `
                         <tr>
-                            <td><strong>${esc(r.nombre)}</strong></td>
-                            <td style="color:#ff9800;letter-spacing:2px">${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</td>
-                            <td style="max-width:220px;font-size:0.85rem">${esc(r.texto)}</td>
-                            <td style="font-size:0.8rem;color:var(--muted);white-space:nowrap">${new Date(r.fecha).toLocaleDateString('es-CU')}</td>
-                            <td><button class="act-btn del" data-del-resena="${r.id}"><i class="fas fa-trash"></i></button></td>
+                            <td><strong>${escapeHtml(r.nombre)}</strong></div>
+                            <td style="color:#ff9800;letter-spacing:2px">${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</div>
+                            <td style="max-width:220px;font-size:0.85rem">${escapeHtml(r.texto)}</div>
+                            <td style="font-size:0.8rem;color:var(--muted);white-space:nowrap">${new Date(r.fecha).toLocaleDateString('es-CU')}</div>
+                            <td><button class="act-btn del" data-del-resena="${escapeHtml(r.id)}"><i class="fas fa-trash"></i></button></div>
                         </tr>`).join('')}
                 </tbody>
             </table>
@@ -375,12 +368,12 @@ function agregarFilaVariante(v = {}) {
     div.innerHTML = `
         <button class="btn-rm-variante" title="Eliminar variante"><i class="fas fa-times"></i></button>
         <div class="variante-fila">
-            <div><div class="variante-label">Nombre</div><input type="text" placeholder="Ej: Rojo, Talla M..." value="${esc(v.nombre ?? '')}" data-campo="nombre"></div>
-            <div><div class="variante-label">URL de foto</div><input type="url" placeholder="https://foto.jpg" value="${esc(v.imagen ?? '')}" data-campo="imagen"></div>
+            <div><div class="variante-label">Nombre</div><input type="text" placeholder="Ej: Rojo, Talla M..." value="${escapeHtml(v.nombre ?? '')}" data-campo="nombre"></div>
+            <div><div class="variante-label">URL de foto</div><input type="url" placeholder="https://foto.jpg" value="${escapeHtml(v.imagen ?? '')}" data-campo="imagen"></div>
         </div>
         <div class="variante-fila">
-            <div><div class="variante-label">Precio (CUP)</div><input type="number" placeholder="Precio" value="${esc(String(v.precio ?? ''))}" data-campo="precio" min="0"></div>
-            <div><div class="variante-label">Stock</div><input type="number" placeholder="Stock" value="${esc(String(v.stock ?? ''))}" data-campo="stock" min="0"></div>
+            <div><div class="variante-label">Precio (CUP)</div><input type="number" placeholder="Precio" value="${escapeHtml(String(v.precio ?? ''))}" data-campo="precio" min="0"></div>
+            <div><div class="variante-label">Stock</div><input type="number" placeholder="Stock" value="${escapeHtml(String(v.stock ?? ''))}" data-campo="stock" min="0"></div>
         </div>
     `;
     div.querySelector('.btn-rm-variante').addEventListener('click', () => div.remove());
