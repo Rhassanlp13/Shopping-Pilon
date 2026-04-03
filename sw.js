@@ -43,13 +43,19 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Excluir imágenes de postimg.cc del caché (para evitar servir versiones rotas)
+  // 1. Excluir imágenes de postimg.cc (si no cargan, no cachear)
   if (url.hostname === 'i.postimg.cc') {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Archivos críticos: network-first (siempre intentar red, luego caché)
+  // 2. Excluir TODAS las peticiones a Supabase (API y auth)
+  if (url.hostname === 'cbusrojcmjbgfydpyffe.supabase.co') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // 3. Archivos críticos del panel: network-first
   const critical = ['/admin.html', '/js/admin.js', '/confirmar.html', '/js/confirmar.js'];
   if (critical.includes(url.pathname)) {
     event.respondWith(
@@ -64,7 +70,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Resto: cache-first con fallback a red
+  // 4. Resto: cache-first (solo assets estáticos)
   event.respondWith(
     caches.match(event.request).then(response => response || fetch(event.request))
   );
