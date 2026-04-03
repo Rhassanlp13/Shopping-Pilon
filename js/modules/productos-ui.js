@@ -10,6 +10,9 @@ function esc(str) {
         .replace(/'/g, '&#39;');
 }
 
+// Placeholder SVG en data URI (no necesita red)
+const PLACEHOLDER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f5f5f7'/%3E%3Ctext x='50%25' y='50%25' font-size='18' text-anchor='middle' dy='.3em' fill='%23999'%3ESin imagen%3C/text%3E%3C/svg%3E";
+
 function renderCard(p) {
     const enCarrito = carrito.cantidadDe(p.id, null);
     const precioReal = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
@@ -19,15 +22,15 @@ function renderCard(p) {
         ? Math.round((1 - p.preciooferta / p.precio) * 100)
         : null;
     const tieneVariantes = p.variantes && p.variantes.length > 0;
-    
+
     let botonTexto = '';
     let botonIcono = '';
     let botonDisabled = false;
-    
+
     if (tieneVariantes) {
         botonTexto = 'Ver opciones';
         botonIcono = '<i class="fas fa-eye"></i>';
-        botonDisabled = false;  // siempre habilitado para abrir detalle
+        botonDisabled = false;
     } else if (agotado) {
         botonTexto = 'Agotado';
         botonIcono = '<i class="fas fa-times-circle"></i>';
@@ -42,8 +45,8 @@ function renderCard(p) {
         <article class="product-card ${p.enoferta && p.preciooferta ? 'en-oferta' : ''}" data-id="${esc(p.id)}">
             ${descuento ? `<span class="card-badge-oferta">−${descuento}%</span>` : ''}
             ${stockBajo && !descuento && !tieneVariantes ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
-            <img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy"
-                 onerror="this.removeAttribute('onerror');this.src='https://placehold.co/400x400?text=Sin+imagen'">
+            <img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" decoding="async"
+                 onerror="this.onerror=null; this.src='${PLACEHOLDER_SVG}'">
             <div class="product-info">
                 <span class="vendedor"><i class="fas fa-user-circle"></i> ${esc(p.vendedor)}</span>
                 <h3>${esc(p.nombre)}</h3>
@@ -91,7 +94,6 @@ export function bindGridEventos(grid, productos, onAgregar, onAbrirDetalle) {
         if (btn) {
             const tieneVariantes = btn.dataset.hasVariants === 'true';
             if (tieneVariantes) {
-                // Abrir detalle en lugar de añadir
                 const card = btn.closest('.product-card');
                 if (card) onAbrirDetalle(card.dataset.id);
                 return;

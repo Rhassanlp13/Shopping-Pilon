@@ -13,6 +13,9 @@ function esc(str) {
         .replace(/'/g, '&#39;');
 }
 
+// Placeholder SVG (offline, no necesita red)
+const PLACEHOLDER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f5f5f7'/%3E%3Ctext x='50%25' y='50%25' font-size='18' text-anchor='middle' dy='.3em' fill='%23999'%3ESin imagen%3C/text%3E%3C/svg%3E";
+
 export const detalleUI = {
     productoActualId: null,
     varianteActual: null,
@@ -22,10 +25,10 @@ export const detalleUI = {
         if (!p) return;
 
         this.productoActualId = id;
-        this.varianteActual   = null;
+        this.varianteActual = null;
 
-        const modal       = document.getElementById('modal-detalle');
-        const precioBase  = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
+        const modal = document.getElementById('modal-detalle');
+        const precioBase = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
         const descuentoBase = (p.enoferta && p.preciooferta)
             ? Math.round((1 - p.preciooferta / p.precio) * 100)
             : null;
@@ -34,20 +37,20 @@ export const detalleUI = {
             cerrarLightbox();
             this.varianteActual = variante;
 
-            const precio          = variante ? (variante.precio ?? p.precio) : precioBase;
-            const stockVal        = variante ? (variante.stock ?? p.stock) : p.stock;
-            const imagenUrl       = variante ? (variante.imagen ?? p.imagen) : p.imagen;
-            const enC             = carrito.cantidadDe(id, variante ? p.variantes.indexOf(variante) : null);
-            const agotado         = stockVal <= 0 || enC >= stockVal;
+            const precio = variante ? (variante.precio ?? p.precio) : precioBase;
+            const stockVal = variante ? (variante.stock ?? p.stock) : p.stock;
+            const imagenUrl = variante ? (variante.imagen ?? p.imagen) : p.imagen;
+            const enC = carrito.cantidadDe(id, variante ? p.variantes.indexOf(variante) : null);
+            const agotado = stockVal <= 0 || enC >= stockVal;
 
             const img = document.getElementById('detalle-img');
-            img.style.opacity   = '0';
+            img.style.opacity = '0';
             img.style.transform = 'scale(0.97)';
             setTimeout(() => {
                 img.src = esc(imagenUrl);
                 img.style.transition = 'opacity .25s, transform .25s';
-                img.style.opacity    = '1';
-                img.style.transform  = 'scale(1)';
+                img.style.opacity = '1';
+                img.style.transform = 'scale(1)';
             }, 150);
 
             const precioEl = document.getElementById('detalle-precio');
@@ -63,17 +66,17 @@ export const detalleUI = {
             const stockEl = document.getElementById('detalle-stock');
             if (stockVal <= 0) {
                 stockEl.textContent = 'Agotado';
-                stockEl.className   = 'detalle-stock agotado';
+                stockEl.className = 'detalle-stock agotado';
             } else if (stockVal <= 3) {
                 stockEl.textContent = `¡Solo quedan ${stockVal}!`;
-                stockEl.className   = 'detalle-stock low';
+                stockEl.className = 'detalle-stock low';
             } else {
                 stockEl.textContent = `${stockVal} disponibles`;
-                stockEl.className   = 'detalle-stock ok';
+                stockEl.className = 'detalle-stock ok';
             }
 
             const btnAdd = document.getElementById('detalle-btn-add');
-            btnAdd.disabled  = agotado;
+            btnAdd.disabled = agotado;
             btnAdd.innerHTML = agotado
                 ? '<i class="fas fa-times-circle"></i> Sin stock'
                 : '<i class="fas fa-cart-plus"></i> Añadir al carrito';
@@ -81,16 +84,21 @@ export const detalleUI = {
 
         // Info base
         const detalleImg = document.getElementById('detalle-img');
-        detalleImg.src        = esc(p.imagen);
-        detalleImg.alt        = esc(p.nombre);
+        detalleImg.src = esc(p.imagen);
+        detalleImg.alt = esc(p.nombre);
         detalleImg.style.cursor = 'pointer';
+        // Añadir onerror a la imagen principal
+        detalleImg.onerror = function () {
+            this.onerror = null;
+            this.src = PLACEHOLDER_SVG;
+        };
         // Limpiar listener previo clonando el nodo
         const newImg = detalleImg.cloneNode(true);
         detalleImg.parentNode.replaceChild(newImg, detalleImg);
         newImg.addEventListener('click', () => abrirLightbox(newImg.src));
 
         document.getElementById('detalle-vendedor').textContent = p.vendedor;
-        document.getElementById('detalle-nombre').textContent   = p.nombre;
+        document.getElementById('detalle-nombre').textContent = p.nombre;
 
         // Variantes
         const contenedor = document.getElementById('detalle-variantes');
@@ -104,13 +112,13 @@ export const detalleUI = {
 
         const crearCard = (imagen, nombre, precio, stock, index, esBase) => {
             const card = document.createElement('div');
-            card.className    = 'variante-card';
+            card.className = 'variante-card';
             card.dataset.index = index;
             if (esBase) card.classList.add('selected');
             card.innerHTML = `
                 <div class="variante-imagen">
                     <img src="${esc(imagen)}" alt="${esc(nombre)}"
-                         onerror="this.src='https://placehold.co/80x80?text=?'">
+                         onerror="this.onerror=null; this.src='${PLACEHOLDER_SVG}'">
                 </div>
                 <div class="variante-info">
                     <div class="variante-nombre">${esc(nombre)}</div>
