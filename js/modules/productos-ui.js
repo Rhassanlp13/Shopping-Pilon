@@ -1,4 +1,3 @@
-// productos-ui.js — Render del grid de productos
 import { carrito } from '../carrito.js';
 import { mostrarToast } from './toast.js';
 
@@ -19,13 +18,31 @@ function renderCard(p) {
     const descuento = (p.enoferta && p.preciooferta)
         ? Math.round((1 - p.preciooferta / p.precio) * 100)
         : null;
+    const tieneVariantes = p.variantes && p.variantes.length > 0;
+    
+    let botonTexto = '';
+    let botonIcono = '';
+    let botonDisabled = false;
+    
+    if (tieneVariantes) {
+        botonTexto = 'Ver opciones';
+        botonIcono = '<i class="fas fa-eye"></i>';
+        botonDisabled = false;
+    } else if (agotado) {
+        botonTexto = 'Agotado';
+        botonIcono = '<i class="fas fa-times-circle"></i>';
+        botonDisabled = true;
+    } else {
+        botonTexto = 'Añadir';
+        botonIcono = '<i class="fas fa-cart-plus"></i>';
+        botonDisabled = false;
+    }
 
     return `
         <article class="product-card ${p.enoferta && p.preciooferta ? 'en-oferta' : ''}" data-id="${esc(p.id)}">
             ${descuento ? `<span class="card-badge-oferta">−${descuento}%</span>` : ''}
-            ${stockBajo && !descuento ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
-            <img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy"
-                 onerror="this.removeAttribute('onerror');this.src='https://placehold.co/400x400?text=Sin+imagen'">
+            ${stockBajo && !descuento && !tieneVariantes ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
+            <img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" decoding="async">
             <div class="product-info">
                 <span class="vendedor"><i class="fas fa-user-circle"></i> ${esc(p.vendedor)}</span>
                 <h3>${esc(p.nombre)}</h3>
@@ -36,10 +53,8 @@ function renderCard(p) {
                     </span>
                     ${descuento ? `<span class="descuento-badge">−${descuento}%</span>` : ''}
                 </div>
-                <button class="card-btn-add" data-id="${esc(p.id)}" ${agotado ? 'disabled' : ''}>
-                    ${agotado
-                        ? '<i class="fas fa-times-circle"></i> Agotado'
-                        : '<i class="fas fa-cart-plus"></i> Añadir'}
+                <button class="card-btn-add" data-id="${esc(p.id)}" ${botonDisabled ? 'disabled' : ''} data-has-variants="${tieneVariantes}">
+                    ${botonIcono} ${botonTexto}
                 </button>
             </div>
         </article>`;
@@ -47,13 +62,8 @@ function renderCard(p) {
 
 export function renderProductos(grid, productos) {
     if (!grid) return;
-
     if (productos.length === 0) {
-        grid.innerHTML = `
-            <div class="grid-empty">
-                <i class="fas fa-box-open"></i>
-                <p>No hay productos disponibles aún.</p>
-            </div>`;
+        grid.innerHTML = `<div class="grid-empty"><i class="fas fa-box-open"></i><p>No hay productos disponibles aún.</p></div>`;
         return;
     }
 
@@ -62,14 +72,8 @@ export function renderProductos(grid, productos) {
 
     let html = '';
     if (ofertas.length > 0) {
-        html += `
-            <div class="seccion-header oferta-header">
-                <i class="fas fa-fire"></i> Ofertas destacadas
-            </div>
-            ${ofertas.map(renderCard).join('')}
-            <div class="seccion-header normal-header">
-                <i class="fas fa-shopping-bag"></i> Todos los productos
-            </div>`;
+        html += `<div class="seccion-header oferta-header"><i class="fas fa-fire"></i> Ofertas destacadas</div>${ofertas.map(renderCard).join('')}`;
+        html += `<div class="seccion-header normal-header"><i class="fas fa-shopping-bag"></i> Todos los productos</div>`;
     }
     html += normales.map(renderCard).join('');
     grid.innerHTML = html;
@@ -77,22 +81,19 @@ export function renderProductos(grid, productos) {
 
 export function mostrarError(grid) {
     if (!grid) return;
-    grid.innerHTML = `
-        <div class="grid-empty">
-            <i class="fas fa-wifi" style="opacity:.4"></i>
-            <p>No se pudieron cargar los productos.</p>
-            <button onclick="location.reload()"
-                style="margin-top:1rem;padding:8px 20px;border:1.5px solid currentColor;
-                       border-radius:8px;background:none;cursor:pointer;color:inherit">
-                Reintentar
-            </button>
-        </div>`;
+    grid.innerHTML = `<div class="grid-empty"><i class="fas fa-wifi" style="opacity:.4"></i><p>No se pudieron cargar los productos.</p><button onclick="location.reload()" style="margin-top:1rem;padding:8px 20px;border:1.5px solid currentColor;border-radius:8px;background:none;cursor:pointer;color:inherit">Reintentar</button></div>`;
 }
 
 export function bindGridEventos(grid, productos, onAgregar, onAbrirDetalle) {
     grid?.addEventListener('click', e => {
         const btn = e.target.closest('.card-btn-add');
         if (btn) {
+            const tieneVariantes = btn.dataset.hasVariants === 'true';
+            if (tieneVariantes) {
+                const card = btn.closest('.product-card');
+                if (card) onAbrirDetalle(card.dataset.id);
+                return;
+            }
             if (btn.disabled) return;
             const res = carrito.agregar(btn.dataset.id, null, productos);
             if (res.ok) {
