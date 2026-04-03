@@ -187,7 +187,7 @@ function renderTabla(filtro = '') {
         const ofertaBadge = p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es-CU')}</span>` : '<span style="color:#bbb">—</span>';
         return `
                         <tr>
-                            <td><img src="${esc(p.imagen)}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'" alt="${esc(p.nombre)}"><span><div class="prod-name">${esc(p.nombre)}</div><div class="prod-vendedor">${esc(p.vendedor)}</div></span></td>
+                            
                             <td>$${Number(p.precio).toLocaleString('es-CU')} CUP</td>
                             <td>${stockBadge}</td>
                             <td>${ofertaBadge}</td>
