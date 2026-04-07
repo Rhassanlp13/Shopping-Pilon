@@ -1,6 +1,7 @@
 import { CONFIG } from './config.js';
 import { carrito } from './carrito.js';
 import { supabase } from './supabase.js';
+import { auth } from './auth.js';
 
 function esc(str) {
     return String(str ?? '')
@@ -396,7 +397,7 @@ export const UI = {
             const { data, error } = await supabase
                 .from('reseñas')
                 .select('*')
-                .eq('productoId', productoId)
+                .eq('productoid', productoId)
                 .order('fecha', { ascending: false });
             if (error) throw error;
 
@@ -439,7 +440,7 @@ export const UI = {
             const { error } = await supabase
                 .from('reseñas')
                 .insert([{
-                    productoId: this.productoActualId,
+                    productoid: this.productoActualId,
                     nombre: nombre.slice(0, 30),
                     texto: texto.slice(0, 200),
                     estrellas: Math.min(5, Math.max(1, estrellas)),
@@ -538,13 +539,11 @@ export const UI = {
         const vendedores = Object.values(porVendedor);
         const pedidosIds = [];
 
-        // Guardar pedidos y obtener IDs
         for (const grupo of vendedores) {
             const id = await this.guardarPedido(nombre, telefono, grupo.items, grupo.telefono, grupo.vendedor);
             if (id) pedidosIds.push(id);
         }
 
-        // Abrir WhatsApp con enlace de confirmación
         vendedores.forEach((grupo, i) => {
             const totalGrupo = grupo.items.reduce((s, it) => s + it.precio * it.cantidad, 0);
             let texto = `🛍️ *Pedido — Shopping Pilón*\n\n`;
@@ -669,5 +668,76 @@ export const UI = {
         });
 
         document.getElementById('btn-enviar-resena')?.addEventListener('click', () => this.enviarResena());
-    },
+
+        // ========== NUEVOS EVENTOS PARA EL MODAL DE AUTENTICACIÓN ==========
+        const btnRegistroVendedor = document.getElementById('btn-registro-vendedor');
+        const authModal = document.getElementById('auth-modal');
+        const closeAuthModal = document.getElementById('close-auth-modal');
+        const footerRegistro = document.getElementById('footer-registro');
+
+        const abrirAuthModal = (e) => {
+            if (e) e.preventDefault();
+            authModal?.removeAttribute('hidden');
+        };
+
+        btnRegistroVendedor?.addEventListener('click', abrirAuthModal);
+        footerRegistro?.addEventListener('click', abrirAuthModal);
+        closeAuthModal?.addEventListener('click', () => authModal?.setAttribute('hidden', ''));
+        authModal?.addEventListener('click', (e) => {
+            if (e.target === authModal) authModal.setAttribute('hidden', '');
+        });
+
+        // Tabs
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${target}-panel`).classList.add('active');
+            });
+        });
+
+        // Login
+        const btnLogin = document.getElementById('btn-login');
+        const loginError = document.getElementById('login-error');
+        btnLogin?.addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            try {
+                await auth.login(email, password);
+                window.location.href = '/admin.html';
+            } catch (err) {
+                loginError.textContent = 'Credenciales incorrectas. Intenta de nuevo.';
+                loginError.style.display = 'block';
+            }
+        });
+
+        // Registro
+        const btnRegister = document.getElementById('btn-register');
+        const registerError = document.getElementById('register-error');
+        btnRegister?.addEventListener('click', async () => {
+            const nombre = document.getElementById('reg-nombre').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const telefono = document.getElementById('reg-telefono').value.trim();
+            const password = document.getElementById('reg-password').value;
+            if (!nombre || !email || !telefono || password.length < 6) {
+                registerError.textContent = 'Completa todos los campos (contraseña mínimo 6 caracteres).';
+                registerError.style.display = 'block';
+                return;
+            }
+            try {
+                await auth.register(nombre, email, telefono, password);
+                alert('Registro exitoso. Revisa tu correo para confirmar (si no, inicia sesión).');
+                // Cambiar a pestaña login
+                document.querySelector('.auth-tab[data-tab="login"]').click();
+                document.getElementById('login-email').value = email;
+                document.getElementById('login-password').value = '';
+                registerError.style.display = 'none';
+            } catch (err) {
+                registerError.textContent = err.message || 'Error al registrarte. Intenta de nuevo.';
+                registerError.style.display = 'block';
+            }
+        });
+    }
 };
