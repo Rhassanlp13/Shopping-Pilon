@@ -141,7 +141,7 @@ async function handleLogin() {
         if (error) throw error;
         closeAuthModal();
         mostrarToast(`Bienvenido, ${email}`, 'ok');
-        // No recargamos aquí porque el listener de auth actualizará la UI
+        // El listener de auth recargará la UI
     } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
@@ -212,12 +212,31 @@ export function bindAuthEvents() {
     const loginBtn = document.getElementById('login-submit');
     const registerBtn = document.getElementById('register-submit');
     const userBtn = document.getElementById('user-btn');
+    const btnRegistroVendedor = document.getElementById('btn-registro-vendedor');
+    const footerRegistro = document.getElementById('footer-registro');
+
     if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeAuthModal(); });
     if (tabs) tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
     if (loginBtn) loginBtn.addEventListener('click', handleLogin);
     if (registerBtn) registerBtn.addEventListener('click', handleRegister);
+    
+    // Abrir modal con pestaña de registro cuando se hace clic en "Registrarme como vendedor"
+    if (btnRegistroVendedor) {
+        btnRegistroVendedor.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAuthModal('seller');
+        });
+    }
+    if (footerRegistro) {
+        footerRegistro.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAuthModal('seller');
+        });
+    }
+    
     if (userBtn && !currentUser) userBtn.addEventListener('click', () => openAuthModal());
+    
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
     });
