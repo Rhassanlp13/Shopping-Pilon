@@ -1,5 +1,5 @@
-// Estrategia: HTML siempre desde red, estáticos desde caché
-const CACHE_NAME = 'shopping-pilon-static-v1';
+// Estrategia: HTML siempre desde red, estáticos desde caché con actualización automática
+const CACHE_NAME = 'shopping-pilon-v1';
 const STATIC_ASSETS = [
   '/style.css',
   '/js/app.js',
@@ -26,21 +26,24 @@ self.addEventListener('install', event => {
   self.skipWaiting(); // Activar inmediatamente
 });
 
-// Activación: limpiar cachés antiguas
+// Activación: limpiar cachés antiguas y tomar control
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
       keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
     ))
   );
-  self.clients.claim(); // Tomar control de las páginas abiertas
+  self.clients.claim();
 });
 
-// Fetch: HTML siempre desde red, estáticos desde caché
+// Fetch: HTML siempre desde red, estáticos desde caché (con actualización en segundo plano)
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  const isStatic = STATIC_ASSETS.some(asset => url.pathname === asset) || 
+                   url.pathname.startsWith('/js/') || 
+                   url.pathname === '/style.css';
   
-  // Si es HTML (página) -> ir a la red siempre
+  // Páginas HTML: siempre desde red
   if (event.request.mode === 'navigate' || 
       url.pathname === '/' || 
       url.pathname.endsWith('.html')) {
@@ -48,18 +51,33 @@ self.addEventListener('fetch', event => {
       fetch(event.request).catch(() => caches.match(event.request))
     );
   } 
-  // Para estáticos (CSS, JS, fuentes) -> caché primero
-  else {
+  // Recursos estáticos: caché primero, luego red, y actualizar caché en segundo plano
+  else if (isStatic) {
     event.respondWith(
-      caches.match(event.request).then(response => 
-        response || fetch(event.request).then(networkResponse => {
+      caches.match(event.request).then(cached => {
+        const fetchPromise = fetch(event.request).then(networkResponse => {
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           }
           return networkResponse;
-        })
-      )
+        }).catch(() => cached);
+        return cached || fetchPromise;
+      })
+    );
+  }
+  // El resto (imágenes, etc.) -> caché primero, red después
+  else {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        return cached || fetch(event.request).then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        });
+      })
     );
   }
 });
