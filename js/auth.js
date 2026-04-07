@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
+import { escapeHtml } from './utils/escape.js';
 
 let currentUser = null;
 let currentRole = null;
@@ -69,7 +70,11 @@ function updateUIForLoggedIn() {
     userBtn.addEventListener('click', toggleDropdown);
     document.addEventListener('click', () => userMenu.classList.remove('show'));
     const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) logoutBtn.addEventListener('click', async () => { await supabase.auth.signOut(); mostrarToast('Sesión cerrada', 'info'); location.reload(); });
+    if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        mostrarToast('Sesión cerrada', 'info');
+        location.reload();
+    });
 }
 
 function updateUIForLoggedOut() {
@@ -136,6 +141,7 @@ async function handleLogin() {
         if (error) throw error;
         closeAuthModal();
         mostrarToast(`Bienvenido, ${email}`, 'ok');
+        // No recargamos aquí porque el listener de auth actualizará la UI
     } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
@@ -171,12 +177,17 @@ async function handleRegister() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
     errorDiv.style.display = 'none';
     try {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { role } } });
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { role } }
+        });
         if (error) throw error;
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
         await supabase.from('profiles').upsert({ id: user.id, email, role }, { onConflict: 'id' });
-        await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
         closeAuthModal();
         if (role === 'seller') {
             mostrarToast('Registro exitoso. Ahora puedes acceder al panel de vendedor.', 'info');
@@ -210,9 +221,4 @@ export function bindAuthEvents() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
     });
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
