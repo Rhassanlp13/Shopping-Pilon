@@ -943,7 +943,7 @@ body {
     font-weight: bold;
 }
 
-/* ========== MODAL DE AUTENTICACIÓN PROFESIONAL ========== */
+/* ========== MODAL DE AUTENTICACIÓN PROFESIONAL (VERSIÓN ÚNICA) ========== */
 #auth-modal .modal-box {
     max-width: 440px;
     border-radius: 28px;
@@ -952,40 +952,36 @@ body {
     overflow: hidden;
     animation: slideUp 0.3s ease;
 }
-
 #auth-modal .modal-header {
     background: var(--primary);
     padding: 1.2rem 1.5rem;
 }
-
 #auth-modal .modal-header h2 {
     font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: -0.3px;
 }
-
 #auth-modal .modal-body {
     padding: 1.8rem 1.5rem 2rem;
 }
 
-/* Pestañas mejoradas */
+/* Pestañas profesionales (definitivas) */
 .auth-tabs {
     display: flex;
-    gap: 0.8rem;
-    background: #f0f2f5;
+    gap: 0.5rem;
+    background: #f1f5f9;
     padding: 0.5rem;
     border-radius: 60px;
     margin-bottom: 2rem;
 }
-
 .auth-tab {
     flex: 1;
     background: transparent;
     border: none;
-    padding: 0.8rem 0;
+    padding: 0.75rem 0;
     font-size: 0.95rem;
-    font-weight: 700;
-    color: #5a6a7e;
+    font-weight: 600;
+    color: #64748b;
     cursor: pointer;
     border-radius: 40px;
     transition: all 0.25s ease;
@@ -993,13 +989,17 @@ body {
     text-align: center;
     letter-spacing: 0.3px;
 }
-
 .auth-tab.active {
     background: #ffffff;
     color: #1a237e;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+.auth-tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.3);
+    color: #1e293b;
 }
 
+/* Formularios */
 .auth-form {
     display: none;
     flex-direction: column;
@@ -1029,7 +1029,7 @@ body {
     outline: none;
 }
 
-/* Botones de acción (Ingresar / Crear cuenta) */
+/* Botón de acción (Ingresar / Crear cuenta) */
 .auth-form .btn-primary {
     background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
     border-radius: 60px;
@@ -1045,18 +1045,16 @@ body {
     width: 100%;
     text-align: center;
 }
-
 .auth-form .btn-primary:hover {
     transform: translateY(-2px);
     background: linear-gradient(135deg, #0f195e 0%, #1a237e 100%);
     box-shadow: 0 10px 20px rgba(26, 35, 126, 0.3);
 }
-
 .auth-form .btn-primary:active {
     transform: translateY(1px);
 }
 
-/* Mensaje de error elegante */
+/* Mensaje de error */
 .error-msg {
     background: #fff5f5;
     border-radius: 40px;
@@ -1130,41 +1128,4 @@ body {
     color: var(--danger);
     border-top: 1px solid var(--border);
     margin-top: 4px;
-}
-
-/* ========== PESTAÑAS PROFESIONALES (login/registro) ========== */
-.auth-tabs {
-    display: flex;
-    gap: 0.5rem;
-    background: #f1f5f9;  /* fondo gris suave */
-    padding: 0.5rem;
-    border-radius: 60px;   /* forma de pastilla */
-    margin-bottom: 2rem;
-}
-
-.auth-tab {
-    flex: 1;
-    background: transparent;
-    border: none;
-    padding: 0.75rem 0;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #64748b;        /* gris azulado */
-    cursor: pointer;
-    border-radius: 40px;
-    transition: all 0.25s ease;
-    font-family: 'DM Sans', sans-serif;
-    text-align: center;
-    letter-spacing: 0.3px;
-}
-
-.auth-tab.active {
-    background: #ffffff;    /* fondo blanco */
-    color: #1a237e;         /* texto azul primario */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
-.auth-tab:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.3);
-    color: #1e293b;
 }
