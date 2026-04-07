@@ -1131,3 +1131,40 @@ body {
     border-top: 1px solid var(--border);
     margin-top: 4px;
 }
+
+/* ========== PESTAÑAS PROFESIONALES (login/registro) ========== */
+.auth-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f1f5f9;  /* fondo gris suave */
+    padding: 0.5rem;
+    border-radius: 60px;   /* forma de pastilla */
+    margin-bottom: 2rem;
+}
+
+.auth-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0.75rem 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;        /* gris azulado */
+    cursor: pointer;
+    border-radius: 40px;
+    transition: all 0.25s ease;
+    font-family: 'DM Sans', sans-serif;
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.auth-tab.active {
+    background: #ffffff;    /* fondo blanco */
+    color: #1a237e;         /* texto azul primario */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.auth-tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.3);
+    color: #1e293b;
+}
