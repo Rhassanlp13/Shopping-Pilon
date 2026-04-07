@@ -9,7 +9,6 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Estilos específicos para admin (ya están en style.css, pero se incluyen por si acaso) */
         .shell { display: none; min-height: 100vh; }
         .shell.visible { display: grid; grid-template-columns: 220px 1fr; }
         @media (max-width: 700px) { .shell.visible { grid-template-columns: 1fr; } .sidebar { display: none; } }
@@ -43,9 +42,9 @@
         </main>
     </div>
 
-    <!-- Modales de producto y borrar (igual que antes) -->
-    <div class="modal-overlay" id="modal-producto" hidden>... (contenido igual al que tenías) ...</div>
-    <div class="modal-overlay" id="modal-borrar" hidden>... (contenido igual) ...</div>
+    <!-- Modal producto (incluye el contenido completo que ya tenías) -->
+    <div class="modal-overlay" id="modal-producto" hidden>...</div>
+    <div class="modal-overlay" id="modal-borrar" hidden>...</div>
     <div id="toast-admin"></div>
 
     <script type="module" src="js/admin.js"></script>
