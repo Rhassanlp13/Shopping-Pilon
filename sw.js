@@ -1,32 +1,23 @@
-// Estrategia: HTML siempre desde red, estáticos desde caché con actualización automática
-const CACHE_NAME = 'shopping-pilon-v1';
+const CACHE_NAME = 'shopping-pilon-v9';
 const STATIC_ASSETS = [
-  '/style.css',
-  '/js/app.js',
-  '/js/auth.js',
-  '/js/ui.js',
-  '/js/carrito.js',
-  '/js/productos.js',
-  '/js/supabase.js',
-  '/js/config.js',
-  '/js/admin.js',
-  '/js/confirmar.js',
-  '/js/modules/toast.js',
-  '/js/utils/escape.js',
+  '/',
+  '/index.html',
+  '/admin.html',
+  '/confirmar.html',
   'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 ];
 
-// Instalación: guardar estáticos
+// Instalación: solo guarda lo mínimo
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting(); // Activar inmediatamente
+  self.skipWaiting();
 });
 
-// Activación: limpiar cachés antiguas y tomar control
+// Activación: limpia viejas
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
@@ -36,48 +27,20 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: HTML siempre desde red, estáticos desde caché (con actualización en segundo plano)
+// Fetch: CSS y JS siempre desde la red (nunca desde caché)
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  const isStatic = STATIC_ASSETS.some(asset => url.pathname === asset) || 
-                   url.pathname.startsWith('/js/') || 
-                   url.pathname === '/style.css';
   
-  // Páginas HTML: siempre desde red
-  if (event.request.mode === 'navigate' || 
-      url.pathname === '/' || 
-      url.pathname.endsWith('.html')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
-  } 
-  // Recursos estáticos: caché primero, luego red, y actualizar caché en segundo plano
-  else if (isStatic) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        const fetchPromise = fetch(event.request).then(networkResponse => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return networkResponse;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
-    );
+  // Los archivos CSS y JS nunca se cachean → siempre actuales
+  if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js')) {
+    event.respondWith(fetch(event.request));
+    return;
   }
-  // El resto (imágenes, etc.) -> caché primero, red después
-  else {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        return cached || fetch(event.request).then(networkResponse => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return networkResponse;
-        });
-      })
-    );
-  }
+  
+  // Para el resto: intenta caché, si no, red
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
 });
