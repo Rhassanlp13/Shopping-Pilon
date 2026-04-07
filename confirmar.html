@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirmar Pedido - Shopping Pilón</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
@@ -20,65 +17,58 @@
             align-items: center;
             min-height: 100vh;
         }
-
         .container {
             max-width: 600px;
             width: 100%;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-
         .header {
             background: #1a237e;
             color: white;
             padding: 1.5rem;
             text-align: center;
         }
-
         .header h1 {
             font-family: 'Playfair Display', serif;
             margin: 0;
             font-size: 1.5rem;
         }
-
         .header p {
             margin: 0.5rem 0 0;
             opacity: 0.8;
         }
-
         .content {
             padding: 1.5rem;
         }
-
         .pedido-info {
             background: #f8f9fa;
             border-radius: 12px;
             padding: 1rem;
             margin-bottom: 1.5rem;
         }
-
+        .pedido-info p {
+            margin: 0.5rem 0;
+        }
         .productos {
             border-top: 1px solid #e0e0e0;
             margin-top: 1rem;
             padding-top: 1rem;
         }
-
         .producto-item {
             display: flex;
             justify-content: space-between;
             padding: 0.5rem 0;
             border-bottom: 1px solid #f0f0f0;
         }
-
         .total {
             font-weight: bold;
             font-size: 1.2rem;
             text-align: right;
             margin-top: 1rem;
         }
-
         .btn-confirmar {
             background: #25d366;
             color: white;
@@ -90,13 +80,15 @@
             cursor: pointer;
             width: 100%;
             margin-top: 1rem;
+            transition: background 0.2s;
         }
-
+        .btn-confirmar:hover {
+            background: #128c7e;
+        }
         .btn-confirmar:disabled {
             background: #ccc;
             cursor: not-allowed;
         }
-
         .mensaje {
             margin-top: 1rem;
             padding: 0.75rem;
@@ -104,26 +96,22 @@
             text-align: center;
             display: none;
         }
-
         .mensaje.success {
             background: #d4edda;
             color: #155724;
             display: block;
         }
-
         .mensaje.error {
             background: #f8d7da;
             color: #721c24;
             display: block;
         }
-
         .loading {
             text-align: center;
             padding: 1rem;
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header">
@@ -131,14 +119,110 @@
             <p>Revisa los detalles y confirma para actualizar el stock</p>
         </div>
         <div class="content">
-            <div id="loading" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
-            <div id="pedido-info" style="display:none;"></div>
-            <button id="btn-confirmar" class="btn-confirmar" style="display:none;">Confirmar Pedido</button>
+            <div id="loading" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Cargando información del pedido...
+            </div>
+            <div id="pedido-info" style="display: none;"></div>
+            <button id="btn-confirmar" class="btn-confirmar" style="display: none;">
+                <i class="fas fa-check"></i> Confirmar Pedido
+            </button>
             <div id="mensaje" class="mensaje"></div>
         </div>
     </div>
 
-    <script type="module" src="/js/confirmar.js"></script>
-</body>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
+        const supabaseUrl = 'https://cbusrojcmjbgfydpyffe.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNidXNyb2pjbWpiZ2Z5ZHB5ZmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMjI0NDcsImV4cCI6MjA4OTY5ODQ0N30.DIBaBedFSLz5aEplmJgCmPvwKu1xn2JN6mDAjjljFbQ';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const pedidoId = urlParams.get('pedido');
+
+        if (!pedidoId) {
+            document.getElementById('loading').style.display = 'none';
+            const div = document.getElementById('pedido-info');
+            div.style.display = 'block';
+            div.innerHTML = '<p style="color: red;">Error: No se especificó un pedido.</p>';
+            return;
+        }
+
+        async function cargarPedido() {
+            try {
+                const { data, error } = await supabase
+                    .from('pedidos')
+                    .select('*')
+                    .eq('id', pedidoId)
+                    .single();
+
+                if (error || !data) {
+                    throw new Error('Pedido no encontrado');
+                }
+
+                const pedido = data;
+                document.getElementById('loading').style.display = 'none';
+                const infoDiv = document.getElementById('pedido-info');
+                infoDiv.style.display = 'block';
+
+                let productosHtml = '<div class="productos"><h3>Productos:</h3>';
+                pedido.productos.forEach(prod => {
+                    productosHtml += `
+                        <div class="producto-item">
+                            <span>${prod.nombre} x${prod.cantidad}</span>
+                            <span>$${(prod.precio * prod.cantidad).toLocaleString('es-CU')}</span>
+                        </div>
+                    `;
+                });
+                productosHtml += `</div><div class="total">Total: $${pedido.total.toLocaleString('es-CU')}</div>`;
+
+                infoDiv.innerHTML = `
+                    <div class="pedido-info">
+                        <p><strong>Cliente:</strong> ${pedido.cliente_nombre}</p>
+                        <p><strong>Teléfono:</strong> ${pedido.cliente_telefono}</p>
+                        <p><strong>Fecha:</strong> ${new Date(pedido.created_at).toLocaleString()}</p>
+                        ${productosHtml}
+                    </div>
+                `;
+
+                if (pedido.status === 'pendiente') {
+                    document.getElementById('btn-confirmar').style.display = 'block';
+                } else {
+                    document.getElementById('mensaje').innerHTML = '<i class="fas fa-check-circle"></i> Este pedido ya fue confirmado.';
+                    document.getElementById('mensaje').classList.add('success');
+                }
+            } catch (err) {
+                document.getElementById('loading').style.display = 'none';
+                const div = document.getElementById('pedido-info');
+                div.style.display = 'block';
+                div.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+            }
+        }
+
+        document.getElementById('btn-confirmar').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-confirmar');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando...';
+
+            try {
+                const { data, error } = await supabase.rpc('confirmar_pedido', { pedido_id: pedidoId });
+                if (error) throw error;
+                if (data && data.success) {
+                    document.getElementById('mensaje').innerHTML = '<i class="fas fa-check-circle"></i> Pedido confirmado. ¡Stock actualizado!';
+                    document.getElementById('mensaje').classList.add('success');
+                    btn.style.display = 'none';
+                } else {
+                    throw new Error(data?.error || 'Error al confirmar');
+                }
+            } catch (err) {
+                document.getElementById('mensaje').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: ${err.message}`;
+                document.getElementById('mensaje').classList.add('error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Pedido';
+            }
+        });
+
+        cargarPedido();
+    </script>
+</body>
 </html>
