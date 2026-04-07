@@ -63,19 +63,7 @@
                 <button class="modal-close" id="modal-close">&times;</button>
             </div>
             <div class="modal-body"><div id="cart-items"></div></div>
-            <div class="cliente-form" id="cliente-form">
-                <div class="cliente-form-title"><i class="fas fa-user"></i> Tus datos para el pedido</div>
-                <div class="cliente-inputs">
-                    <div class="cliente-group" id="g-cliente-nombre">
-                        <input type="text" id="cliente-nombre" placeholder="Tu nombre *" maxlength="50">
-                        <div class="cliente-error">Escribe tu nombre</div>
-                    </div>
-                    <div class="cliente-group" id="g-cliente-tel">
-                        <input type="tel" id="cliente-telefono" placeholder="Tu teléfono *" maxlength="20">
-                        <div class="cliente-error">Escribe tu teléfono</div>
-                    </div>
-                </div>
-            </div>
+            
             <div class="modal-footer">
                 <div class="total-row"><span>Total:</span><strong>$<span id="cart-total">0</span> CUP</strong></div>
                 <button class="btn-whatsapp" id="btn-whatsapp"><i class="fab fa-whatsapp"></i> Confirmar pedido</button>
@@ -178,19 +166,6 @@
     </footer>
 
     <script type="module" src="js/app.js"></script>
-    <script>
-        // Forzar desregistro de cualquier Service Worker residual
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                registrations.forEach(reg => reg.unregister());
-                console.log('Service Workers desregistrados');
-            });
-        }
-        // Recargar la página una vez para asegurar que se usen los nuevos recursos
-        if (!sessionStorage.getItem('reloaded')) {
-            sessionStorage.setItem('reloaded', 'true');
-            location.reload();
-        }
-    </script>
+    
 </body>
 </html>

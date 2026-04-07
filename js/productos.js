@@ -18,7 +18,7 @@ export async function cargarProductos() {
     // Intentar cargar desde caché (válido por 5 minutos)
     const cached = localStorage.getItem('productos_cache');
     const timestamp = localStorage.getItem('productos_cache_time');
-    if (cached && timestamp && (Date.now() - timestamp) < 1 * 60 * 1000) {
+    if (cached && timestamp && (Date.now() - timestamp) < 4 * 60 * 1000) {
         return { ok: true, data: JSON.parse(cached) };
     }
 

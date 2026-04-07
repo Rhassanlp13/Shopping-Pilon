@@ -739,54 +739,6 @@ body {
 }
 .grid-empty i { font-size: 2.5rem; display: block; margin-bottom: 1rem; }
 
-/* CLIENT FORM */
-.cliente-form {
-    padding: 1rem 1.2rem;
-    border-top: 1px solid #f0f0f0;
-    background: #fafafa;
-}
-.cliente-form-title {
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--primary);
-    margin-bottom: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.cliente-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-@media (max-width: 400px) {
-    .cliente-inputs { grid-template-columns: 1fr; }
-}
-.cliente-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.cliente-group input {
-    padding: 9px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.88rem;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
-    background: var(--white);
-}
-.cliente-group input:focus { border-color: var(--primary); }
-.cliente-group.error input { border-color: var(--danger); }
-.cliente-error {
-    font-size: 0.75rem;
-    color: var(--danger);
-    display: none;
-}
-.cliente-group.error .cliente-error { display: block; }
 
 /* OFERTAS */
 .seccion-header {
@@ -943,29 +895,34 @@ body {
     font-weight: bold;
 }
 
-/* ========== MODAL DE AUTENTICACIÓN PROFESIONAL (VERSIÓN ÚNICA) ========== */
+/* ========== MODAL DE AUTENTICACIÓN PROFESIONAL (CORREGIDO) ========== */
 #auth-modal .modal-box {
     max-width: 440px;
     border-radius: 28px;
     background: var(--white);
-    box-shadow: 0 30px 50px rgba(0,0,0,0.2);
+    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     animation: slideUp 0.3s ease;
 }
+
 #auth-modal .modal-header {
     background: var(--primary);
     padding: 1.2rem 1.5rem;
 }
+
 #auth-modal .modal-header h2 {
     font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: -0.3px;
+    color: white;
+    margin: 0;
 }
+
 #auth-modal .modal-body {
     padding: 1.8rem 1.5rem 2rem;
 }
 
-/* Pestañas profesionales (definitivas) */
+/* Pestañas - ahora usando .tab-btn (coincide con el HTML) */
 .auth-tabs {
     display: flex;
     gap: 0.5rem;
@@ -974,7 +931,8 @@ body {
     border-radius: 60px;
     margin-bottom: 2rem;
 }
-.auth-tab {
+
+.tab-btn {
     flex: 1;
     background: transparent;
     border: none;
@@ -989,12 +947,14 @@ body {
     text-align: center;
     letter-spacing: 0.3px;
 }
-.auth-tab.active {
+
+.tab-btn.active {
     background: #ffffff;
     color: #1a237e;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
-.auth-tab:hover:not(.active) {
+
+.tab-btn:hover:not(.active) {
     background: rgba(255, 255, 255, 0.3);
     color: #1e293b;
 }
@@ -1005,11 +965,12 @@ body {
     flex-direction: column;
     gap: 1.2rem;
 }
+
 .auth-form.active {
     display: flex;
 }
 
-/* Inputs modernos */
+/* Inputs y select */
 .auth-form input,
 .auth-form select {
     width: 100%;
@@ -1020,7 +981,10 @@ body {
     font-size: 0.95rem;
     font-family: 'DM Sans', sans-serif;
     transition: all 0.2s;
+    outline: none;
+    color: var(--text);
 }
+
 .auth-form input:focus,
 .auth-form select:focus {
     border-color: #1a237e;
@@ -1029,7 +993,7 @@ body {
     outline: none;
 }
 
-/* Botón de acción (Ingresar / Crear cuenta) */
+/* Botón principal (ingresar / crear cuenta) */
 .auth-form .btn-primary {
     background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
     border-radius: 60px;
@@ -1044,12 +1008,18 @@ body {
     margin-top: 0.8rem;
     width: 100%;
     text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
+
 .auth-form .btn-primary:hover {
     transform: translateY(-2px);
     background: linear-gradient(135deg, #0f195e 0%, #1a237e 100%);
     box-shadow: 0 10px 20px rgba(26, 35, 126, 0.3);
 }
+
 .auth-form .btn-primary:active {
     transform: translateY(1px);
 }
@@ -1063,16 +1033,19 @@ body {
     color: #e53e3e;
     text-align: center;
     border: 1px solid #fed7d7;
+    margin-top: 0.5rem;
 }
 
-/* Mejoras responsive para el modal en móvil */
+/* Responsive */
 @media (max-width: 480px) {
     #auth-modal .modal-body {
         padding: 1.5rem;
     }
+
     .auth-tabs {
         margin-bottom: 1.5rem;
     }
+
     .auth-form input,
     .auth-form select {
         padding: 12px 14px;
@@ -1080,52 +1053,102 @@ body {
     }
 }
 
-/* Dropdown de usuario mejorado */
+/* ========== DROPDOWN DE USUARIO ========== */
 .user-dropdown {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 10px);
     right: 0;
-    background: var(--white);
+    background: white;
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    min-width: 220px;
     z-index: 1000;
     display: none;
     overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
     animation: fadeIn 0.2s ease;
 }
+
 .user-dropdown.show {
     display: block;
 }
-.user-dropdown .user-email {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
+
+.user-dropdown-header {
+    padding: 14px 16px;
+    background: #f8f9fc;
+    border-bottom: 1px solid #eef2f6;
     font-size: 0.8rem;
-    color: var(--text-muted);
-    background: var(--bg);
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     word-break: break-all;
 }
+
+.user-dropdown-header i {
+    color: #1a237e;
+    font-size: 0.9rem;
+}
+
 .user-dropdown a,
 .user-dropdown button {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     width: 100%;
     text-align: left;
-    padding: 10px 16px;
+    padding: 12px 16px;
     background: none;
     border: none;
     font-size: 0.85rem;
     cursor: pointer;
     text-decoration: none;
-    color: var(--text);
-    transition: background 0.2s;
+    color: #334155;
+    transition: all 0.2s;
     font-family: 'DM Sans', sans-serif;
 }
+
+.user-dropdown a i,
+.user-dropdown button i {
+    width: 18px;
+    text-align: center;
+    color: #64748b;
+}
+
 .user-dropdown a:hover,
 .user-dropdown button:hover {
-    background: var(--bg);
+    background: #f1f5f9;
+    color: #1a237e;
 }
+
+.user-dropdown a:hover i,
+.user-dropdown button:hover i {
+    color: #1a237e;
+}
+
 .user-dropdown button {
-    color: var(--danger);
-    border-top: 1px solid var(--border);
+    border-top: 1px solid #eef2f6;
     margin-top: 4px;
+    color: #e53935;
+}
+
+.user-dropdown button i {
+    color: #e53935;
+}
+
+.user-dropdown button:hover {
+    background: #fff5f5;
+    color: #c62828;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

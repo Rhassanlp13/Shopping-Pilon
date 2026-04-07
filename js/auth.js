@@ -51,30 +51,62 @@ async function loadUserRole() {
 function updateUIForLoggedIn() {
     const userBtn = document.getElementById('user-btn');
     if (!userBtn) return;
+
     const container = userBtn.parentNode;
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
+
+    // Cambiar el icono del botón
     userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
     userBtn.style.cursor = 'pointer';
+    userBtn.style.position = 'relative';
+
+    // Crear el menú desplegable con estructura limpia
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
+
+    // Mostrar email de forma segura
+    const emailText = currentUser?.email || 'Usuario';
     userMenu.innerHTML = `
-        <div class="user-email">${escapeHtml(currentUser.email)}</div>
-        <a href="#" id="profile-link">Mi perfil</a>
-        ${(currentRole === 'seller' || currentRole === 'admin') ? '<a href="/admin.html" id="admin-link">Panel de vendedor</a>' : ''}
-        <button id="logout-btn">Cerrar sesión</button>
+        <div class="user-dropdown-header">
+            <i class="fas fa-envelope"></i> ${escapeHtml(emailText)}
+        </div>
+        
+        ${(currentRole === 'seller' || currentRole === 'admin') ? `
+        <a href="/admin.html" id="admin-link">
+            <i class="fas fa-chalkboard-user"></i> Panel de vendedor
+        </a>` : ''}
+        <button id="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </button>
     `;
+
     container.style.position = 'relative';
     container.appendChild(userMenu);
-    const toggleDropdown = (e) => { e.stopPropagation(); userMenu.classList.toggle('show'); };
+
+    // Alternar visibilidad al hacer clic en el botón
+    const toggleDropdown = (e) => {
+        e.stopPropagation();
+        userMenu.classList.toggle('show');
+    };
     userBtn.addEventListener('click', toggleDropdown);
-    document.addEventListener('click', () => userMenu.classList.remove('show'));
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        mostrarToast('Sesión cerrada', 'info');
-        location.reload();
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            userMenu.classList.remove('show');
+        }
     });
+
+    // Evento de cierre de sesión
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            mostrarToast('Sesión cerrada', 'info');
+            location.reload();
+        });
+    }
 }
 
 function updateUIForLoggedOut() {
