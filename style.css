@@ -1108,3 +1108,94 @@ body {
     border-top: 1px solid var(--border);
     margin-top: 4px;
 }
+
+/* ========== MEJORA DE BOTONES EN MODAL DE AUTENTICACIÓN ========== */
+
+/* Pestañas Iniciar sesión / Registrarme */
+.auth-tabs {
+    display: flex;
+    gap: 0.8rem;
+    background: #f0f2f5;
+    padding: 0.5rem;
+    border-radius: 60px;
+    margin-bottom: 2rem;
+}
+
+.auth-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0.8rem 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #5a6a7e;
+    cursor: pointer;
+    border-radius: 40px;
+    transition: all 0.25s ease;
+    font-family: 'DM Sans', sans-serif;
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.auth-tab.active {
+    background: #ffffff;
+    color: #1a237e;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Botón Crear cuenta (y también el de Ingresar) */
+.auth-form .btn-primary {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    border-radius: 60px;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 14px rgba(26, 35, 126, 0.25);
+    margin-top: 0.8rem;
+    width: 100%;
+    text-align: center;
+}
+
+.auth-form .btn-primary:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #0f195e 0%, #1a237e 100%);
+    box-shadow: 0 10px 20px rgba(26, 35, 126, 0.3);
+}
+
+.auth-form .btn-primary:active {
+    transform: translateY(1px);
+}
+
+/* Inputs más modernos */
+.auth-form input,
+.auth-form select {
+    background: #f8f9fc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.auth-form input:focus,
+.auth-form select:focus {
+    border-color: #1a237e;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+    outline: none;
+}
+
+/* Mensaje de error más elegante */
+.error-msg {
+    background: #fff5f5;
+    border-radius: 40px;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #e53e3e;
+    text-align: center;
+    border: 1px solid #fed7d7;
+}
