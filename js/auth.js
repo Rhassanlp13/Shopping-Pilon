@@ -4,16 +4,6 @@ import { mostrarToast } from './modules/toast.js';
 let currentUser = null;
 let currentRole = null;
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
 export async function initAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -36,105 +26,67 @@ export async function initAuth() {
 
 async function loadUserRole() {
     if (!currentUser) return;
-
-    // Intentar obtener el rol
-    let { data, error } = await supabase
+    const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', currentUser.id)
         .maybeSingle();
-
-    // Si hay un error de servidor (500) o de conexión, no intentamos crear el perfil
     if (error) {
         console.error('Error al consultar perfil:', error);
-        // Mostrar un mensaje amigable
         mostrarToast('Error al verificar tu cuenta. Intenta recargar la página.', 'error');
-        currentRole = 'customer'; // fallback
+        currentRole = 'customer';
         return;
     }
-
-    // Si no existe el perfil, lo creamos
     if (!data) {
-        console.log('Perfil no encontrado, creando uno por defecto...');
-        const { error: insertError } = await supabase
-            .from('profiles')
-            .upsert({
-                id: currentUser.id,
-                email: currentUser.email,
-                role: 'customer'
-            }, { onConflict: 'id' }); // ← upsert evita el error 409
-
-        if (insertError) {
-            console.error('Error al crear perfil:', insertError);
-            currentRole = 'customer';
-        } else {
-            currentRole = 'customer';
-            console.log('Perfil creado exitosamente');
-        }
+        await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: 'customer' }, { onConflict: 'id' });
+        currentRole = 'customer';
         return;
     }
-
-    // Perfil existe, asignamos el rol (normalizamos 'administrativo' a 'admin')
     let role = data.role;
-    if (role === 'administrativo') role = 'admin';  // ← compatibilidad
+    if (role === 'administrativo') role = 'admin';
     currentRole = role || 'customer';
 }
 
 function updateUIForLoggedIn() {
     const userBtn = document.getElementById('user-btn');
-    if (userBtn) {
-        userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
-        const existingDropdown = userBtn.parentNode.querySelector('.user-dropdown');
-        if (existingDropdown) existingDropdown.remove();
-
-        const userMenu = document.createElement('div');
-        userMenu.className = 'user-dropdown';
-        userMenu.innerHTML = `
-            <div class="user-email">${escapeHtml(currentUser.email)}</div>
-            <a href="#" id="profile-link">Mi perfil</a>
-            ${(currentRole === 'seller' || currentRole === 'admin') ? '<a href="/admin.html" id="admin-link">Panel de vendedor</a>' : ''}
-            <button id="logout-btn">Cerrar sesión</button>
-        `;
-        userBtn.parentNode.style.position = 'relative';
-        userBtn.parentNode.appendChild(userMenu);
-
-        userBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userMenu.classList.toggle('show');
-        });
-        document.addEventListener('click', () => userMenu.classList.remove('show'));
-
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                await supabase.auth.signOut();
-                mostrarToast('Sesión cerrada', 'info');
-                location.reload();
-            });
-        }
-    }
-    const authBtn = document.getElementById('auth-btn');
-    if (authBtn) authBtn.style.display = 'none';
+    if (!userBtn) return;
+    const container = userBtn.parentNode;
+    const oldDropdown = container.querySelector('.user-dropdown');
+    if (oldDropdown) oldDropdown.remove();
+    userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
+    userBtn.style.cursor = 'pointer';
+    const userMenu = document.createElement('div');
+    userMenu.className = 'user-dropdown';
+    userMenu.innerHTML = `
+        <div class="user-email">${escapeHtml(currentUser.email)}</div>
+        <a href="#" id="profile-link">Mi perfil</a>
+        ${(currentRole === 'seller' || currentRole === 'admin') ? '<a href="/admin.html" id="admin-link">Panel de vendedor</a>' : ''}
+        <button id="logout-btn">Cerrar sesión</button>
+    `;
+    container.style.position = 'relative';
+    container.appendChild(userMenu);
+    const toggleDropdown = (e) => { e.stopPropagation(); userMenu.classList.toggle('show'); };
+    userBtn.addEventListener('click', toggleDropdown);
+    document.addEventListener('click', () => userMenu.classList.remove('show'));
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', async () => { await supabase.auth.signOut(); mostrarToast('Sesión cerrada', 'info'); location.reload(); });
 }
 
 function updateUIForLoggedOut() {
     const userBtn = document.getElementById('user-btn');
-    if (userBtn) {
-        userBtn.innerHTML = `<i class="fas fa-user"></i>`;
-        const dropdown = userBtn.parentNode.querySelector('.user-dropdown');
-        if (dropdown) dropdown.remove();
-        // Reemplazar event listener
-        userBtn.replaceWith(userBtn.cloneNode(true));
-        const newUserBtn = document.getElementById('user-btn');
-        if (newUserBtn) newUserBtn.addEventListener('click', () => openAuthModal());
-    }
+    if (!userBtn) return;
+    userBtn.innerHTML = `<i class="fas fa-user"></i>`;
+    const dropdown = userBtn.parentNode.querySelector('.user-dropdown');
+    if (dropdown) dropdown.remove();
+    const newUserBtn = userBtn.cloneNode(true);
+    userBtn.parentNode.replaceChild(newUserBtn, userBtn);
+    newUserBtn.addEventListener('click', () => openAuthModal());
 }
 
 export function openAuthModal(preselectedRole = null) {
     const modal = document.getElementById('auth-modal');
     if (!modal) return;
     modal.removeAttribute('hidden');
-
     document.getElementById('login-email').value = '';
     document.getElementById('login-password').value = '';
     document.getElementById('reg-email').value = '';
@@ -144,7 +96,6 @@ export function openAuthModal(preselectedRole = null) {
     if (roleSelect) roleSelect.value = 'customer';
     document.getElementById('login-error').style.display = 'none';
     document.getElementById('register-error').style.display = 'none';
-
     if (preselectedRole === 'seller') {
         switchTab('register');
         if (roleSelect) roleSelect.value = 'seller';
@@ -185,7 +136,6 @@ async function handleLogin() {
         if (error) throw error;
         closeAuthModal();
         mostrarToast(`Bienvenido, ${email}`, 'ok');
-        location.reload();
     } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
@@ -221,23 +171,12 @@ async function handleRegister() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
     errorDiv.style.display = 'none';
     try {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { role } }
-        });
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { role } } });
         if (error) throw error;
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
-
-        // Usar upsert para evitar duplicados
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({ id: user.id, email, role }, { onConflict: 'id' });
-        if (profileError) console.error('Error al crear perfil:', profileError);
-
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
+        await supabase.from('profiles').upsert({ id: user.id, email, role }, { onConflict: 'id' });
+        await supabase.auth.signInWithPassword({ email, password });
         closeAuthModal();
         if (role === 'seller') {
             mostrarToast('Registro exitoso. Ahora puedes acceder al panel de vendedor.', 'info');
@@ -264,13 +203,16 @@ export function bindAuthEvents() {
     const userBtn = document.getElementById('user-btn');
     if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeAuthModal(); });
-    if (tabs) tabs.forEach(tab => {
-        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    });
+    if (tabs) tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
     if (loginBtn) loginBtn.addEventListener('click', handleLogin);
     if (registerBtn) registerBtn.addEventListener('click', handleRegister);
-    if (userBtn && !currentUser) userBtn.addEventListener('click', openAuthModal);
+    if (userBtn && !currentUser) userBtn.addEventListener('click', () => openAuthModal());
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
     });
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
