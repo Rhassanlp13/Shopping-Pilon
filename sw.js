@@ -1,9 +1,6 @@
-const CACHE_NAME = 'shopping-pilon-v7';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/admin.html',
-  '/confirmar.html',
+// Estrategia: HTML siempre desde red, estáticos desde caché
+const CACHE_NAME = 'shopping-pilon-static-v1';
+const STATIC_ASSETS = [
   '/style.css',
   '/js/app.js',
   '/js/auth.js',
@@ -21,28 +18,48 @@ const urlsToCache = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 ];
 
+// Instalación: guardar estáticos
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
+  self.skipWaiting(); // Activar inmediatamente
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
-  );
-});
-
+// Activación: limpiar cachés antiguas
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    ))
   );
+  self.clients.claim(); // Tomar control de las páginas abiertas
+});
+
+// Fetch: HTML siempre desde red, estáticos desde caché
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // Si es HTML (página) -> ir a la red siempre
+  if (event.request.mode === 'navigate' || 
+      url.pathname === '/' || 
+      url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+  } 
+  // Para estáticos (CSS, JS, fuentes) -> caché primero
+  else {
+    event.respondWith(
+      caches.match(event.request).then(response => 
+        response || fetch(event.request).then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+      )
+    );
+  }
 });
