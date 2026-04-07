@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shopping-pilon-v2'; // antes era v1
+const CACHE_NAME = 'shopping-pilon-v3'; // 🔄 Cambia la versión para renovar caché
 const urlsToCache = [
   '/',
   '/index.html',
