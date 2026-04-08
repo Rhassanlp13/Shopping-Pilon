@@ -249,74 +249,90 @@ function validarTelefonoCubano(tel) {
 }
 
 async function guardarProducto() {
-    const nombre = document.getElementById('f-nombre').value.trim();
-    const precio = parseFloat(document.getElementById('f-precio').value);
-    const stock = parseInt(document.getElementById('f-stock').value);
-    const vendedor = document.getElementById('f-vendedor').value.trim();
-    let telefonovendedor = document.getElementById('f-telefono-vendedor').value.trim();
-    const imagen = document.getElementById('f-imagen').value.trim();
-    const enOferta = document.getElementById('f-en-oferta').checked;
-    const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
+    const btnGuardar = document.getElementById('btn-guardar');
+    const textoOriginal = btnGuardar.innerHTML;
 
-    if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor || !imagen) {
-        mostrarToast('Completa los campos obligatorios', 'error');
-        return;
-    }
-    if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) {
-        mostrarToast('El teléfono del vendedor debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error');
-        return;
-    }
-    if (!telefonovendedor) telefonovendedor = null;
+    // Deshabilitar botón y mostrar spinner
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
-    const variantes = [];
-    document.querySelectorAll('.variante-item').forEach(item => {
-        const nombreVar = item.querySelector('.var-nombre')?.value.trim();
-        if (!nombreVar) return;
-        const precioVar = parseFloat(item.querySelector('.var-precio')?.value);
-        const stockVar = parseInt(item.querySelector('.var-stock')?.value);
-        const imagenVar = item.querySelector('.var-imagen')?.value.trim();
-        variantes.push({
-            nombre: nombreVar,
-            precio: isNaN(precioVar) ? null : precioVar,
-            stock: isNaN(stockVar) ? 0 : stockVar,
-            imagen: imagenVar || null
+    try {
+        const nombre = document.getElementById('f-nombre').value.trim();
+        const precio = parseFloat(document.getElementById('f-precio').value);
+        const stock = parseInt(document.getElementById('f-stock').value);
+        const vendedor = document.getElementById('f-vendedor').value.trim();
+        let telefonovendedor = document.getElementById('f-telefono-vendedor').value.trim();
+        const imagen = document.getElementById('f-imagen').value.trim();
+        const enOferta = document.getElementById('f-en-oferta').checked;
+        const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
+
+        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor || !imagen) {
+            mostrarToast('Completa los campos obligatorios', 'error');
+            return;
+        }
+        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) {
+            mostrarToast('El teléfono del vendedor debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error');
+            return;
+        }
+        if (!telefonovendedor) telefonovendedor = null;
+
+        const variantes = [];
+        document.querySelectorAll('.variante-item').forEach(item => {
+            const nombreVar = item.querySelector('.var-nombre')?.value.trim();
+            if (!nombreVar) return;
+            const precioVar = parseFloat(item.querySelector('.var-precio')?.value);
+            const stockVar = parseInt(item.querySelector('.var-stock')?.value);
+            const imagenVar = item.querySelector('.var-imagen')?.value.trim();
+            variantes.push({
+                nombre: nombreVar,
+                precio: isNaN(precioVar) ? null : precioVar,
+                stock: isNaN(stockVar) ? 0 : stockVar,
+                imagen: imagenVar || null
+            });
         });
-    });
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        mostrarToast('Debes iniciar sesión', 'error');
-        return;
-    }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            mostrarToast('Debes iniciar sesión', 'error');
+            return;
+        }
 
-    const productoData = {
-        nombre,
-        precio,
-        stock,
-        imagen,
-        vendedor,
-        telefonovendedor,
-        enoferta: enOferta,
-        preciooferta: precioOferta,
-        variantes: variantes.length ? variantes : [],
-        seller_id: user.id
-    };
+        const productoData = {
+            nombre,
+            precio,
+            stock,
+            imagen,
+            vendedor,
+            telefonovendedor,
+            enoferta: enOferta,
+            preciooferta: precioOferta,   // ← nombre correcto
+            variantes: variantes.length ? variantes : [],
+            seller_id: user.id
+        };
 
-    let error;
-    if (editandoId) {
-        const { error: updateError } = await supabase.from('productos').update(productoData).eq('id', editandoId);
-        error = updateError;
-    } else {
-        const { error: insertError } = await supabase.from('productos').insert([productoData]);
-        error = insertError;
-    }
+        let error;
+        if (editandoId) {
+            const { error: updateError } = await supabase.from('productos').update(productoData).eq('id', editandoId);
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabase.from('productos').insert([productoData]);
+            error = insertError;
+        }
 
-    if (error) {
-        mostrarToast('Error al guardar producto', 'error');
-    } else {
-        mostrarToast('Producto guardado', 'ok');
-        cerrarModal();
-        cargarProductos();
+        if (error) {
+            mostrarToast('Error al guardar producto', 'error');
+        } else {
+            mostrarToast('Producto guardado', 'ok');
+            cerrarModal();
+            cargarProductos();
+        }
+    } catch (err) {
+        console.error(err);
+        mostrarToast('Error inesperado', 'error');
+    } finally {
+        // Restaurar botón
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = textoOriginal;
     }
 }
 
