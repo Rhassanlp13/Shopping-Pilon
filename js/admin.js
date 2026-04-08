@@ -297,7 +297,7 @@ async function guardarProducto() {
         vendedor,
         telefonovendedor,
         enoferta: enOferta,
-        precio_oferta: precioOferta,
+        preciooferta: precioOferta,
         variantes: variantes.length ? variantes : [],
         seller_id: user.id
     };
