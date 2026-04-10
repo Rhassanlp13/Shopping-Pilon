@@ -1178,3 +1178,42 @@ body {
     font-size: 0.85rem;
     opacity: 0.7;
 }
+
+.detalle-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.detalle-btn-add,
+.detalle-btn-share {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.detalle-btn-share {
+    background: #25d366;
+    color: white;
+}
+
+.detalle-btn-share:hover {
+    filter: brightness(0.9);
+}
+
+.detalle-btn-add {
+    background: var(--primary);
+    color: white;
+}
+
+.detalle-btn-add:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
