@@ -1,7 +1,6 @@
 {
   "name": "Shopping Pilón",
-  "short_name": "Shopping Pilón",
-  "description": "Tu mercado en Pilón: compra y vende desde casa",
+  "short_name": "Pilón Shop",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#1a237e",
