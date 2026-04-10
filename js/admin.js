@@ -1,6 +1,20 @@
+// admin.js - Corregido: oferta 0, optimización imágenes, validación eliminación
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
+
+// Función auxiliar para optimizar imágenes (misma lógica que en ui.js)
+function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
+    if (!url) return '';
+    if (url.includes('unsplash.com')) {
+        const baseUrl = url.split('?')[0];
+        return `${baseUrl}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
+    }
+    if (url.includes('cloudinary.com')) {
+        return url.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
+    }
+    return url;
+}
 
 let productos = [];
 let pedidos = [];
@@ -52,7 +66,6 @@ async function iniciar() {
     if (buscador) buscador.addEventListener('input', e => renderTabla(e.target.value.trim().toLowerCase()));
 }
 
-// ======================== PRODUCTOS ========================
 async function cargarProductos() {
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -92,10 +105,10 @@ function renderTabla(filtro = '') {
     }
     tablaDiv.innerHTML = `<table class="admin-table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr></thead><tbody>${lista.map(p => `
         <tr>
-            <td><img src="${escapeHtml(p.imagen)}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
-            <td>$${Number(p.precio).toLocaleString('es-CU')} CUP</td>
+            <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
+            <td>$${Number(p.precio).toLocaleString('es')} CUP</td>
             <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
-            <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es-CU')}</span>` : '—'}</td>
+            <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
             <td>${p.variantes?.length > 0 ? `<span class="badge badge-variant">${p.variantes.length} var.</span>` : '—'}</td>
             <td><div class="actions"><button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button><button class="act-btn del" data-del="${p.id}" data-nombre="${escapeHtml(p.nombre)}"><i class="fas fa-trash"></i></button></div></td>
         </tr>`).join('')}</tbody></table>`;
@@ -103,7 +116,6 @@ function renderTabla(filtro = '') {
     document.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', () => abrirBorrar(btn.dataset.del, btn.dataset.nombre)));
 }
 
-// ======================== PEDIDOS ========================
 async function cargarPedidos() {
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -133,9 +145,9 @@ function renderPedidos() {
             <td>${escapeHtml(p.cliente_nombre)}</td>
             <td>${escapeHtml(p.cliente_telefono)}</td>
             <td>${new Date(p.created_at).toLocaleString()}</td>
-            <td>$${Number(p.total).toLocaleString('es-CU')}</td>
+            <td>$${Number(p.total).toLocaleString('es')}</td>
             <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
-            <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es-CU')}</li>`).join('')}</ul></td>
+            <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
             <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
         </tr>`).join('')}</tbody></table>`;
     document.querySelectorAll('.confirmar-pedido').forEach(btn => btn.addEventListener('click', () => confirmarPedido(btn.dataset.id)));
@@ -157,7 +169,6 @@ async function confirmarPedido(pedidoId) {
     }
 }
 
-// ======================== RESEÑAS (solo admin) ========================
 async function cargarResenas() {
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -195,7 +206,6 @@ function renderResenas() {
         </tr>`).join('')}</tbody></table>`;
 }
 
-// ======================== CRUD PRODUCTOS ========================
 function abrirNuevo() {
     editandoId = null;
     document.getElementById('modal-titulo').innerText = 'Nuevo producto';
@@ -214,7 +224,8 @@ function abrirEditar(id) {
     document.getElementById('f-vendedor').value = prod.vendedor;
     document.getElementById('f-telefono-vendedor').value = prod.telefonovendedor || '';
     document.getElementById('f-imagen').value = prod.imagen;
-    document.getElementById('f-precio-oferta').value = prod.preciooferta || '';
+    // CORRECCIÓN: usar ?? para respetar el valor 0
+    document.getElementById('f-precio-oferta').value = prod.preciooferta ?? '';
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
     const variantesDiv = document.getElementById('variantes-list');
     variantesDiv.innerHTML = '';
@@ -237,14 +248,14 @@ function limpiarFormulario() {
 function agregarVariante(v = null, index = null) {
     const div = document.createElement('div');
     div.className = 'variante-item';
-    div.innerHTML = `<button class="btn-rm-variante" type="button"><i class="fas fa-times"></i></button><div class="variante-fila"><div class="form-group"><label>Nombre</label><input type="text" class="var-nombre" placeholder="Ej: Rojo, XL" value="${escapeHtml(v?.nombre || '')}"></div><div class="form-group"><label>Precio (CUP)</label><input type="number" class="var-precio" placeholder="Opcional" value="${v?.precio || ''}"></div></div><div class="variante-fila"><div class="form-group"><label>Stock</label><input type="number" class="var-stock" placeholder="Cantidad" value="${v?.stock || ''}"></div><div class="form-group"><label>Imagen URL</label><input type="url" class="var-imagen" placeholder="https://..." value="${escapeHtml(v?.imagen || '')}"></div></div>`;
+    div.innerHTML = `<button class="btn-rm-variante" type="button"><i class="fas fa-times"></i></button><div class="variante-fila"><div class="form-group"><label>Nombre</label><input type="text" class="var-nombre" placeholder="Ej: Rojo, XL" value="${escapeHtml(v?.nombre || '')}"></div><div class="form-group"><label>Precio (CUP)</label><input type="number" class="var-precio" placeholder="Opcional" value="${v?.precio ?? ''}"></div></div><div class="variante-fila"><div class="form-group"><label>Stock</label><input type="number" class="var-stock" placeholder="Cantidad" value="${v?.stock ?? ''}"></div><div class="form-group"><label>Imagen URL</label><input type="url" class="var-imagen" placeholder="https://..." value="${escapeHtml(v?.imagen || '')}"></div></div>`;
     div.querySelector('.btn-rm-variante').addEventListener('click', () => div.remove());
     document.getElementById('variantes-list').appendChild(div);
 }
 
 function validarTelefonoCubano(tel) {
     const cleaned = tel.replace(/\s+/g, '');
-    const regex = /^5[0-9]{7}$/; // 5 + 7 dígitos = 8 dígitos
+    const regex = /^5[0-9]{7}$/;
     return regex.test(cleaned);
 }
 
@@ -252,7 +263,6 @@ async function guardarProducto() {
     const btnGuardar = document.getElementById('btn-guardar');
     const textoOriginal = btnGuardar.innerHTML;
 
-    // Deshabilitar botón y mostrar spinner
     btnGuardar.disabled = true;
     btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
@@ -305,7 +315,7 @@ async function guardarProducto() {
             vendedor,
             telefonovendedor,
             enoferta: enOferta,
-            preciooferta: precioOferta,   // ← nombre correcto
+            preciooferta: precioOferta,
             variantes: variantes.length ? variantes : [],
             seller_id: user.id
         };
@@ -330,7 +340,6 @@ async function guardarProducto() {
         console.error(err);
         mostrarToast('Error inesperado', 'error');
     } finally {
-        // Restaurar botón
         btnGuardar.disabled = false;
         btnGuardar.innerHTML = textoOriginal;
     }
@@ -353,6 +362,25 @@ function cerrarBorrar() {
 
 async function eliminarProducto() {
     if (!borrandoId) return;
+
+    // Verificar si el producto tiene pedidos asociados (prevención)
+    const { data: pedidosRelacionados, error: searchError } = await supabase
+        .from('pedidos')
+        .select('id')
+        .filter('productos::text', 'ilike', `%"id":"${borrandoId}"%`)
+        .limit(1);
+
+    if (searchError) {
+        console.error('Error al verificar pedidos:', searchError);
+        mostrarToast('No se pudo verificar si el producto tiene pedidos', 'error');
+        return;
+    }
+
+    if (pedidosRelacionados && pedidosRelacionados.length > 0) {
+        mostrarToast('❌ No se puede eliminar el producto porque tiene pedidos asociados', 'error');
+        return;
+    }
+
     const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
     if (error) {
         mostrarToast('Error al eliminar', 'error');

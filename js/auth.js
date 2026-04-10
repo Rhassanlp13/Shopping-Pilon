@@ -1,3 +1,4 @@
+// auth.js - Versión final sin errores y con soporte admin
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -27,6 +28,13 @@ export async function initAuth() {
 
 async function loadUserRole() {
     if (!currentUser) return;
+    // Cache de rol por 1 hora
+    const cached = localStorage.getItem('user_role');
+    const cachedExpiry = localStorage.getItem('user_role_expiry');
+    if (cached && cachedExpiry && Date.now() < parseInt(cachedExpiry)) {
+        currentRole = cached;
+        return;
+    }
     const { data, error } = await supabase
         .from('profiles')
         .select('role')
@@ -46,32 +54,26 @@ async function loadUserRole() {
     let role = data.role;
     if (role === 'administrativo') role = 'admin';
     currentRole = role || 'customer';
+    localStorage.setItem('user_role', currentRole);
+    localStorage.setItem('user_role_expiry', Date.now() + 3600000);
 }
 
 function updateUIForLoggedIn() {
     const userBtn = document.getElementById('user-btn');
     if (!userBtn) return;
-
     const container = userBtn.parentNode;
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
-
-    // Cambiar el icono del botón
     userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
     userBtn.style.cursor = 'pointer';
     userBtn.style.position = 'relative';
-
-    // Crear el menú desplegable con estructura limpia
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
-
-    // Mostrar email de forma segura
     const emailText = currentUser?.email || 'Usuario';
     userMenu.innerHTML = `
         <div class="user-dropdown-header">
             <i class="fas fa-envelope"></i> ${escapeHtml(emailText)}
         </div>
-        
         ${(currentRole === 'seller' || currentRole === 'admin') ? `
         <a href="/admin.html" id="admin-link">
             <i class="fas fa-chalkboard-user"></i> Panel de vendedor
@@ -80,25 +82,18 @@ function updateUIForLoggedIn() {
             <i class="fas fa-sign-out-alt"></i> Cerrar sesión
         </button>
     `;
-
     container.style.position = 'relative';
     container.appendChild(userMenu);
-
-    // Alternar visibilidad al hacer clic en el botón
     const toggleDropdown = (e) => {
         e.stopPropagation();
         userMenu.classList.toggle('show');
     };
     userBtn.addEventListener('click', toggleDropdown);
-
-    // Cerrar al hacer clic fuera
     document.addEventListener('click', (e) => {
         if (!container.contains(e.target)) {
             userMenu.classList.remove('show');
         }
     });
-
-    // Evento de cierre de sesión
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -126,7 +121,9 @@ export function openAuthModal(preselectedRole = null) {
     modal.removeAttribute('hidden');
     document.getElementById('login-email').value = '';
     document.getElementById('login-password').value = '';
+    document.getElementById('reg-nombre').value = '';
     document.getElementById('reg-email').value = '';
+    document.getElementById('reg-telefono').value = '';
     document.getElementById('reg-password').value = '';
     document.getElementById('reg-confirm').value = '';
     const roleSelect = document.getElementById('reg-role');
@@ -151,8 +148,16 @@ function switchTab(tabId) {
     const forms = document.querySelectorAll('.auth-form');
     tabs.forEach(tab => tab.classList.remove('active'));
     forms.forEach(form => form.classList.remove('active'));
-    document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
-    document.getElementById(`${tabId}-form`).classList.add('active');
+    const activeTab = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    if (activeTab) activeTab.classList.add('active');
+    const activeForm = document.getElementById(`${tabId}-form`);
+    if (activeForm) activeForm.classList.add('active');
+}
+
+function validarTelefonoCubano(tel) {
+    if (!tel) return false;
+    const cleaned = tel.replace(/\s+/g, '');
+    return /^5[0-9]{7}$/.test(cleaned);
 }
 
 async function handleLogin() {
@@ -173,7 +178,6 @@ async function handleLogin() {
         if (error) throw error;
         closeAuthModal();
         mostrarToast(`Bienvenido, ${email}`, 'ok');
-        // El listener de auth recargará la UI
     } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
@@ -184,12 +188,15 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+    const nombre = document.getElementById('reg-nombre').value.trim();
     const email = document.getElementById('reg-email').value.trim();
+    const telefono = document.getElementById('reg-telefono').value.trim();
     const password = document.getElementById('reg-password').value;
     const confirm = document.getElementById('reg-confirm').value;
     const role = document.getElementById('reg-role').value;
     const errorDiv = document.getElementById('register-error');
-    if (!email || !password || !confirm) {
+
+    if (!nombre || !email || !password || !confirm) {
         errorDiv.textContent = 'Todos los campos son obligatorios';
         errorDiv.style.display = 'block';
         return;
@@ -204,22 +211,39 @@ async function handleRegister() {
         errorDiv.style.display = 'block';
         return;
     }
+    if (role === 'seller' && telefono && !validarTelefonoCubano(telefono)) {
+        errorDiv.textContent = 'Teléfono cubano inválido (formato: 5XXXXXXX)';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
     const btn = document.getElementById('register-submit');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
     errorDiv.style.display = 'none';
+
     try {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            options: { data: { role } }
+            options: { data: { role, nombre, telefono } }
         });
         if (error) throw error;
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
-        await supabase.from('profiles').upsert({ id: user.id, email, role }, { onConflict: 'id' });
+
+        // Guardar perfil completo
+        await supabase.from('profiles').upsert({
+            id: user.id,
+            email,
+            role,
+            nombre_completo: nombre,
+            telefono: telefono || null
+        }, { onConflict: 'id' });
+
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
+
         closeAuthModal();
         if (role === 'seller') {
             mostrarToast('Registro exitoso. Ahora puedes acceder al panel de vendedor.', 'info');
@@ -252,8 +276,7 @@ export function bindAuthEvents() {
     if (tabs) tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
     if (loginBtn) loginBtn.addEventListener('click', handleLogin);
     if (registerBtn) registerBtn.addEventListener('click', handleRegister);
-    
-    // Abrir modal con pestaña de registro cuando se hace clic en "Registrarme como vendedor"
+
     if (btnRegistroVendedor) {
         btnRegistroVendedor.addEventListener('click', (e) => {
             e.preventDefault();
@@ -266,9 +289,9 @@ export function bindAuthEvents() {
             openAuthModal('seller');
         });
     }
-    
+
     if (userBtn && !currentUser) userBtn.addEventListener('click', () => openAuthModal());
-    
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
     });

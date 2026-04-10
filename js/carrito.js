@@ -1,4 +1,4 @@
-// carrito.js — Carrito con soporte para variantes y ofertas
+// carrito.js — Corregido: validación de variante y stock
 export const carrito = {
     _items: [],
 
@@ -24,9 +24,16 @@ export const carrito = {
             .map(item => {
                 const p = productos.find(p => p.id === item.id);
                 if (!p) return null;
-                const variante = (item.variantId !== undefined && item.variantId !== null)
-                    ? p.variantes?.[item.variantId]
-                    : null;
+                // Validar que la variante exista si se especifica
+                let variante = null;
+                if (item.variantId !== undefined && item.variantId !== null) {
+                    if (p.variantes && p.variantes[item.variantId]) {
+                        variante = p.variantes[item.variantId];
+                    } else {
+                        // Variante inválida: ignorar este item
+                        return null;
+                    }
+                }
                 const precio = variante
                     ? variante.precio
                     : (p.enoferta && p.preciooferta ? p.preciooferta : p.precio);
@@ -39,7 +46,7 @@ export const carrito = {
                     variantId: item.variantId,
                     variantNombre: nombreVariante,
                     stockDisponible,
-                    seller_id: p.seller_id,          // 👈 Añadido para identificar al vendedor
+                    seller_id: p.seller_id,
                 };
             })
             .filter(Boolean);
@@ -49,9 +56,14 @@ export const carrito = {
         const producto = productos.find(p => p.id === idProducto);
         if (!producto) return { ok: false, msg: 'Producto no encontrado' };
 
-        const variante = (variantId !== undefined && variantId !== null)
-            ? producto.variantes?.[variantId]
-            : null;
+        // Validar que la variante exista
+        let variante = null;
+        if (variantId !== null && variantId !== undefined) {
+            if (!producto.variantes || !producto.variantes[variantId]) {
+                return { ok: false, msg: 'Variante no válida' };
+            }
+            variante = producto.variantes[variantId];
+        }
         const stock = variante ? variante.stock : producto.stock;
         if (stock <= 0) return { ok: false, msg: 'Producto agotado' };
 
@@ -75,9 +87,11 @@ export const carrito = {
         const producto = productos.find(p => p.id === idProducto);
         if (!item || !producto) return;
 
-        const variante = (variantId !== undefined && variantId !== null)
-            ? producto.variantes?.[variantId]
-            : null;
+        let variante = null;
+        if (variantId !== null && variantId !== undefined) {
+            if (!producto.variantes || !producto.variantes[variantId]) return;
+            variante = producto.variantes[variantId];
+        }
         const stock = variante ? variante.stock : producto.stock;
 
         if (item.cantidad < stock) {
@@ -110,9 +124,14 @@ export const carrito = {
         return this._items.reduce((sum, item) => {
             const p = productos.find(p => p.id === item.id);
             if (!p) return sum;
-            const variante = (item.variantId !== undefined && item.variantId !== null)
-                ? p.variantes?.[item.variantId]
-                : null;
+            let variante = null;
+            if (item.variantId !== null && item.variantId !== undefined) {
+                if (p.variantes && p.variantes[item.variantId]) {
+                    variante = p.variantes[item.variantId];
+                } else {
+                    return sum;
+                }
+            }
             const precio = variante
                 ? variante.precio
                 : (p.enoferta && p.preciooferta ? p.preciooferta : p.precio);

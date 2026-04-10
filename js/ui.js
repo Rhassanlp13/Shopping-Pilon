@@ -1,8 +1,46 @@
+// ui.js - Versión final corregida y optimizada para Cuba
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
+
+// ==================== OPTIMIZACIÓN DE IMÁGENES ====================
+function optimizarImagen(url, ancho = 400, alto = 400) {
+    if (!url) return '';
+    if (url.includes('unsplash.com')) {
+        const baseUrl = url.split('?')[0];
+        return `${baseUrl}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
+    }
+    if (url.includes('cloudinary.com')) {
+        return url.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
+    }
+    if (url.includes('?') && !url.includes('q=')) {
+        return `${url}&q=80`;
+    }
+    return url;
+}
+
+// ==================== CACHÉ DE RESEÑAS ====================
+const CACHE_TTL = 300000; // 5 minutos
+
+async function getResenasConCache(productoId) {
+    const cacheKey = `resenas_${productoId}`;
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+    if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
+        return JSON.parse(cached);
+    }
+    const { data, error } = await supabase
+        .from('reseñas')
+        .select('*')
+        .eq('productoid', productoId)
+        .order('fecha', { ascending: false });
+    if (error) throw error;
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    localStorage.setItem(`${cacheKey}_time`, Date.now());
+    return data;
+}
 
 export const UI = {
     grid: null,
@@ -13,7 +51,8 @@ export const UI = {
     productos: [],
     productoActualId: null,
     estrellaSeleccionada: 0,
-    varianteActual: null,
+    varianteActualIndex: null,
+    enviandoPedido: false, // Para evitar duplicados
 
     init(productos) {
         this.productos = productos;
@@ -41,17 +80,18 @@ export const UI = {
             const agotado = p.stock <= 0 || enCarrito >= p.stock;
             const stockBajo = !agotado && p.stock <= 3;
             const descuento = (p.enoferta && p.preciooferta) ? Math.round((1 - p.preciooferta / p.precio) * 100) : null;
+            const imgOptimizada = optimizarImagen(p.imagen, 400, 400);
             return `
                 <article class="product-card ${p.enoferta && p.preciooferta ? 'en-oferta' : ''}" data-id="${escapeHtml(p.id)}">
                     ${descuento ? `<span class="card-badge-oferta">−${descuento}%</span>` : ''}
                     ${stockBajo && !descuento ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
-                    <img src="${escapeHtml(p.imagen)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.src='https://placehold.co/400x400?text=Sin+imagen'">
+                    <img src="${escapeHtml(imgOptimizada)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.src='https://placehold.co/400x400?text=Sin+imagen'">
                     <div class="product-info">
                         <span class="vendedor"><i class="fas fa-user-circle"></i> ${escapeHtml(p.vendedor)}</span>
                         <h3>${escapeHtml(p.nombre)}</h3>
                         <div class="price-wrap">
-                            ${descuento ? `<span class="price-original">$${Number(p.precio).toLocaleString('es-CU')}</span>` : ''}
-                            <span class="price ${descuento ? 'price-oferta' : ''}">$${Number(precioReal).toLocaleString('es-CU')}</span>
+                            ${descuento ? `<span class="price-original">$${Number(p.precio).toLocaleString('es')}</span>` : ''}
+                            <span class="price ${descuento ? 'price-oferta' : ''}">$${Number(precioReal).toLocaleString('es')}</span>
                             ${descuento ? `<span class="descuento-badge">−${descuento}%</span>` : ''}
                         </div>
                         <button class="card-btn-add" data-id="${escapeHtml(p.id)}" ${agotado ? 'disabled' : ''}>
@@ -104,9 +144,9 @@ export const UI = {
         }
         this.cartItems.innerHTML = items.map(item => {
             const puedeAumentar = item.cantidad < item.stockDisponible;
-            return `<div class="cart-item" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}"><div class="cart-item-info"><div class="cart-item-name">${escapeHtml(item.nombre)}${escapeHtml(item.variantNombre)}</div><div class="cart-item-price">$${(item.precio * item.cantidad).toLocaleString('es-CU')} CUP</div></div><div class="qty-control"><button class="qty-btn btn-disminuir" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">−</button><span class="qty-num">${item.cantidad}</span><button class="qty-btn btn-aumentar" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button></div></div>`;
+            return `<div class="cart-item" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}"><div class="cart-item-info"><div class="cart-item-name">${escapeHtml(item.nombre)}${escapeHtml(item.variantNombre)}</div><div class="cart-item-price">$${(item.precio * item.cantidad).toLocaleString('es')} CUP</div></div><div class="qty-control"><button class="qty-btn btn-disminuir" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">−</button><span class="qty-num">${item.cantidad}</span><button class="qty-btn btn-aumentar" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button></div></div>`;
         }).join('');
-        this.cartTotal.textContent = carrito.total(this.productos).toLocaleString('es-CU');
+        this.cartTotal.textContent = carrito.total(this.productos).toLocaleString('es');
     },
 
     abrirLightbox() {
@@ -136,23 +176,23 @@ export const UI = {
         const p = this.productos.find(p => p.id === id);
         if (!p) return;
         this.productoActualId = id;
-        this.varianteActual = null;
+        this.varianteActualIndex = null;
 
         const modal = document.getElementById('modal-detalle');
 
-        // Función que actualiza la vista al cambiar de variante
-        const actualizarVista = (variante = null) => {
+        const actualizarVista = (index = null) => {
             this.cerrarLightbox();
-            this.varianteActual = variante;
+            this.varianteActualIndex = index;
 
-            let precioBaseNum = Number(p.precio);
-            if (isNaN(precioBaseNum)) precioBaseNum = 0;
-            let precio = variante ? (Number(variante.precio) || precioBaseNum) : precioBaseNum;
+            const variante = (index !== null && p.variantes?.[index]) ? p.variantes[index] : null;
+            // CORRECCIÓN: Precio 0 se respeta
+            let precio = variante
+                ? (variante.precio !== undefined && variante.precio !== null ? Number(variante.precio) : Number(p.precio))
+                : Number(p.precio);
             if (isNaN(precio)) precio = 0;
-
             const stockVal = variante ? (variante.stock ?? p.stock) : p.stock;
-            const imagenUrl = variante ? (variante.imagen ?? p.imagen) : p.imagen;
-            const enC = carrito.cantidadDe(id, variante ? p.variantes.indexOf(variante) : null);
+            const imagenUrl = variante ? (variante.imagen || p.imagen) : p.imagen;
+            const enC = carrito.cantidadDe(id, index);
             const agotado = stockVal <= 0 || enC >= stockVal;
 
             const img = document.getElementById('detalle-img');
@@ -160,7 +200,7 @@ export const UI = {
                 img.style.opacity = '0';
                 img.style.transform = 'scale(0.97)';
                 setTimeout(() => {
-                    img.src = escapeHtml(imagenUrl);
+                    img.src = optimizarImagen(imagenUrl, 600, 600);
                     img.style.transition = 'opacity .25s, transform .25s';
                     img.style.opacity = '1';
                     img.style.transform = 'scale(1)';
@@ -169,11 +209,11 @@ export const UI = {
 
             const precioEl = document.getElementById('detalle-precio');
             if (precioEl) {
-                const descuentoBase = (p.enoferta && p.preciooferta) ? Math.round((1 - Number(p.preciooferta) / precioBaseNum) * 100) : null;
+                const descuentoBase = (p.enoferta && p.preciooferta && !variante) ? Math.round((1 - Number(p.preciooferta) / Number(p.precio)) * 100) : null;
                 if (descuentoBase && !variante) {
-                    precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">$${precioBaseNum.toLocaleString('es-CU')}</span> <span style="color:#e53935;font-weight:700"> $${Number(p.preciooferta).toLocaleString('es-CU')}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
+                    precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">$${Number(p.precio).toLocaleString('es')}</span> <span style="color:#e53935;font-weight:700"> $${Number(p.preciooferta).toLocaleString('es')}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
                 } else {
-                    precioEl.textContent = precio.toLocaleString('es-CU');
+                    precioEl.textContent = precio.toLocaleString('es');
                 }
             }
 
@@ -198,8 +238,7 @@ export const UI = {
             }
         };
 
-        // Configurar elementos básicos
-        document.getElementById('detalle-img').src = escapeHtml(p.imagen);
+        document.getElementById('detalle-img').src = optimizarImagen(p.imagen, 600, 600);
         document.getElementById('detalle-img').alt = escapeHtml(p.nombre);
         document.getElementById('detalle-vendedor').textContent = p.vendedor;
         document.getElementById('detalle-nombre').textContent = p.nombre;
@@ -214,14 +253,14 @@ export const UI = {
 
         const baseCard = document.createElement('div');
         baseCard.className = 'variante-card';
-        if (!this.varianteActual) baseCard.classList.add('selected');
-        baseCard.dataset.index = -1;
-        baseCard.innerHTML = `<div class="variante-imagen"><img src="${escapeHtml(p.imagen)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">$${Number(p.precio).toLocaleString('es-CU')}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
+        if (this.varianteActualIndex === null) baseCard.classList.add('selected');
+        baseCard.dataset.index = '-1';
+        baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">$${Number(p.precio).toLocaleString('es')}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
         baseCard.addEventListener('click', () => {
             if (baseCard.classList.contains('selected')) return;
             document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
             baseCard.classList.add('selected');
-            this.varianteActual = null;
+            this.varianteActualIndex = null;
             actualizarVista(null);
         });
         grid.appendChild(baseCard);
@@ -231,14 +270,15 @@ export const UI = {
                 const imagenVar = v.imagen || p.imagen;
                 const card = document.createElement('div');
                 card.className = 'variante-card';
+                if (this.varianteActualIndex === i) card.classList.add('selected');
                 card.dataset.index = i;
-                card.innerHTML = `<div class="variante-imagen"><img src="${escapeHtml(imagenVar)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">$${v.precio.toLocaleString('es-CU')}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
+                card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">$${v.precio.toLocaleString('es')}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
                 card.addEventListener('click', () => {
                     if (card.classList.contains('selected')) return;
                     document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
-                    this.varianteActual = v;
-                    actualizarVista(v);
+                    this.varianteActualIndex = i;
+                    actualizarVista(i);
                 });
                 grid.appendChild(card);
             });
@@ -248,12 +288,48 @@ export const UI = {
 
         const btnAdd = document.getElementById('detalle-btn-add');
         btnAdd.onclick = () => {
-            const variantId = this.varianteActual ? p.variantes.indexOf(this.varianteActual) : null;
+            const variantId = this.varianteActualIndex !== null ? this.varianteActualIndex : null;
             const res = carrito.agregar(id, variantId, this.productos);
             if (res.ok) {
                 this.actualizarContador();
                 mostrarToast(`🛒 ${res.msg}`, 'ok');
-                actualizarVista(this.varianteActual);
+                actualizarVista(this.varianteActualIndex);
+                // Feedback visual en el botón del modal
+                const originalText = btnAdd.innerHTML;
+                btnAdd.innerHTML = '<i class="fas fa-check"></i> Añadido';
+                setTimeout(() => {
+                    if (!btnAdd.disabled) btnAdd.innerHTML = originalText;
+                }, 1500);
+
+                // ========== ACTUALIZAR EL BOTÓN EN EL GRID ==========
+                // Buscar la tarjeta del producto en el grid
+                const targetCard = document.querySelector(`.product-card[data-id="${id}"]`);
+                if (targetCard) {
+                    const btnGrid = targetCard.querySelector('.card-btn-add');
+                    const p = this.productos.find(p => p.id === id);
+                    if (p) {
+                        const cantidadEnCarrito = carrito.cantidadDe(id, null);
+                        const agotado = p.stock <= 0 || cantidadEnCarrito >= p.stock;
+                        if (btnGrid) {
+                            btnGrid.disabled = agotado;
+                            btnGrid.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir';
+                        }
+                        // Opcional: actualizar el badge de stock bajo si se muestra
+                        const stockBadge = targetCard.querySelector('.card-stock-badge');
+                        if (stockBadge && p.stock > 0 && p.stock <= 3 && !agotado) {
+                            // ya existe, no hacer nada
+                        } else if (stockBadge && (p.stock > 3 || agotado)) {
+                            stockBadge.remove();
+                        } else if (!stockBadge && p.stock > 0 && p.stock <= 3 && !agotado) {
+                            // añadir badge de "¡Solo X!"
+                            const badge = document.createElement('span');
+                            badge.className = 'card-stock-badge';
+                            badge.textContent = `¡Solo ${p.stock}!`;
+                            targetCard.querySelector('.product-info')?.prepend(badge);
+                        }
+                    }
+                }
+                // ====================================================
             } else {
                 mostrarToast(`❌ ${res.msg}`, 'error');
             }
@@ -268,8 +344,7 @@ export const UI = {
         this.actualizarEstrellas(0);
         await this.cargarResenas(id);
 
-        // 🔥 CORRECCIÓN CLAVE: mostrar el producto base (sin variante)
-        actualizarVista(null);
+        actualizarVista(this.varianteActualIndex);
     },
 
     cerrarDetalle() {
@@ -284,40 +359,60 @@ export const UI = {
         if (!lista) return;
         lista.innerHTML = '<div class="resenas-empty"><i class="fas fa-spinner fa-spin"></i></div>';
         try {
-            const { data, error } = await supabase.from('reseñas').select('*').eq('productoid', productoId).order('fecha', { ascending: false });
-            if (error) throw error;
+            const data = await getResenasConCache(productoId);
             count.textContent = data.length > 0 ? `(${data.length})` : '';
-            if (data.length === 0) { lista.innerHTML = '<div class="resenas-empty"><i class="fas fa-comment-slash"></i><br>Sin reseñas aún. ¡Sé el primero!</div>'; return; }
-            lista.innerHTML = data.map(r => `<div class="resena-item"><div class="resena-header"><span class="resena-autor">${escapeHtml(r.nombre)}</span><span class="resena-estrellas">${'★'.repeat(Number(r.estrellas))}${'☆'.repeat(5 - Number(r.estrellas))}</span></div><div class="resena-texto">${escapeHtml(r.texto)}</div><div class="resena-fecha">${new Date(r.fecha).toLocaleDateString('es-CU', { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>`).join('');
-        } catch (err) { lista.innerHTML = '<div class="resenas-empty">No se pudieron cargar las reseñas.</div>'; }
+            if (data.length === 0) {
+                lista.innerHTML = '<div class="resenas-empty"><i class="fas fa-comment-slash"></i><br>Sin reseñas aún. ¡Sé el primero!</div>';
+                return;
+            }
+            lista.innerHTML = data.map(r => `<div class="resena-item"><div class="resena-header"><span class="resena-autor">${escapeHtml(r.nombre)}</span><span class="resena-estrellas">${'★'.repeat(Number(r.estrellas))}${'☆'.repeat(5 - Number(r.estrellas))}</span></div><div class="resena-texto">${escapeHtml(r.texto)}</div><div class="resena-fecha">${new Date(r.fecha).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>`).join('');
+        } catch (err) {
+            lista.innerHTML = '<div class="resenas-empty">No se pudieron cargar las reseñas.</div>';
+        }
     },
 
     async enviarResena() {
         const nombre = document.getElementById('resena-nombre').value.trim();
         const texto = document.getElementById('resena-texto').value.trim();
         const estrellas = this.estrellaSeleccionada;
-        if (!nombre || !texto || estrellas === 0) { mostrarToast('⚠️ Completa nombre, estrellas y opinión', 'warning'); return; }
+        if (!nombre || !texto || estrellas === 0) {
+            mostrarToast('⚠️ Completa nombre, estrellas y opinión', 'warning');
+            return;
+        }
         const btn = document.getElementById('btn-enviar-resena');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
         try {
-            const { error } = await supabase.from('reseñas').insert([{ productoid: this.productoActualId, nombre: nombre.slice(0, 30), texto: texto.slice(0, 200), estrellas: Math.min(5, Math.max(1, estrellas)), fecha: new Date().toISOString() }]);
+            const { error } = await supabase.from('reseñas').insert([{
+                productoid: this.productoActualId,
+                nombre: nombre.slice(0, 30),
+                texto: texto.slice(0, 200),
+                estrellas: Math.min(5, Math.max(1, estrellas)),
+                fecha: new Date().toISOString()
+            }]);
             if (error) throw error;
             mostrarToast('✅ Reseña publicada', 'ok');
             document.getElementById('resena-nombre').value = '';
             document.getElementById('resena-texto').value = '';
             this.estrellaSeleccionada = 0;
             this.actualizarEstrellas(0);
+            // Invalidar caché de reseñas para este producto
+            localStorage.removeItem(`resenas_${this.productoActualId}`);
+            localStorage.removeItem(`resenas_${this.productoActualId}_time`);
             await this.cargarResenas(this.productoActualId);
-        } catch (err) { mostrarToast('❌ Error al publicar reseña', 'error'); }
-        finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Publicar reseña'; }
+        } catch (err) {
+            mostrarToast('❌ Error al publicar reseña', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Publicar reseña';
+        }
     },
 
     actualizarEstrellas(valor) {
         document.querySelectorAll('#estrellas-input i').forEach((star, i) => star.classList.toggle('activa', i < valor));
     },
 
-    async guardarPedido(items) {
+    async guardarPedido(items, clienteNombre, clienteTelefono) {
         const total = items.reduce((sum, it) => sum + it.precio * it.cantidad, 0);
         const seller_id = items[0]?.seller_id;
         if (!seller_id) return null;
@@ -331,14 +426,11 @@ export const UI = {
             vendedor_id: seller_id
         }));
 
-        const cliente_nombre = "Cliente vía WhatsApp";
-        const cliente_telefono = "No especificado";
-
         const { data, error } = await supabase
             .from('pedidos')
             .insert([{
-                cliente_nombre,
-                cliente_telefono,
+                cliente_nombre: clienteNombre,
+                cliente_telefono: clienteTelefono,
                 total,
                 productos: productosData,
                 vendedor_id: seller_id,
@@ -354,77 +446,171 @@ export const UI = {
         return data.id;
     },
 
+    // Muestra un modal con los enlaces de WhatsApp para que el usuario haga clic manualmente
+    mostrarModalWhatsApp(vendedores, pedidosIds, clienteNombre) {
+        let modal = document.getElementById('modal-whatsapp');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-whatsapp';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+            <div class="modal-box" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2><i class="fab fa-whatsapp"></i> Confirmar pedido</h2>
+                    <button class="modal-close" id="close-whatsapp-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="whatsapp-links"></div>
+            </div>
+        `;
+            document.body.appendChild(modal);
+            document.getElementById('close-whatsapp-modal')?.addEventListener('click', () => {
+                modal.setAttribute('hidden', '');
+                document.body.style.overflow = '';
+            });
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.setAttribute('hidden', '');
+            });
+        }
+
+        const linksContainer = document.getElementById('whatsapp-links');
+        linksContainer.innerHTML = `<p style="margin-bottom: 0.5rem;"><strong>👤 Comprador:</strong> ${escapeHtml(clienteNombre)}</p>`;
+        linksContainer.innerHTML += '<p style="margin-bottom: 1rem;">Selecciona el vendedor para enviar el pedido por WhatsApp:</p>';
+
+        vendedores.forEach((grupo, i) => {
+            const totalGrupo = grupo.items.reduce((s, it) => s + it.precio * it.cantidad, 0);
+            const pedidoId = pedidosIds[i];
+
+            // Construcción del mensaje de WhatsApp con el nombre del comprador
+            let texto = `🛍️ *Nuevo Pedido — Shopping Pilón*\n\n`;
+            texto += `👤 *Comprador:* ${clienteNombre}\n`;  // <-- Aquí va la línea que pediste
+            texto += `📦 *Productos:*\n`;
+            grupo.items.forEach(item => {
+                texto += `• ${item.nombre}${item.variantNombre} x${item.cantidad} — $${(item.precio * item.cantidad).toLocaleString('es')} CUP\n`;
+            });
+            texto += `\n💰 *Total: $${totalGrupo.toLocaleString('es')} CUP*\n`;
+            if (vendedores.length > 1) texto += `\n_Pedido dividido entre ${vendedores.length} vendedores._\n`;
+            texto += `\n🔗 *Confirmar pedido:* ${window.location.origin}/confirmar.html?pedido=${pedidoId}\n`;
+            texto += `\nHola, confirma este pedido para continuar. 😊`;
+
+            const link = `https://wa.me/${grupo.telefono}?text=${encodeURIComponent(texto)}`;
+            linksContainer.innerHTML += `
+            <a href="${link}" target="_blank" class="btn-whatsapp" style="display: block; margin-bottom: 0.75rem; text-align: center; text-decoration: none;">
+                <i class="fab fa-whatsapp"></i> ${escapeHtml(grupo.vendedor)} - $${totalGrupo.toLocaleString('es')}
+            </a>
+        `;
+        });
+
+        modal.removeAttribute('hidden');
+        document.body.style.overflow = 'hidden';
+    },
+
     async enviarWhatsApp() {
+        if (this.enviandoPedido) {
+            mostrarToast('⏳ Procesando pedido, espera...', 'warning');
+            return;
+        }
+
         const items = carrito.itemsConDatos(this.productos);
         if (items.length === 0) {
             mostrarToast('⚠️ Tu carrito está vacío', 'warning');
             return;
         }
 
-        const porVendedor = {};
-        items.forEach(item => {
-            const sellerId = item.seller_id;
-            if (!porVendedor[sellerId]) {
-                porVendedor[sellerId] = {
-                    seller_id: sellerId,
-                    vendedor: item.vendedor,
-                    telefono: item.telefonovendedor || CONFIG.whatsapp,
-                    items: []
-                };
-            }
-            porVendedor[sellerId].items.push(item);
-        });
-        const vendedores = Object.values(porVendedor);
-
-        const pedidosIds = [];
-        for (const grupo of vendedores) {
-            const id = await this.guardarPedido(grupo.items);
-            if (id) pedidosIds.push(id);
+        // Solo pedir nombre
+        const clienteNombre = document.getElementById('cliente-nombre')?.value.trim();
+        if (!clienteNombre) {
+            mostrarToast('📝 Por favor, ingresa tu nombre', 'error');
+            return;
         }
+        const clienteTelefono = "Enviado por WhatsApp";
 
-        vendedores.forEach((grupo, i) => {
-            const totalGrupo = grupo.items.reduce((s, it) => s + it.precio * it.cantidad, 0);
-            let texto = `🛍️ *Nuevo Pedido — Shopping Pilón*\n\n`;
-            texto += `📦 *Productos:*\n`;
-            grupo.items.forEach(item => {
-                texto += `• ${item.nombre}${item.variantNombre} x${item.cantidad} — $${(item.precio * item.cantidad).toLocaleString('es-CU')} CUP\n`;
+        this.enviandoPedido = true;
+
+        try {
+            const porVendedor = {};
+            items.forEach(item => {
+                const sellerId = item.seller_id;
+                if (!porVendedor[sellerId]) {
+                    porVendedor[sellerId] = {
+                        seller_id: sellerId,
+                        vendedor: item.vendedor,
+                        telefono: item.telefonovendedor || CONFIG.whatsapp,
+                        items: []
+                    };
+                }
+                porVendedor[sellerId].items.push(item);
             });
-            texto += `\n💰 *Total: $${totalGrupo.toLocaleString('es-CU')} CUP*\n`;
-            if (vendedores.length > 1) texto += `\n_Pedido dividido entre ${vendedores.length} vendedores._\n`;
-            if (pedidosIds[i]) texto += `\n🔗 *Confirmar pedido:* ${window.location.origin}/confirmar.html?pedido=${pedidosIds[i]}`;
-            texto += `\n\nHola, confirma este pedido para continuar. 😊`;
+            const vendedores = Object.values(porVendedor);
 
-            setTimeout(() => {
-                window.open(`https://wa.me/${grupo.telefono}?text=${encodeURIComponent(texto)}`, '_blank');
-            }, i * 800);
-        });
+            const pedidosIds = [];
+            for (const grupo of vendedores) {
+                const id = await this.guardarPedido(grupo.items, clienteNombre, clienteTelefono);
+                if (id) pedidosIds.push(id);
+                else throw new Error('Error al guardar pedido');
+            }
 
-        setTimeout(() => {
+            // Mostrar modal con enlaces e incluir nombre del comprador
+            this.mostrarModalWhatsApp(vendedores, pedidosIds, clienteNombre);
+
             carrito.vaciar();
             this.actualizarContador();
             this.renderProductos();
             this.cerrarModal();
-            mostrarToast(`✅ Pedido enviado a ${vendedores.length} vendedor${vendedores.length > 1 ? 'es' : ''}`, 'ok');
-        }, vendedores.length * 800);
+            mostrarToast(`✅ Pedido preparado. Selecciona el vendedor para enviar.`, 'ok');
+        } catch (err) {
+            console.error(err);
+            mostrarToast(`❌ Error al procesar pedido: ${err.message}`, 'error');
+        } finally {
+            this.enviandoPedido = false;
+        }
     },
 
     bindEventos() {
         document.getElementById('cart-btn')?.addEventListener('click', () => this.abrirModal());
         document.getElementById('modal-close')?.addEventListener('click', () => this.cerrarModal());
         this.cartModal?.addEventListener('click', e => { if (e.target === this.cartModal) this.cerrarModal(); });
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!this.cartModal?.hasAttribute('hidden')) this.cerrarModal(); if (!document.getElementById('modal-detalle')?.hasAttribute('hidden')) this.cerrarDetalle(); } });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if (!this.cartModal?.hasAttribute('hidden')) this.cerrarModal();
+                if (!document.getElementById('modal-detalle')?.hasAttribute('hidden')) this.cerrarDetalle();
+            }
+        });
         document.getElementById('btn-whatsapp')?.addEventListener('click', () => this.enviarWhatsApp());
-        document.getElementById('btn-clear')?.addEventListener('click', () => { if (carrito.cantidad === 0) { mostrarToast('⚠️ El carrito ya está vacío', 'warning'); return; } carrito.vaciar(); this.actualizarContador(); this.renderCarrito(); this.renderProductos(); mostrarToast('🗑️ Carrito vaciado', 'info'); });
-
-        // Eliminados los event listeners obsoletos de cliente-nombre y cliente-telefono
+        document.getElementById('btn-clear')?.addEventListener('click', () => {
+            if (carrito.cantidad === 0) {
+                mostrarToast('⚠️ El carrito ya está vacío', 'warning');
+                return;
+            }
+            carrito.vaciar();
+            this.actualizarContador();
+            this.renderCarrito();
+            this.renderProductos();
+            mostrarToast('🗑️ Carrito vaciado', 'info');
+        });
 
         this.grid?.addEventListener('click', e => {
             const btn = e.target.closest('.card-btn-add');
             if (btn) {
                 if (btn.disabled) return;
-                const res = carrito.agregar(btn.dataset.id, null, this.productos);
-                if (res.ok) { this.actualizarContador(); mostrarToast(`🛒 ${res.msg}`, 'ok'); const p = this.productos.find(p => p.id === btn.dataset.id); if (p && carrito.cantidadDe(p.id, null) >= p.stock) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-times-circle"></i> Agotado'; } }
-                else { mostrarToast(`❌ ${res.msg}`, 'error'); }
+                const id = btn.dataset.id;
+                const res = carrito.agregar(id, null, this.productos);
+                if (res.ok) {
+                    this.actualizarContador();
+                    mostrarToast(`🛒 ${res.msg}`, 'ok');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Añadido';
+                    setTimeout(() => {
+                        const p = this.productos.find(p => p.id === id);
+                        if (p && carrito.cantidadDe(p.id, null) >= p.stock) {
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="fas fa-times-circle"></i> Agotado';
+                        } else {
+                            btn.innerHTML = originalText;
+                        }
+                    }, 1500);
+                } else {
+                    mostrarToast(`❌ ${res.msg}`, 'error');
+                }
                 return;
             }
             const card = e.target.closest('.product-card');
@@ -434,15 +620,35 @@ export const UI = {
         this.cartItems?.addEventListener('click', e => {
             const btnA = e.target.closest('.btn-aumentar');
             const btnD = e.target.closest('.btn-disminuir');
-            if (btnA && !btnA.disabled) { const variantId = btnA.dataset.variant === '' ? null : btnA.dataset.variant; carrito.aumentar(btnA.dataset.id, variantId, this.productos); this.actualizarContador(); this.renderCarrito(); this.renderProductos(); }
-            if (btnD) { const variantId = btnD.dataset.variant === '' ? null : btnD.dataset.variant; carrito.disminuir(btnD.dataset.id, variantId); this.actualizarContador(); this.renderCarrito(); this.renderProductos(); if (carrito.cantidad === 0) mostrarToast('🛒 Carrito vacío', 'info'); }
+            if (btnA && !btnA.disabled) {
+                const variantId = btnA.dataset.variant === '' ? null : btnA.dataset.variant;
+                const vid = (variantId && variantId !== '') ? parseInt(variantId) : null;
+                carrito.aumentar(btnA.dataset.id, vid, this.productos);
+                this.actualizarContador();
+                this.renderCarrito();
+                this.renderProductos();
+            }
+            if (btnD) {
+                const variantId = btnD.dataset.variant === '' ? null : btnD.dataset.variant;
+                const vid = variantId !== null ? parseInt(variantId) : null;
+                carrito.disminuir(btnD.dataset.id, vid);
+                this.actualizarContador();
+                this.renderCarrito();
+                this.renderProductos();
+                if (carrito.cantidad === 0) mostrarToast('🛒 Carrito vacío', 'info');
+            }
         });
 
         document.getElementById('detalle-btn-cerrar')?.addEventListener('click', () => this.cerrarDetalle());
-        document.getElementById('modal-detalle')?.addEventListener('click', e => { if (e.target === document.getElementById('modal-detalle')) this.cerrarDetalle(); });
+        document.getElementById('modal-detalle')?.addEventListener('click', e => {
+            if (e.target === document.getElementById('modal-detalle')) this.cerrarDetalle();
+        });
 
         document.querySelectorAll('#estrellas-input i').forEach(star => {
-            star.addEventListener('click', () => { this.estrellaSeleccionada = parseInt(star.dataset.val); this.actualizarEstrellas(this.estrellaSeleccionada); });
+            star.addEventListener('click', () => {
+                this.estrellaSeleccionada = parseInt(star.dataset.val);
+                this.actualizarEstrellas(this.estrellaSeleccionada);
+            });
             star.addEventListener('mouseover', () => this.actualizarEstrellas(parseInt(star.dataset.val)));
             star.addEventListener('mouseout', () => this.actualizarEstrellas(this.estrellaSeleccionada));
         });
