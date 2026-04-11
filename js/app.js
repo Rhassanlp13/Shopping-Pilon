@@ -13,26 +13,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initAuth();
     bindAuthEvents();
 
+    // ========== DEEP LINKING: abrir producto desde URL ==========
+    const urlParams = new URLSearchParams(window.location.search);
+    const productoId = urlParams.get('producto');
+    if (productoId && productos && productos.length) {
+        const producto = productos.find(p => p.id === productoId);
+        if (producto) {
+            setTimeout(() => UI.abrirDetalle(productoId), 500);
+            // Limpiar URL sin recargar
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }
+    // ============================================================
+
     // ========== REGISTRO DE SERVICE WORKER (PWA SIN CACHÉ AGRESIVA) ==========
     if ('serviceWorker' in navigator) {
         try {
             const registration = await navigator.serviceWorker.register('/sw.js');
             console.log('Service Worker registrado correctamente');
-
-            // Forzar búsqueda de actualización cada vez que se carga la página
             await registration.update();
-
-            // Buscar actualización cada hora (por si la página queda abierta mucho tiempo)
             setInterval(() => {
                 registration.update().catch(err => console.warn('Error al buscar actualización SW:', err));
             }, 60 * 60 * 1000);
-
-            // Detectar cuando hay una nueva versión esperando
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // Nueva versión disponible → recargar automáticamente
                         console.log('Nueva versión del SW detectada. Recargando...');
                         mostrarToast('🔄 Actualizando tienda...', 'info');
                         setTimeout(() => window.location.reload(), 1500);
@@ -46,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // =========================================================================
 });
 
-// Función auxiliar para mostrar toasts (si no existe globalmente, la definimos)
+// Función auxiliar para toasts (por si no está disponible globalmente)
 function mostrarToast(mensaje, tipo = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;

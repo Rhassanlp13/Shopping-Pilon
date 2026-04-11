@@ -1,4 +1,4 @@
-// ui.js - Versión final corregida y optimizada para Cuba
+// ui.js - Versión final con compartir producto, optimizaciones y correcciones
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -52,7 +52,7 @@ export const UI = {
     productoActualId: null,
     estrellaSeleccionada: 0,
     varianteActualIndex: null,
-    enviandoPedido: false, // Para evitar duplicados
+    enviandoPedido: false,
 
     init(productos) {
         this.productos = productos;
@@ -185,7 +185,6 @@ export const UI = {
             this.varianteActualIndex = index;
 
             const variante = (index !== null && p.variantes?.[index]) ? p.variantes[index] : null;
-            // CORRECCIÓN: Precio 0 se respeta
             let precio = variante
                 ? (variante.precio !== undefined && variante.precio !== null ? Number(variante.precio) : Number(p.precio))
                 : Number(p.precio);
@@ -294,19 +293,16 @@ export const UI = {
                 this.actualizarContador();
                 mostrarToast(`🛒 ${res.msg}`, 'ok');
                 actualizarVista(this.varianteActualIndex);
-                // Feedback visual en el botón del modal
                 const originalText = btnAdd.innerHTML;
                 btnAdd.innerHTML = '<i class="fas fa-check"></i> Añadido';
                 setTimeout(() => {
                     if (!btnAdd.disabled) btnAdd.innerHTML = originalText;
                 }, 1500);
 
-                // ========== ACTUALIZAR EL BOTÓN EN EL GRID ==========
-                // Buscar la tarjeta del producto en el grid
+                // Actualizar botón en el grid
                 const targetCard = document.querySelector(`.product-card[data-id="${id}"]`);
                 if (targetCard) {
                     const btnGrid = targetCard.querySelector('.card-btn-add');
-                    const p = this.productos.find(p => p.id === id);
                     if (p) {
                         const cantidadEnCarrito = carrito.cantidadDe(id, null);
                         const agotado = p.stock <= 0 || cantidadEnCarrito >= p.stock;
@@ -314,26 +310,32 @@ export const UI = {
                             btnGrid.disabled = agotado;
                             btnGrid.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir';
                         }
-                        // Opcional: actualizar el badge de stock bajo si se muestra
-                        const stockBadge = targetCard.querySelector('.card-stock-badge');
-                        if (stockBadge && p.stock > 0 && p.stock <= 3 && !agotado) {
-                            // ya existe, no hacer nada
-                        } else if (stockBadge && (p.stock > 3 || agotado)) {
-                            stockBadge.remove();
-                        } else if (!stockBadge && p.stock > 0 && p.stock <= 3 && !agotado) {
-                            // añadir badge de "¡Solo X!"
-                            const badge = document.createElement('span');
-                            badge.className = 'card-stock-badge';
-                            badge.textContent = `¡Solo ${p.stock}!`;
-                            targetCard.querySelector('.product-info')?.prepend(badge);
+                        const existingBadge = targetCard.querySelector('.card-stock-badge');
+                        if (p.stock > 0 && p.stock <= 3 && !agotado) {
+                            if (!existingBadge) {
+                                const badge = document.createElement('span');
+                                badge.className = 'card-stock-badge';
+                                badge.textContent = `¡Solo ${p.stock}!`;
+                                targetCard.querySelector('.product-info')?.prepend(badge);
+                            } else {
+                                existingBadge.textContent = `¡Solo ${p.stock}!`;
+                            }
+                        } else if (existingBadge) {
+                            existingBadge.remove();
                         }
                     }
                 }
-                // ====================================================
             } else {
                 mostrarToast(`❌ ${res.msg}`, 'error');
             }
         };
+
+        // === BOTÓN COMPARTIR ===
+        const btnShare = document.getElementById('detalle-btn-share');
+        if (btnShare) {
+            btnShare.onclick = () => this.compartirProducto();
+        }
+        // =====================
 
         modal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
@@ -346,6 +348,17 @@ export const UI = {
 
         actualizarVista(this.varianteActualIndex);
     },
+
+    // === NUEVO: COMPARTIR PRODUCTO POR WHATSAPP ===
+    compartirProducto() {
+        const producto = this.productos.find(p => p.id === this.productoActualId);
+        if (!producto) return;
+        const precioFinal = (producto.enoferta && producto.preciooferta) ? producto.preciooferta : producto.precio;
+        const url = `${window.location.origin}/?producto=${this.productoActualId}`;
+        const texto = `🛍️ *${producto.nombre}* - $${precioFinal.toLocaleString('es')} CUP\n\nMira este producto en Shopping Pilón:\n${url}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    },
+    // ============================================
 
     cerrarDetalle() {
         document.getElementById('modal-detalle').setAttribute('hidden', '');
@@ -396,7 +409,6 @@ export const UI = {
             document.getElementById('resena-texto').value = '';
             this.estrellaSeleccionada = 0;
             this.actualizarEstrellas(0);
-            // Invalidar caché de reseñas para este producto
             localStorage.removeItem(`resenas_${this.productoActualId}`);
             localStorage.removeItem(`resenas_${this.productoActualId}_time`);
             await this.cargarResenas(this.productoActualId);
@@ -428,14 +440,14 @@ export const UI = {
 
         const { data, error } = await supabase
             .from('pedidos')
-            .insert([{
+            .insert({
                 cliente_nombre: clienteNombre,
                 cliente_telefono: clienteTelefono,
-                total,
+                total: total,
                 productos: productosData,
                 vendedor_id: seller_id,
                 status: 'pendiente'
-            }])
+            })
             .select()
             .single();
 
@@ -446,7 +458,6 @@ export const UI = {
         return data.id;
     },
 
-    // Muestra un modal con los enlaces de WhatsApp para que el usuario haga clic manualmente
     mostrarModalWhatsApp(vendedores, pedidosIds, clienteNombre) {
         let modal = document.getElementById('modal-whatsapp');
         if (!modal) {
@@ -454,14 +465,14 @@ export const UI = {
             modal.id = 'modal-whatsapp';
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-            <div class="modal-box" style="max-width: 400px;">
-                <div class="modal-header">
-                    <h2><i class="fab fa-whatsapp"></i> Confirmar pedido</h2>
-                    <button class="modal-close" id="close-whatsapp-modal">&times;</button>
+                <div class="modal-box" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h2><i class="fab fa-whatsapp"></i> Confirmar pedido</h2>
+                        <button class="modal-close" id="close-whatsapp-modal">&times;</button>
+                    </div>
+                    <div class="modal-body" id="whatsapp-links"></div>
                 </div>
-                <div class="modal-body" id="whatsapp-links"></div>
-            </div>
-        `;
+            `;
             document.body.appendChild(modal);
             document.getElementById('close-whatsapp-modal')?.addEventListener('click', () => {
                 modal.setAttribute('hidden', '');
@@ -479,10 +490,8 @@ export const UI = {
         vendedores.forEach((grupo, i) => {
             const totalGrupo = grupo.items.reduce((s, it) => s + it.precio * it.cantidad, 0);
             const pedidoId = pedidosIds[i];
-
-            // Construcción del mensaje de WhatsApp con el nombre del comprador
             let texto = `🛍️ *Nuevo Pedido — Shopping Pilón*\n\n`;
-            texto += `👤 *Comprador:* ${clienteNombre}\n`;  // <-- Aquí va la línea que pediste
+            texto += `👤 *Comprador:* ${clienteNombre}\n`;
             texto += `📦 *Productos:*\n`;
             grupo.items.forEach(item => {
                 texto += `• ${item.nombre}${item.variantNombre} x${item.cantidad} — $${(item.precio * item.cantidad).toLocaleString('es')} CUP\n`;
@@ -494,12 +503,11 @@ export const UI = {
 
             const link = `https://wa.me/${grupo.telefono}?text=${encodeURIComponent(texto)}`;
             linksContainer.innerHTML += `
-            <a href="${link}" target="_blank" class="btn-whatsapp" style="display: block; margin-bottom: 0.75rem; text-align: center; text-decoration: none;">
-                <i class="fab fa-whatsapp"></i> ${escapeHtml(grupo.vendedor)} - $${totalGrupo.toLocaleString('es')}
-            </a>
-        `;
+                <a href="${link}" target="_blank" class="btn-whatsapp" style="display: block; margin-bottom: 0.75rem; text-align: center; text-decoration: none;">
+                    <i class="fab fa-whatsapp"></i> ${escapeHtml(grupo.vendedor)} - $${totalGrupo.toLocaleString('es')}
+                </a>
+            `;
         });
-
         modal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
     },
@@ -516,7 +524,6 @@ export const UI = {
             return;
         }
 
-        // Solo pedir nombre
         const clienteNombre = document.getElementById('cliente-nombre')?.value.trim();
         if (!clienteNombre) {
             mostrarToast('📝 Por favor, ingresa tu nombre', 'error');
@@ -549,7 +556,6 @@ export const UI = {
                 else throw new Error('Error al guardar pedido');
             }
 
-            // Mostrar modal con enlaces e incluir nombre del comprador
             this.mostrarModalWhatsApp(vendedores, pedidosIds, clienteNombre);
 
             carrito.vaciar();
