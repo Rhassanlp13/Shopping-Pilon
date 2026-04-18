@@ -102,7 +102,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     currentUserRole = profile.role;
 
-    // Configurar UI según rol
     const grupoUrl = document.getElementById('grupo-url-imagen');
     const grupoFile = document.getElementById('grupo-file-imagen');
     if (currentUserRole === 'admin') {
@@ -319,6 +318,9 @@ function abrirEditar(id) {
     document.getElementById('f-imagen').value = prod.imagen;
     document.getElementById('f-precio-oferta').value = prod.preciooferta ?? '';
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
+    // Cargar categoría
+    const categoriaSelect = document.getElementById('f-categoria');
+    if (categoriaSelect) categoriaSelect.value = prod.categoria || 'Otros';
     const variantesDiv = document.getElementById('variantes-list');
     variantesDiv.innerHTML = '';
     if (prod.variantes && prod.variantes.length) prod.variantes.forEach((v, i) => agregarVariante(v, i));
@@ -334,8 +336,10 @@ function limpiarFormulario() {
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-precio-oferta').value = '';
     document.getElementById('f-en-oferta').checked = false;
+    // Restablecer categoría
+    const categoriaSelect = document.getElementById('f-categoria');
+    if (categoriaSelect) categoriaSelect.value = 'Otros';
     document.getElementById('variantes-list').innerHTML = '';
-    // Limpiar vista previa de imagen si existe
     const previewDiv = document.getElementById('vista-previa');
     if (previewDiv) previewDiv.innerHTML = '';
     const fileInput = document.getElementById('f-imagen-file');
@@ -370,8 +374,8 @@ async function guardarProducto() {
         let telefonovendedor = document.getElementById('f-telefono-vendedor').value.trim();
         const enOferta = document.getElementById('f-en-oferta').checked;
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
+        const categoria = document.getElementById('f-categoria').value; // <-- CATEGORÍA
 
-        // ----- IMAGEN: según rol -----
         let imagenUrl = '';
         if (currentUserRole === 'admin') {
             imagenUrl = document.getElementById('f-imagen').value.trim();
@@ -380,8 +384,7 @@ async function guardarProducto() {
                 return;
             }
         } else {
-            // Vendedor: puede mantener imagen existente o subir nueva
-            imagenUrl = document.getElementById('f-imagen').value.trim(); // URL actual (si edita)
+            imagenUrl = document.getElementById('f-imagen').value.trim();
             const fileInput = document.getElementById('f-imagen-file');
             if (fileInput.files.length > 0) {
                 const uploadedUrl = await subirImagen(fileInput.files[0], editandoId);
@@ -389,13 +392,10 @@ async function guardarProducto() {
                 imagenUrl = uploadedUrl;
                 document.getElementById('f-imagen').value = imagenUrl;
             } else if (!imagenUrl) {
-                // No hay archivo nuevo ni URL existente (producto nuevo)
                 mostrarToast('Debes seleccionar una imagen', 'error');
                 return;
             }
-            // Si ya tiene imagenUrl (porque es edición) y no se subió nueva, se conserva
         }
-        // ----------------------------
 
         if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
             mostrarToast('Completa los campos obligatorios', 'error');
@@ -437,6 +437,7 @@ async function guardarProducto() {
             telefonovendedor,
             enoferta: enOferta,
             preciooferta: precioOferta,
+            categoria: categoria,   // <-- Guardar categoría
             variantes: variantes.length ? variantes : [],
             seller_id: user.id
         };
@@ -482,7 +483,6 @@ function cerrarBorrar() {
 async function eliminarProducto() {
     if (!borrandoId) return;
 
-    // Verificar si el producto tiene pedidos asociados (evitar pérdida de referencia)
     const { data: pedidosRelacionados, error: searchError } = await supabase
         .from('pedidos')
         .select('id')

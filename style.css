@@ -1806,3 +1806,42 @@ body {
     backdrop-filter: blur(4px);
     color: white;
 }
+
+/* FILTROS POR CATEGORÍA */
+.filtros-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.filtros-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 1rem 0 1.5rem;
+}
+
+.filtro-btn {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 8px 18px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+}
+
+.filtro-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.filtro-btn:hover:not(.active) {
+    background: #f0f0f0;
+    border-color: #ccc;
+}
