@@ -1,4 +1,4 @@
-// auth.js - Con reenvío de confirmación, restablecer contraseña y bienvenida en hero
+// auth.js - Con reenvío de confirmación, restablecer contraseña, bienvenida en hero y logout fijo
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -89,14 +89,27 @@ async function ensureProfile() {
 }
 
 function updateUIForLoggedIn() {
-    const userBtn = document.getElementById('user-btn');
-    if (!userBtn) return;
-    const container = userBtn.parentNode;
+    const oldUserBtn = document.getElementById('user-btn');
+    if (!oldUserBtn) return;
+
+    // Crear un nuevo botón para eliminar cualquier listener anterior
+    const newUserBtn = document.createElement('button');
+    newUserBtn.className = 'cart-btn';
+    newUserBtn.id = 'user-btn';
+    newUserBtn.setAttribute('aria-label', 'Usuario');
+    newUserBtn.innerHTML = '<i class="fas fa-user-check"></i>';
+    newUserBtn.style.cursor = 'pointer';
+    newUserBtn.style.position = 'relative';
+
+    // Reemplazar el botón antiguo por el nuevo
+    const container = oldUserBtn.parentNode;
+    container.replaceChild(newUserBtn, oldUserBtn);
+
+    // Eliminar menú desplegable anterior si existe
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
-    userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
-    userBtn.style.cursor = 'pointer';
-    userBtn.style.position = 'relative';
+
+    // Crear el menú desplegable
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
     const emailText = currentUser?.email || 'Usuario';
@@ -108,30 +121,40 @@ function updateUIForLoggedIn() {
         <a href="/admin.html" id="admin-link">
             <i class="fas fa-chalkboard-user"></i> Panel de vendedor
         </a>` : ''}
-        <button id="logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-        </button>
     `;
+
+    // Botón de cerrar sesión con evento directo
+    const logoutBtn = document.createElement('button');
+    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
+    logoutBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+            await supabase.auth.signOut();
+            mostrarToast('Sesión cerrada', 'info');
+            location.reload();
+        } catch (err) {
+            console.error('Error al cerrar sesión:', err);
+            mostrarToast('Error al cerrar sesión', 'error');
+        }
+    });
+    userMenu.appendChild(logoutBtn);
+
     container.style.position = 'relative';
     container.appendChild(userMenu);
+
+    // Toggle del menú
     const toggleDropdown = (e) => {
         e.stopPropagation();
         userMenu.classList.toggle('show');
     };
-    userBtn.addEventListener('click', toggleDropdown);
+    newUserBtn.addEventListener('click', toggleDropdown);
+
+    // Cerrar menú al hacer clic fuera
     document.addEventListener('click', (e) => {
         if (!container.contains(e.target)) {
             userMenu.classList.remove('show');
         }
     });
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            mostrarToast('Sesión cerrada', 'info');
-            location.reload();
-        });
-    }
 
     // Mensaje de bienvenida en el héroe
     const heroWelcome = document.getElementById('hero-welcome');
@@ -257,7 +280,6 @@ async function handleRegister() {
     const errorDiv = document.getElementById('register-error');
     const infoDiv = document.getElementById('register-info');
 
-    // Validaciones básicas
     if (!nombre || !email || !password || !confirm) {
         errorDiv.textContent = 'Todos los campos son obligatorios';
         errorDiv.style.display = 'block';
@@ -290,7 +312,6 @@ async function handleRegister() {
     if (infoDiv) infoDiv.style.display = 'none';
 
     try {
-        // Registrar usuario en Supabase con redirección personalizada
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -299,22 +320,17 @@ async function handleRegister() {
                 data: { role, nombre, telefono }
             }
         });
-
         if (error) throw error;
-
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
 
-        // Insertar perfil en tabla profiles
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-                id: user.id,
-                email,
-                role,
-                nombre_completo: nombre,
-                telefono: telefono || null
-            }, { onConflict: 'id' });
+        await supabase.from('profiles').upsert({
+            id: user.id,
+            email,
+            role,
+            nombre_completo: nombre,
+            telefono: telefono || null
+        }, { onConflict: 'id' });
 
         if (profileError) {
             console.error('Error al guardar perfil:', profileError);
@@ -323,27 +339,21 @@ async function handleRegister() {
             console.log('Perfil guardado correctamente para', email);
         }
 
-        // Verificar si requiere confirmación de email
         if (user.confirmed_at === null) {
-            // Mostrar mensaje de verificación en el formulario
             if (infoDiv) {
                 infoDiv.innerHTML = '<i class="fas fa-envelope"></i> Te hemos enviado un correo de verificación. Revisa tu bandeja (incluye spam) y confirma tu cuenta. Luego inicia sesión.';
                 infoDiv.style.display = 'block';
             }
             mostrarToast('✅ Revisa tu correo y confirma tu cuenta.', 'info');
-            // Limpiar campos de contraseña
             document.getElementById('reg-password').value = '';
             document.getElementById('reg-confirm').value = '';
-            // No cerramos el modal para que el usuario vea el mensaje
             btn.disabled = false;
             btn.innerHTML = 'Crear cuenta';
             return;
         }
 
-        // Si no requiere confirmación (o ya está confirmado), iniciar sesión automáticamente
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-
         closeAuthModal();
         if (role === 'seller') {
             mostrarToast('Registro exitoso. Ahora puedes acceder al panel de vendedor.', 'info');
@@ -367,7 +377,6 @@ async function handleRegister() {
     }
 }
 
-// ========== FUNCIONES PARA REENVIAR CONFIRMACIÓN Y RESTABLECER CONTRASEÑA ==========
 async function resendConfirmationEmail() {
     const email = document.getElementById('login-email').value.trim() || document.getElementById('reg-email').value.trim();
     if (!email) {
@@ -377,9 +386,7 @@ async function resendConfirmationEmail() {
     const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
-        options: {
-            emailRedirectTo: window.location.origin
-        }
+        options: { emailRedirectTo: window.location.origin }
     });
     if (error) {
         mostrarToast(`Error: ${error.message}`, 'error');
@@ -403,7 +410,6 @@ async function resetPassword() {
         mostrarToast(`📧 Se ha enviado un enlace para restablecer tu contraseña a ${email}. Revisa tu correo.`, 'info');
     }
 }
-// =================================================================================
 
 async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -470,12 +476,12 @@ export function bindAuthEvents() {
         tab.addEventListener('click', handleTabClick);
     });
 
-    // Enlaces de restablecer y reenviar confirmación
+    // Enlaces
     if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); resetPassword(); });
     if (resendLinkLogin) resendLinkLogin.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
     if (resendLinkRegister) resendLinkRegister.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
 
-    // Delegación de eventos para el ojito
+    // Ojito
     document.body.addEventListener('click', function (e) {
         const icon = e.target.closest('.toggle-password');
         if (!icon) return;
