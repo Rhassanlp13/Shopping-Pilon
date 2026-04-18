@@ -1,9 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
-    <title>Confirmando cuenta...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmando cuenta - Shopping Pilón</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #f5f5f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .confirm-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #1a237e;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            color: #555;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #1a237e;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn {
+            display: inline-block;
+            background: #1a237e;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #0f195e;
+        }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const supabaseUrl = 'https://xistchuskgnmjrzlntve.supabase.co';
@@ -16,28 +103,43 @@
             const access_token = params.get('access_token');
             const refresh_token = params.get('refresh_token');
             const type = params.get('type');
+            const msgDiv = document.getElementById('message');
+            const iconDiv = document.getElementById('icon');
+            const titleEl = document.getElementById('title');
 
             if (type === 'signup' && access_token) {
-                // Establecer la sesión automáticamente
+                // Establecer sesión automáticamente
                 const { error } = await supabase.auth.setSession({ access_token, refresh_token });
                 if (error) {
-                    document.body.innerHTML = '<p>Error al confirmar la cuenta. Intenta iniciar sesión manualmente.</p>';
+                    iconDiv.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#e53935;"></i>';
+                    titleEl.innerText = 'Error al confirmar';
+                    msgDiv.innerHTML = '<p>El enlace es inválido o ha expirado. Puedes solicitar un nuevo correo de verificación desde la tienda.</p><a href="/" class="btn">Volver a la tienda</a>';
                 } else {
-                    // Redirigir a la página principal después de 1 segundo
+                    iconDiv.innerHTML = '<i class="fas fa-check-circle" style="color:#25d366;"></i>';
+                    titleEl.innerText = '¡Cuenta confirmada!';
+                    msgDiv.innerHTML = '<p>Tu cuenta ha sido verificada correctamente. Serás redirigido a la tienda en unos segundos...</p><a href="/" class="btn">Ir ahora</a>';
                     setTimeout(() => {
                         window.location.href = '/';
-                    }, 1500);
-                    document.body.innerHTML = '<p>¡Cuenta confirmada! Redirigiendo a la tienda...</p>';
+                    }, 3000);
                 }
             } else {
-                document.body.innerHTML = '<p>Enlace inválido. Solicita un nuevo correo de verificación.</p>';
+                iconDiv.innerHTML = '<i class="fas fa-envelope" style="color:#ff9800;"></i>';
+                titleEl.innerText = 'Enlace no válido';
+                msgDiv.innerHTML = '<p>Este enlace no es para confirmar cuenta. Si tienes problemas, inicia sesión o solicita un nuevo correo.</p><a href="/" class="btn">Ir a la tienda</a>';
             }
         };
     </script>
 </head>
 
 <body>
-    <p>Confirmando tu cuenta, por favor espera...</p>
+    <div class="confirm-card">
+        <div id="icon" class="icon"><i class="fas fa-spinner fa-pulse"></i></div>
+        <h1 id="title">Confirmando cuenta...</h1>
+        <div id="message">
+            <div class="spinner"></div>
+            <p>Verificando tu correo, por favor espera...</p>
+        </div>
+    </div>
 </body>
 
 </html>
