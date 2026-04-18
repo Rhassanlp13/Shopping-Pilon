@@ -1,27 +1,94 @@
-// admin.js - Corregido: oferta 0, optimización imágenes, validación eliminación
+// admin.js - Con soporte para admin (URL) y vendedores (file upload a Supabase)
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
-
-// Función auxiliar para optimizar imágenes (misma lógica que en ui.js)
-function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
-    if (!url) return '';
-    if (url.includes('unsplash.com')) {
-        const baseUrl = url.split('?')[0];
-        return `${baseUrl}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
-    }
-    if (url.includes('cloudinary.com')) {
-        return url.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
-    }
-    return url;
-}
 
 let productos = [];
 let pedidos = [];
 let resenas = [];
 let editandoId = null;
 let borrandoId = null;
+let currentUserRole = null;
 
+// ==================== SUBIDA DE IMÁGENES (SOLO PARA VENDEDORES) ====================
+async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/webp', 0.8);
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
+    });
+}
+
+async function subirImagen(file, productoId = null) {
+    if (!file) return null;
+    try {
+        const blobOptimizado = await resizeAndOptimizeImage(file);
+        const extension = 'webp';
+        const nombreArchivo = productoId
+            ? `${productoId}_${Date.now()}.${extension}`
+            : `temp_${Date.now()}.${extension}`;
+        const { data, error } = await supabase.storage
+            .from('products')
+            .upload(nombreArchivo, blobOptimizado, {
+                contentType: 'image/webp',
+                cacheControl: '3600'
+            });
+        if (error) throw error;
+        const { data: publicUrlData } = supabase.storage
+            .from('products')
+            .getPublicUrl(nombreArchivo);
+        return publicUrlData.publicUrl;
+    } catch (err) {
+        console.error('Error subiendo imagen:', err);
+        mostrarToast('Error al subir la imagen: ' + err.message, 'error');
+        return null;
+    }
+}
+
+function setupImagePreview() {
+    const fileInput = document.getElementById('f-imagen-file');
+    const previewDiv = document.getElementById('vista-previa');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewDiv.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 150px; border-radius: 8px; border: 1px solid #ddd; padding: 4px;">`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewDiv.innerHTML = '';
+        }
+    });
+}
+
+// ==================== FUNCIONES PRINCIPALES ====================
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -33,6 +100,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = '/';
         return;
     }
+    currentUserRole = profile.role;
+
+    // Configurar UI según rol
+    const grupoUrl = document.getElementById('grupo-url-imagen');
+    const grupoFile = document.getElementById('grupo-file-imagen');
+    if (currentUserRole === 'admin') {
+        grupoUrl.style.display = 'block';
+        grupoFile.style.display = 'none';
+    } else {
+        grupoUrl.style.display = 'none';
+        grupoFile.style.display = 'block';
+        setupImagePreview();
+    }
+
     const shell = document.getElementById('shell');
     if (shell) shell.classList.add('visible');
     iniciar();
@@ -93,6 +174,18 @@ function renderStats() {
     const ofertas = productos.filter(p => p.enoferta && p.preciooferta).length;
     const statsDiv = document.getElementById('stats-productos');
     if (statsDiv) statsDiv.innerHTML = `<div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div></div><div class="stat-card"><div class="stat-label">Sin stock</div><div class="stat-val" style="color:var(--danger)">${sinStk}</div></div><div class="stat-card"><div class="stat-label">Stock bajo</div><div class="stat-val" style="color:var(--warning)">${bajo}</div></div><div class="stat-card"><div class="stat-label">Con variantes</div><div class="stat-val">${conVar}</div></div><div class="stat-card"><div class="stat-label">En oferta</div><div class="stat-val" style="color:var(--danger)">${ofertas}</div></div>`;
+}
+
+function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
+    if (!url) return '';
+    if (url.includes('unsplash.com')) {
+        const baseUrl = url.split('?')[0];
+        return `${baseUrl}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
+    }
+    if (url.includes('cloudinary.com')) {
+        return url.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
+    }
+    return url;
 }
 
 function renderTabla(filtro = '') {
@@ -224,7 +317,6 @@ function abrirEditar(id) {
     document.getElementById('f-vendedor').value = prod.vendedor;
     document.getElementById('f-telefono-vendedor').value = prod.telefonovendedor || '';
     document.getElementById('f-imagen').value = prod.imagen;
-    // CORRECCIÓN: usar ?? para respetar el valor 0
     document.getElementById('f-precio-oferta').value = prod.preciooferta ?? '';
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
     const variantesDiv = document.getElementById('variantes-list');
@@ -243,6 +335,11 @@ function limpiarFormulario() {
     document.getElementById('f-precio-oferta').value = '';
     document.getElementById('f-en-oferta').checked = false;
     document.getElementById('variantes-list').innerHTML = '';
+    // Limpiar vista previa de imagen si existe
+    const previewDiv = document.getElementById('vista-previa');
+    if (previewDiv) previewDiv.innerHTML = '';
+    const fileInput = document.getElementById('f-imagen-file');
+    if (fileInput) fileInput.value = '';
 }
 
 function agregarVariante(v = null, index = null) {
@@ -262,7 +359,6 @@ function validarTelefonoCubano(tel) {
 async function guardarProducto() {
     const btnGuardar = document.getElementById('btn-guardar');
     const textoOriginal = btnGuardar.innerHTML;
-
     btnGuardar.disabled = true;
     btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
@@ -272,11 +368,36 @@ async function guardarProducto() {
         const stock = parseInt(document.getElementById('f-stock').value);
         const vendedor = document.getElementById('f-vendedor').value.trim();
         let telefonovendedor = document.getElementById('f-telefono-vendedor').value.trim();
-        const imagen = document.getElementById('f-imagen').value.trim();
         const enOferta = document.getElementById('f-en-oferta').checked;
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
 
-        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor || !imagen) {
+        // ----- IMAGEN: según rol -----
+        let imagenUrl = '';
+        if (currentUserRole === 'admin') {
+            imagenUrl = document.getElementById('f-imagen').value.trim();
+            if (!imagenUrl) {
+                mostrarToast('Debes ingresar una URL de imagen', 'error');
+                return;
+            }
+        } else {
+            // Vendedor: puede mantener imagen existente o subir nueva
+            imagenUrl = document.getElementById('f-imagen').value.trim(); // URL actual (si edita)
+            const fileInput = document.getElementById('f-imagen-file');
+            if (fileInput.files.length > 0) {
+                const uploadedUrl = await subirImagen(fileInput.files[0], editandoId);
+                if (!uploadedUrl) throw new Error('No se pudo subir la imagen');
+                imagenUrl = uploadedUrl;
+                document.getElementById('f-imagen').value = imagenUrl;
+            } else if (!imagenUrl) {
+                // No hay archivo nuevo ni URL existente (producto nuevo)
+                mostrarToast('Debes seleccionar una imagen', 'error');
+                return;
+            }
+            // Si ya tiene imagenUrl (porque es edición) y no se subió nueva, se conserva
+        }
+        // ----------------------------
+
+        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
             mostrarToast('Completa los campos obligatorios', 'error');
             return;
         }
@@ -311,7 +432,7 @@ async function guardarProducto() {
             nombre,
             precio,
             stock,
-            imagen,
+            imagen: imagenUrl,
             vendedor,
             telefonovendedor,
             enoferta: enOferta,
@@ -329,16 +450,14 @@ async function guardarProducto() {
             error = insertError;
         }
 
-        if (error) {
-            mostrarToast('Error al guardar producto', 'error');
-        } else {
-            mostrarToast('Producto guardado', 'ok');
-            cerrarModal();
-            cargarProductos();
-        }
+        if (error) throw error;
+
+        mostrarToast('Producto guardado', 'ok');
+        cerrarModal();
+        cargarProductos();
     } catch (err) {
         console.error(err);
-        mostrarToast('Error inesperado', 'error');
+        mostrarToast(err.message || 'Error inesperado', 'error');
     } finally {
         btnGuardar.disabled = false;
         btnGuardar.innerHTML = textoOriginal;
@@ -363,7 +482,7 @@ function cerrarBorrar() {
 async function eliminarProducto() {
     if (!borrandoId) return;
 
-    // Verificar si el producto tiene pedidos asociados (prevención)
+    // Verificar si el producto tiene pedidos asociados (evitar pérdida de referencia)
     const { data: pedidosRelacionados, error: searchError } = await supabase
         .from('pedidos')
         .select('id')

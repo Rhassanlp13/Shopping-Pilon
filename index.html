@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopping Pilón | Tienda Online</title>
-    
+
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1a237e">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,6 +24,7 @@
     <meta name="apple-mobile-web-app-title" content="Pilón Shop">
     <link rel="apple-touch-icon" href="/icon-192.png">
 </head>
+
 <body>
 
     <header class="navbar">
@@ -62,12 +67,14 @@
                 <h2><i class="fas fa-shopping-bag"></i> Tu Pedido</h2>
                 <button class="modal-close" id="modal-close">&times;</button>
             </div>
-            <div class="modal-body"><div id="cart-items"></div></div>
+            <div class="modal-body">
+                <div id="cart-items"></div>
+            </div>
             <div class="cliente-info" style="margin-bottom: 1rem;">
                 <input type="text" id="cliente-nombre" placeholder="Tu nombre " required
                     style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
-            
+
             <div class="modal-footer">
                 <div class="total-row"><span>Total:</span><strong>$<span id="cart-total">0</span> CUP</strong></div>
                 <button class="btn-whatsapp" id="btn-whatsapp"><i class="fab fa-whatsapp"></i> Confirmar pedido</button>
@@ -83,21 +90,24 @@
             <div class="detalle-img-wrap"><img id="detalle-img" src="" alt=""></div>
             <div class="detalle-scroll">
                 <div class="detalle-info">
-                    <div class="detalle-vendedor"><i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span></div>
+                    <div class="detalle-vendedor"><i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
+                    </div>
                     <div class="detalle-nombre" id="detalle-nombre"></div>
                     <div class="detalle-precio">$<span id="detalle-precio"></span> CUP</div>
                     <span class="detalle-stock" id="detalle-stock"></span>
                     <div id="detalle-variantes"></div>
                 </div>
                 <div class="detalle-actions">
-                    <button class="detalle-btn-add" id="detalle-btn-add"><i class="fas fa-cart-plus"></i> Añadir al carrito</button>
+                    <button class="detalle-btn-add" id="detalle-btn-add"><i class="fas fa-cart-plus"></i> Añadir al
+                        carrito</button>
                     <button class="detalle-btn-share" id="detalle-btn-share">
                         <i class="fab fa-whatsapp"></i> Compartir
                     </button>
                 </div>
-                
+
                 <div class="resenas-section">
-                    <h3 class="resenas-titulo"><i class="fas fa-star"></i> Reseñas <span class="resenas-count" id="resenas-count"></span></h3>
+                    <h3 class="resenas-titulo"><i class="fas fa-star"></i> Reseñas <span class="resenas-count"
+                            id="resenas-count"></span></h3>
                     <div class="resena-form">
                         <input type="text" id="resena-nombre" placeholder="Tu nombre" maxlength="30">
                         <div class="estrellas-input" id="estrellas-input">
@@ -105,8 +115,10 @@
                             <i class="fas fa-star" data-val="3"></i><i class="fas fa-star" data-val="4"></i>
                             <i class="fas fa-star" data-val="5"></i>
                         </div>
-                        <textarea id="resena-texto" placeholder="Escribe tu opinión..." maxlength="200" rows="3"></textarea>
-                        <button class="btn-enviar-resena" id="btn-enviar-resena"><i class="fas fa-paper-plane"></i> Publicar reseña</button>
+                        <textarea id="resena-texto" placeholder="Escribe tu opinión..." maxlength="200"
+                            rows="3"></textarea>
+                        <button class="btn-enviar-resena" id="btn-enviar-resena"><i class="fas fa-paper-plane"></i>
+                            Publicar reseña</button>
                     </div>
                     <div id="resenas-lista"></div>
                 </div>
@@ -116,34 +128,77 @@
 
     <!-- Modal Login/Registro (con diseño moderno) -->
     <div id="auth-modal" class="modal-overlay" hidden>
-        <div class="modal-box" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-store"></i> Área de vendedores</h2>
-                <button class="modal-close" id="auth-close">&times;</button>
+        <div class="modal-box" style="max-width: 400px; border-radius: 24px; overflow: hidden;">
+            <div class="modal-header"
+                style="background: white; border-bottom: 1px solid #f0f0f0; padding: 1rem 1.5rem;">
+                <h2 style="font-family: 'Playfair Display', serif; color: #1a237e; margin: 0; font-size: 1.3rem;">
+                    Shopping
+                    Pilón</h2>
+                <button class="modal-close" id="auth-close" style="color: #999;">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="auth-tabs">
+            <div class="modal-body" style="padding: 1.5rem;">
+                <!-- Pestañas (sin estilos en línea para que el CSS pueda cambiar el color y borde) -->
+                <div class="auth-tabs"
+                    style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #eee;">
                     <button class="tab-btn active" data-tab="login">Iniciar sesión</button>
                     <button class="tab-btn" data-tab="register">Registrarme</button>
                 </div>
+
+                <!-- Login form -->
                 <div id="login-form" class="auth-form active">
-                    <input type="email" id="login-email" placeholder="Correo electrónico" autocomplete="email">
-                    <input type="password" id="login-password" placeholder="Contraseña">
-                    <button id="login-submit" class="btn-primary" style="width:100%">Ingresar</button>
+                    <input type="email" id="login-email" placeholder="Correo electrónico"
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
+                    <input type="password" id="login-password" placeholder="Contraseña"
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
+                    <button id="login-submit" class="btn-primary"
+                        style="width: 100%; background: #1a237e; border-radius: 40px; padding: 12px;">Ingresar</button>
                     <p id="login-error" class="error-msg" style="display:none"></p>
                 </div>
+
+                <!-- Register form -->
                 <div id="register-form" class="auth-form">
-                    <input type="text" id="reg-nombre" placeholder="Nombre completo" autocomplete="name">
-                    <input type="email" id="reg-email" placeholder="Correo electrónico" autocomplete="email">
-                    <input type="tel" id="reg-telefono" placeholder="Teléfono (WhatsApp)" autocomplete="tel">
-                    <input type="password" id="reg-password" placeholder="Contraseña (mínimo 6 caracteres)">
-                    <input type="password" id="reg-confirm" placeholder="Confirmar contraseña">
-                    <select id="reg-role">
+                    <input type="text" id="reg-nombre" placeholder="Nombre completo"
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
+                    <input type="email" id="reg-email" placeholder="Correo electrónico"
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
+                    <input type="tel" id="reg-telefono" placeholder="Teléfono (WhatsApp)"
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
+                    <div style="position: relative; margin-bottom: 1rem;">
+                        <input type="password" id="reg-password" placeholder="Contraseña (mínimo 6 caracteres)"
+                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px;">
+                        <i class="fas fa-eye toggle-password" data-target="reg-password"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;"></i>
+                    </div>
+                    <div style="position: relative; margin-bottom: 1rem;">
+                        <input type="password" id="reg-confirm" placeholder="Confirmar contraseña"
+                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px;">
+                        <i class="fas fa-eye toggle-password" data-target="reg-confirm"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;"></i>
+                    </div>
+                    <select id="reg-role"
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
                         <option value="customer">Cliente</option>
                         <option value="seller">Vendedor</option>
                     </select>
-                    <button id="register-submit" class="btn-primary" style="width:100%">Crear cuenta</button>
+                    <button id="register-submit" class="btn-primary"
+                        style="width: 100%; background: #1a237e; border-radius: 40px; padding: 12px;">Crear
+                        cuenta</button>
                     <p id="register-error" class="error-msg" style="display:none"></p>
+                </div>
+
+                <!-- Social login buttons (estilo Shein) -->
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <p style="color: #888; font-size: 0.8rem; margin-bottom: 1rem;">O continúa con</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button id="login-google"
+                            style="background: white; border: 1px solid #ddd; border-radius: 50px; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
+                            <i class="fab fa-google" style="color: #4285F4;"></i> Google
+                        </button>
+                        <button id="login-facebook"
+                            style="background: white; border: 1px solid #ddd; border-radius: 50px; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
+                            <i class="fab fa-facebook" style="color: #1877F2;"></i> Facebook
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -154,7 +209,8 @@
             <div class="footer-brand">
                 <div class="footer-logo">SHOPPING <span>PILÓN</span></div>
                 <p class="footer-desc">El mercado digital de Pilón. Compra y vende desde casa, rápido y seguro.</p>
-                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank"><i class="fab fa-whatsapp"></i> Escríbenos</a>
+                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank"><i class="fab fa-whatsapp"></i>
+                    Escríbenos</a>
             </div>
             <div class="footer-links">
                 <h4>Navegación</h4>
@@ -176,6 +232,7 @@
     </footer>
 
     <script type="module" src="js/app.js"></script>
-    
+
 </body>
+
 </html>

@@ -1,4 +1,4 @@
-// auth.js - Versión final sin errores y con soporte admin
+// auth.js - Con toggle de contraseña, manejo de verificación de email y pestañas funcionales
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -11,12 +11,14 @@ export async function initAuth() {
     if (session) {
         currentUser = session.user;
         await loadUserRole();
+        await ensureProfile();
         updateUIForLoggedIn();
     }
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN') {
             currentUser = session.user;
             await loadUserRole();
+            await ensureProfile();
             updateUIForLoggedIn();
         } else if (event === 'SIGNED_OUT') {
             currentUser = null;
@@ -28,7 +30,6 @@ export async function initAuth() {
 
 async function loadUserRole() {
     if (!currentUser) return;
-    // Cache de rol por 1 hora
     const cached = localStorage.getItem('user_role');
     const cachedExpiry = localStorage.getItem('user_role_expiry');
     if (cached && cachedExpiry && Date.now() < parseInt(cachedExpiry)) {
@@ -56,6 +57,35 @@ async function loadUserRole() {
     currentRole = role || 'customer';
     localStorage.setItem('user_role', currentRole);
     localStorage.setItem('user_role_expiry', Date.now() + 3600000);
+}
+
+async function ensureProfile() {
+    if (!currentUser) return;
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+    if (error) {
+        console.error('Error al verificar perfil:', error);
+        return;
+    }
+    if (!data) {
+        const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+                id: currentUser.id,
+                email: currentUser.email,
+                role: 'customer',
+                nombre_completo: currentUser.user_metadata?.full_name || '',
+                telefono: currentUser.user_metadata?.phone || null
+            });
+        if (insertError) {
+            console.error('Error al crear perfil:', insertError);
+        } else {
+            console.log('Perfil creado automáticamente para', currentUser.email);
+        }
+    }
 }
 
 function updateUIForLoggedIn() {
@@ -145,13 +175,22 @@ function closeAuthModal() {
 
 function switchTab(tabId) {
     const tabs = document.querySelectorAll('.tab-btn');
-    const forms = document.querySelectorAll('.auth-form');
-    tabs.forEach(tab => tab.classList.remove('active'));
-    forms.forEach(form => form.classList.remove('active'));
-    const activeTab = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
-    if (activeTab) activeTab.classList.add('active');
-    const activeForm = document.getElementById(`${tabId}-form`);
-    if (activeForm) activeForm.classList.add('active');
+    tabs.forEach(tab => {
+        if (tab.dataset.tab === tabId) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    if (tabId === 'login') {
+        if (loginForm) loginForm.classList.add('active');
+        if (registerForm) registerForm.classList.remove('active');
+    } else {
+        if (registerForm) registerForm.classList.add('active');
+        if (loginForm) loginForm.classList.remove('active');
+    }
 }
 
 function validarTelefonoCubano(tel) {
@@ -232,7 +271,6 @@ async function handleRegister() {
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
 
-        // Guardar perfil completo
         await supabase.from('profiles').upsert({
             id: user.id,
             email,
@@ -240,6 +278,14 @@ async function handleRegister() {
             nombre_completo: nombre,
             telefono: telefono || null
         }, { onConflict: 'id' });
+
+        if (user.confirmed_at === null) {
+            mostrarToast('✅ Revisa tu correo (incluye spam) y confirma tu cuenta. Luego inicia sesión.', 'info');
+            closeAuthModal();
+            document.getElementById('reg-password').value = '';
+            document.getElementById('reg-confirm').value = '';
+            return;
+        }
 
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
@@ -253,6 +299,7 @@ async function handleRegister() {
             location.reload();
         }
     } catch (err) {
+        console.error('Error en registro:', err);
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
     } finally {
@@ -261,21 +308,39 @@ async function handleRegister() {
     }
 }
 
+async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+    });
+    if (error) mostrarToast(error.message, 'error');
+}
+
+async function signInWithFacebook() {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: { redirectTo: window.location.origin }
+    });
+    if (error) mostrarToast(error.message, 'error');
+}
+
 export function bindAuthEvents() {
     const modal = document.getElementById('auth-modal');
     const closeBtn = document.getElementById('auth-close');
-    const tabs = document.querySelectorAll('.tab-btn');
     const loginBtn = document.getElementById('login-submit');
     const registerBtn = document.getElementById('register-submit');
     const userBtn = document.getElementById('user-btn');
     const btnRegistroVendedor = document.getElementById('btn-registro-vendedor');
     const footerRegistro = document.getElementById('footer-registro');
+    const googleBtn = document.getElementById('login-google');
+    const facebookBtn = document.getElementById('login-facebook');
 
     if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeAuthModal(); });
-    if (tabs) tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
     if (loginBtn) loginBtn.addEventListener('click', handleLogin);
     if (registerBtn) registerBtn.addEventListener('click', handleRegister);
+    if (googleBtn) googleBtn.addEventListener('click', signInWithGoogle);
+    if (facebookBtn) facebookBtn.addEventListener('click', signInWithFacebook);
 
     if (btnRegistroVendedor) {
         btnRegistroVendedor.addEventListener('click', (e) => {
@@ -289,10 +354,38 @@ export function bindAuthEvents() {
             openAuthModal('seller');
         });
     }
-
     if (userBtn && !currentUser) userBtn.addEventListener('click', () => openAuthModal());
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
+    });
+
+    // Pestañas
+    const tabs = document.querySelectorAll('.tab-btn');
+    function handleTabClick(e) {
+        switchTab(e.currentTarget.dataset.tab);
+    }
+    tabs.forEach(tab => {
+        tab.removeEventListener('click', handleTabClick);
+        tab.addEventListener('click', handleTabClick);
+    });
+
+    // Delegación de eventos para el ojito
+    document.body.addEventListener('click', function (e) {
+        const icon = e.target.closest('.toggle-password');
+        if (!icon) return;
+        const targetId = icon.getAttribute('data-target');
+        if (!targetId) return;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     });
 }
