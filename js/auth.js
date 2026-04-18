@@ -1,4 +1,4 @@
-// auth.js - Con toggle de contraseña, manejo de verificación de email y pestañas funcionales
+// auth.js - Con reenvío de confirmación, restablecer contraseña y bienvenida en hero
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -77,8 +77,8 @@ async function ensureProfile() {
                 id: currentUser.id,
                 email: currentUser.email,
                 role: 'customer',
-                nombre_completo: currentUser.user_metadata?.full_name || '',
-                telefono: currentUser.user_metadata?.phone || null
+                nombre_completo: currentUser.user_metadata?.nombre || currentUser.user_metadata?.full_name || '',
+                telefono: currentUser.user_metadata?.telefono || null
             });
         if (insertError) {
             console.error('Error al crear perfil:', insertError);
@@ -132,6 +132,20 @@ function updateUIForLoggedIn() {
             location.reload();
         });
     }
+
+    // Mensaje de bienvenida en el héroe
+    const heroWelcome = document.getElementById('hero-welcome');
+    const registerBtn = document.getElementById('btn-registro-vendedor');
+    if (heroWelcome && registerBtn) {
+        let userName = currentUser.user_metadata?.nombre ||
+            currentUser.user_metadata?.full_name ||
+            currentUser.email?.split('@')[0] ||
+            'Usuario';
+        const welcomeText = `✨ ¡Bienvenido, ${escapeHtml(userName)}! ✨`;
+        document.getElementById('welcome-message').innerHTML = welcomeText;
+        heroWelcome.style.display = 'block';
+        registerBtn.style.display = 'none';
+    }
 }
 
 function updateUIForLoggedOut() {
@@ -143,6 +157,13 @@ function updateUIForLoggedOut() {
     const newUserBtn = userBtn.cloneNode(true);
     userBtn.parentNode.replaceChild(newUserBtn, userBtn);
     newUserBtn.addEventListener('click', () => openAuthModal());
+
+    const heroWelcome = document.getElementById('hero-welcome');
+    const registerBtn = document.getElementById('btn-registro-vendedor');
+    if (heroWelcome && registerBtn) {
+        heroWelcome.style.display = 'none';
+        registerBtn.style.display = 'inline-flex';
+    }
 }
 
 export function openAuthModal(preselectedRole = null) {
@@ -234,25 +255,31 @@ async function handleRegister() {
     const confirm = document.getElementById('reg-confirm').value;
     const role = document.getElementById('reg-role').value;
     const errorDiv = document.getElementById('register-error');
+    const infoDiv = document.getElementById('register-info');
 
+    // Validaciones básicas
     if (!nombre || !email || !password || !confirm) {
         errorDiv.textContent = 'Todos los campos son obligatorios';
         errorDiv.style.display = 'block';
+        if (infoDiv) infoDiv.style.display = 'none';
         return;
     }
     if (password.length < 6) {
         errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
         errorDiv.style.display = 'block';
+        if (infoDiv) infoDiv.style.display = 'none';
         return;
     }
     if (password !== confirm) {
         errorDiv.textContent = 'Las contraseñas no coinciden';
         errorDiv.style.display = 'block';
+        if (infoDiv) infoDiv.style.display = 'none';
         return;
     }
     if (role === 'seller' && telefono && !validarTelefonoCubano(telefono)) {
         errorDiv.textContent = 'Teléfono cubano inválido (formato: 5XXXXXXX)';
         errorDiv.style.display = 'block';
+        if (infoDiv) infoDiv.style.display = 'none';
         return;
     }
 
@@ -260,33 +287,60 @@ async function handleRegister() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
     errorDiv.style.display = 'none';
+    if (infoDiv) infoDiv.style.display = 'none';
 
     try {
+        // Registrar usuario en Supabase con redirección personalizada
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            options: { data: { role, nombre, telefono } }
+            options: {
+                emailRedirectTo: 'https://shopping-pilon.pages.dev/confirm-email.html',
+                data: { role, nombre, telefono }
+            }
         });
+
         if (error) throw error;
+
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
 
-        await supabase.from('profiles').upsert({
-            id: user.id,
-            email,
-            role,
-            nombre_completo: nombre,
-            telefono: telefono || null
-        }, { onConflict: 'id' });
+        // Insertar perfil en tabla profiles
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+                id: user.id,
+                email,
+                role,
+                nombre_completo: nombre,
+                telefono: telefono || null
+            }, { onConflict: 'id' });
 
+        if (profileError) {
+            console.error('Error al guardar perfil:', profileError);
+            mostrarToast('Usuario creado pero error al guardar perfil. Contacta al administrador.', 'error');
+        } else {
+            console.log('Perfil guardado correctamente para', email);
+        }
+
+        // Verificar si requiere confirmación de email
         if (user.confirmed_at === null) {
-            mostrarToast('✅ Revisa tu correo (incluye spam) y confirma tu cuenta. Luego inicia sesión.', 'info');
-            closeAuthModal();
+            // Mostrar mensaje de verificación en el formulario
+            if (infoDiv) {
+                infoDiv.innerHTML = '<i class="fas fa-envelope"></i> Te hemos enviado un correo de verificación. Revisa tu bandeja (incluye spam) y confirma tu cuenta. Luego inicia sesión.';
+                infoDiv.style.display = 'block';
+            }
+            mostrarToast('✅ Revisa tu correo y confirma tu cuenta.', 'info');
+            // Limpiar campos de contraseña
             document.getElementById('reg-password').value = '';
             document.getElementById('reg-confirm').value = '';
+            // No cerramos el modal para que el usuario vea el mensaje
+            btn.disabled = false;
+            btn.innerHTML = 'Crear cuenta';
             return;
         }
 
+        // Si no requiere confirmación (o ya está confirmado), iniciar sesión automáticamente
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
 
@@ -300,13 +354,56 @@ async function handleRegister() {
         }
     } catch (err) {
         console.error('Error en registro:', err);
-        errorDiv.textContent = err.message;
+        let mensaje = err.message || 'Error al registrar. Revisa tu conexión.';
+        if (err.message && err.message.includes('email rate limit exceeded')) {
+            mensaje = '📧 Demasiados intentos. Espera unos minutos y vuelve a intentar con el mismo correo o usa otro diferente.';
+        }
+        errorDiv.textContent = mensaje;
         errorDiv.style.display = 'block';
+        mostrarToast(mensaje, 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = 'Crear cuenta';
     }
 }
+
+// ========== FUNCIONES PARA REENVIAR CONFIRMACIÓN Y RESTABLECER CONTRASEÑA ==========
+async function resendConfirmationEmail() {
+    const email = document.getElementById('login-email').value.trim() || document.getElementById('reg-email').value.trim();
+    if (!email) {
+        mostrarToast('Ingresa tu correo electrónico primero', 'warning');
+        return;
+    }
+    const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+            emailRedirectTo: window.location.origin
+        }
+    });
+    if (error) {
+        mostrarToast(`Error: ${error.message}`, 'error');
+    } else {
+        mostrarToast(`✅ Se ha enviado un nuevo correo de confirmación a ${email}. Revisa tu bandeja (incluye spam).`, 'info');
+    }
+}
+
+async function resetPassword() {
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) {
+        mostrarToast('Ingresa tu correo electrónico para restablecer la contraseña', 'warning');
+        return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password.html`
+    });
+    if (error) {
+        mostrarToast(`Error: ${error.message}`, 'error');
+    } else {
+        mostrarToast(`📧 Se ha enviado un enlace para restablecer tu contraseña a ${email}. Revisa tu correo.`, 'info');
+    }
+}
+// =================================================================================
 
 async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -334,6 +431,9 @@ export function bindAuthEvents() {
     const footerRegistro = document.getElementById('footer-registro');
     const googleBtn = document.getElementById('login-google');
     const facebookBtn = document.getElementById('login-facebook');
+    const forgotLink = document.getElementById('forgot-password-link');
+    const resendLinkLogin = document.getElementById('resend-confirm-link');
+    const resendLinkRegister = document.getElementById('resend-confirm-register');
 
     if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeAuthModal(); });
@@ -369,6 +469,11 @@ export function bindAuthEvents() {
         tab.removeEventListener('click', handleTabClick);
         tab.addEventListener('click', handleTabClick);
     });
+
+    // Enlaces de restablecer y reenviar confirmación
+    if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); resetPassword(); });
+    if (resendLinkLogin) resendLinkLogin.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
+    if (resendLinkRegister) resendLinkRegister.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
 
     // Delegación de eventos para el ojito
     document.body.addEventListener('click', function (e) {

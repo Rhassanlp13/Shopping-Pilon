@@ -1,0 +1,89 @@
+================================================================================
+     RECOMENDACIONES TECNOLÓGICAS PARA EVOLUCIONAR SHOPPING PILÓN
+================================================================================
+
+Fecha: Abril 2026
+Proyecto: Shopping Pilón (Tienda online con Supabase + WhatsApp)
+Autor: Senior Developer
+
+A continuación se presentan propuestas tecnológicas ordenadas por
+impacto / esfuerzo para mejorar la plataforma.
+
+================================================================================
+🚀 ALTO IMPACTO - MEDIO ESFUERZO
+================================================================================
+
+1. PASARELA DE PAGOS INTEGRADA (Transfermóvil / EnZona / Stripe)
+   - Tecnología: API de Transfermóvil (Cuba) o Stripe Connect (internacional)
+   - Beneficio: Automatizar cobros, reducir dependencia del efectivo y WhatsApp
+   - Implementación: Webhook para actualizar estado del pedido a "pagado"
+
+2. NOTIFICACIONES PUSH (Web Push API)
+   - Tecnología: Service Worker + VAPID (con Supabase o Firebase Cloud Messaging)
+   - Beneficio: Notificar al vendedor cuando llega un pedido nuevo
+   - Implementación: Suscripción del vendedor al iniciar sesión y envío desde guardarPedido
+
+3. BÚSQUEDA Y FILTROS AVANZADOS
+   - Tecnología: pg_trgm + índices GIN en Supabase (Full-Text Search)
+   - Beneficio: Búsqueda por nombre, categoría, rango de precios
+   - Implementación: Endpoint /api/search?q=... con ranking de relevancia
+
+================================================================================
+⚙️ MEDIO IMPACTO - BAJO ESFUERZO
+================================================================================
+
+4. CHAT EN TIEMPO REAL ENTRE CLIENTE Y VENDEDOR
+   - Tecnología: Supabase Realtime (canales)
+   - Beneficio: Resolver dudas antes de comprar, mejora la conversión
+   - Implementación: Ventana de chat asociada a cada producto/pedido
+
+5. PANEL DE ANÁLISIS PARA EL VENDEDOR (ESTADÍSTICAS)
+   - Tecnología: Chart.js + Supabase queries agregadas
+   - Beneficio: El vendedor ve productos más vendidos, ingresos por mes, tasa de confirmación
+   - Implementación: Nueva pestaña "Estadísticas" en admin.html
+
+6. MODO OSCURO
+   - Tecnología: CSS variables + localStorage para persistencia
+   - Beneficio: Mejora experiencia de usuario en entornos con poca luz
+   - Implementación: Botón toggle y detección automática con prefers-color-scheme
+
+================================================================================
+🧠 INNOVACIÓN / DIFERENCIACIÓN
+================================================================================
+
+7. GENERACIÓN AUTOMÁTICA DE IMÁGENES DE PRODUCTOS CON IA
+   - Tecnología: Replicate API (Stable Diffusion) o Hugging Face Inference
+   - Beneficio: Vendedor escribe descripción y la IA genera una imagen de muestra
+   - Implementación: Campo "Generar imagen con IA" en el formulario de nuevo producto
+
+8. RECOMENDACIONES PERSONALIZADAS (FILTRADO COLABORATIVO BÁSICO)
+   - Tecnología: Supabase Edge Functions + algoritmos de similitud (coseno)
+   - Beneficio: Sugerir productos basados en el historial de compras del cliente
+   - Implementación: Sección "Clientes que compraron esto también vieron..."
+
+9. PRUEBAS AUTOMATIZADAS (E2E) CON PLAYWRIGHT
+   - Tecnología: Playwright (Node.js) + GitHub Actions
+   - Beneficio: Evitar regresiones al desplegar cambios
+   - Implementación: Flujos críticos: registro, login, crear producto, añadir al carrito, confirmar pedido
+
+================================================================================
+🎯 RECOMENDACIÓN PRIORITARIA (PRÓXIMO SPRINT)
+================================================================================
+
+Si solo se pudiera implementar una tecnología, elegir:
+   **NOTIFICACIONES PUSH (Web Push API)**
+
+Motivos:
+   - Cierra el bucle de comunicación con el vendedor (no necesita revisar el panel constantemente)
+   - Aumenta la tasa de confirmación de pedidos
+   - Se integra limpiamente con la infraestructura actual (Supabase + Service Worker)
+
+================================================================================
+📌 NOTAS ADICIONALES
+================================================================================
+
+- Antes de implementar cualquier cambio, se recomienda tener un sistema de control de versiones (Git) y realizar despliegues en entorno de pruebas.
+- Para pasarelas de pago en Cuba, investigar la documentación oficial de Transfermóvil (CUP) y EnZona.
+- Las funciones de IA (punto 7) pueden tener costos asociados por uso de API.
+
+================================================================================

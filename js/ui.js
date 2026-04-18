@@ -1,4 +1,4 @@
-// ui.js - Versión final con compartir producto, optimizaciones y correcciones
+// ui.js - Versión con filtros por categoría
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -22,7 +22,7 @@ function optimizarImagen(url, ancho = 400, alto = 400) {
 }
 
 // ==================== CACHÉ DE RESEÑAS ====================
-const CACHE_TTL = 300000; // 5 minutos
+const CACHE_TTL = 300000;
 
 async function getResenasConCache(productoId) {
     const cacheKey = `resenas_${productoId}`;
@@ -53,6 +53,7 @@ export const UI = {
     estrellaSeleccionada: 0,
     varianteActualIndex: null,
     enviandoPedido: false,
+    categoriaActual: 'todos', // Estado del filtro
 
     init(productos) {
         this.productos = productos;
@@ -66,14 +67,25 @@ export const UI = {
         this.bindEventos();
     },
 
-    renderProductos() {
+    // Filtrar productos según categoría seleccionada
+    filtrarProductos() {
+        let productosFiltrados = this.productos;
+        if (this.categoriaActual !== 'todos') {
+            productosFiltrados = this.productos.filter(p => p.categoria === this.categoriaActual);
+        }
+        this.renderProductos(productosFiltrados);
+    },
+
+    // Renderiza productos, acepta array opcional para filtrado
+    renderProductos(productosAMostrar = null) {
+        const productos = productosAMostrar || this.productos;
         if (!this.grid) return;
-        if (this.productos.length === 0) {
-            this.grid.innerHTML = `<div class="grid-empty"><i class="fas fa-box-open"></i><p>No hay productos disponibles aún.</p></div>`;
+        if (productos.length === 0) {
+            this.grid.innerHTML = `<div class="grid-empty"><i class="fas fa-box-open"></i><p>No hay productos en esta categoría.</p></div>`;
             return;
         }
-        const ofertas = this.productos.filter(p => p.enoferta && p.preciooferta);
-        const normales = this.productos.filter(p => !p.enoferta || !p.preciooferta);
+        const ofertas = productos.filter(p => p.enoferta && p.preciooferta);
+        const normales = productos.filter(p => !p.enoferta || !p.preciooferta);
         const renderCard = (p) => {
             const enCarrito = carrito.cantidadDe(p.id, null);
             const precioReal = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
@@ -299,7 +311,6 @@ export const UI = {
                     if (!btnAdd.disabled) btnAdd.innerHTML = originalText;
                 }, 1500);
 
-                // Actualizar botón en el grid
                 const targetCard = document.querySelector(`.product-card[data-id="${id}"]`);
                 if (targetCard) {
                     const btnGrid = targetCard.querySelector('.card-btn-add');
@@ -330,12 +341,10 @@ export const UI = {
             }
         };
 
-        // === BOTÓN COMPARTIR ===
         const btnShare = document.getElementById('detalle-btn-share');
         if (btnShare) {
             btnShare.onclick = () => this.compartirProducto();
         }
-        // =====================
 
         modal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
@@ -349,7 +358,6 @@ export const UI = {
         actualizarVista(this.varianteActualIndex);
     },
 
-    // === NUEVO: COMPARTIR PRODUCTO POR WHATSAPP ===
     compartirProducto() {
         const producto = this.productos.find(p => p.id === this.productoActualId);
         if (!producto) return;
@@ -358,7 +366,6 @@ export const UI = {
         const texto = `🛍️ *${producto.nombre}* - $${precioFinal.toLocaleString('es')} CUP\n\nMira este producto en Shopping Pilón:\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
     },
-    // ============================================
 
     cerrarDetalle() {
         document.getElementById('modal-detalle').setAttribute('hidden', '');
@@ -660,5 +667,16 @@ export const UI = {
         });
 
         document.getElementById('btn-enviar-resena')?.addEventListener('click', () => this.enviarResena());
+
+        // ========== FILTROS POR CATEGORÍA ==========
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.categoriaActual = btn.dataset.categoria;
+                this.filtrarProductos();
+            });
+        });
+        // ===========================================
     }
 };
