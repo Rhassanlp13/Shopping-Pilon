@@ -29,7 +29,7 @@
 
     <header class="navbar">
         <div class="logo">SHOPPING <span>PILÓN</span></div>
-        <div style="display: flex; gap: 0.8rem;">
+        <div class="nav-buttons">
             <button class="cart-btn" id="user-btn" aria-label="Usuario">
                 <i class="fas fa-user"></i>
             </button>
@@ -45,6 +45,11 @@
             <p class="hero-subtitle">Bienvenido a</p>
             <h1>Tu Mercado<br>en <em>Pilón</em></h1>
             <p class="hero-desc">Directo del vendedor a tu casa.</p>
+
+            <div class="hero-welcome" id="hero-welcome" style="display: none;">
+                <p class="welcome-message" id="welcome-message"></p>
+            </div>
+
             <a href="#" id="btn-registro-vendedor" class="btn-primary">
                 <i class="fas fa-user-plus"></i> Registrarme como vendedor
             </a>
@@ -69,16 +74,21 @@
             </div>
             <div class="modal-body">
                 <div id="cart-items"></div>
+                <div class="cliente-info">
+                    <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
+                </div>
             </div>
-            <div class="cliente-info" style="margin-bottom: 1rem;">
-                <input type="text" id="cliente-nombre" placeholder="Tu nombre " required
-                    style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-            </div>
-
             <div class="modal-footer">
-                <div class="total-row"><span>Total:</span><strong>$<span id="cart-total">0</span> CUP</strong></div>
-                <button class="btn-whatsapp" id="btn-whatsapp"><i class="fab fa-whatsapp"></i> Confirmar pedido</button>
-                <button class="btn-clear" id="btn-clear"><i class="fas fa-trash"></i> Vaciar carrito</button>
+                <div class="total-row">
+                    <span>Total:</span>
+                    <strong>$<span id="cart-total">0</span> CUP</strong>
+                </div>
+                <button class="btn-whatsapp" id="btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> Confirmar pedido
+                </button>
+                <button class="btn-clear" id="btn-clear">
+                    <i class="fas fa-trash"></i> Vaciar carrito
+                </button>
             </div>
         </div>
     </div>
@@ -87,10 +97,13 @@
     <div id="modal-detalle" class="modal-overlay" hidden>
         <div class="detalle-box">
             <button class="detalle-btn-cerrar" id="detalle-btn-cerrar"><i class="fas fa-arrow-left"></i></button>
-            <div class="detalle-img-wrap"><img id="detalle-img" src="" alt=""></div>
+            <div class="detalle-img-wrap">
+                <img id="detalle-img" src="" alt="">
+            </div>
             <div class="detalle-scroll">
                 <div class="detalle-info">
-                    <div class="detalle-vendedor"><i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
+                    <div class="detalle-vendedor">
+                        <i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
                     </div>
                     <div class="detalle-nombre" id="detalle-nombre"></div>
                     <div class="detalle-precio">$<span id="detalle-precio"></span> CUP</div>
@@ -98,27 +111,32 @@
                     <div id="detalle-variantes"></div>
                 </div>
                 <div class="detalle-actions">
-                    <button class="detalle-btn-add" id="detalle-btn-add"><i class="fas fa-cart-plus"></i> Añadir al
-                        carrito</button>
+                    <button class="detalle-btn-add" id="detalle-btn-add">
+                        <i class="fas fa-cart-plus"></i> Añadir al carrito
+                    </button>
                     <button class="detalle-btn-share" id="detalle-btn-share">
                         <i class="fab fa-whatsapp"></i> Compartir
                     </button>
                 </div>
-
                 <div class="resenas-section">
-                    <h3 class="resenas-titulo"><i class="fas fa-star"></i> Reseñas <span class="resenas-count"
-                            id="resenas-count"></span></h3>
+                    <h3 class="resenas-titulo">
+                        <i class="fas fa-star"></i> Reseñas
+                        <span class="resenas-count" id="resenas-count"></span>
+                    </h3>
                     <div class="resena-form">
                         <input type="text" id="resena-nombre" placeholder="Tu nombre" maxlength="30">
                         <div class="estrellas-input" id="estrellas-input">
-                            <i class="fas fa-star" data-val="1"></i><i class="fas fa-star" data-val="2"></i>
-                            <i class="fas fa-star" data-val="3"></i><i class="fas fa-star" data-val="4"></i>
+                            <i class="fas fa-star" data-val="1"></i>
+                            <i class="fas fa-star" data-val="2"></i>
+                            <i class="fas fa-star" data-val="3"></i>
+                            <i class="fas fa-star" data-val="4"></i>
                             <i class="fas fa-star" data-val="5"></i>
                         </div>
                         <textarea id="resena-texto" placeholder="Escribe tu opinión..." maxlength="200"
                             rows="3"></textarea>
-                        <button class="btn-enviar-resena" id="btn-enviar-resena"><i class="fas fa-paper-plane"></i>
-                            Publicar reseña</button>
+                        <button class="btn-enviar-resena" id="btn-enviar-resena">
+                            <i class="fas fa-paper-plane"></i> Publicar reseña
+                        </button>
                     </div>
                     <div id="resenas-lista"></div>
                 </div>
@@ -126,78 +144,67 @@
         </div>
     </div>
 
-    <!-- Modal Login/Registro (con diseño moderno) -->
+    <!-- Modal Login/Registro -->
+    <!-- Modal Login/Registro -->
     <div id="auth-modal" class="modal-overlay" hidden>
-        <div class="modal-box" style="max-width: 400px; border-radius: 24px; overflow: hidden;">
-            <div class="modal-header"
-                style="background: white; border-bottom: 1px solid #f0f0f0; padding: 1rem 1.5rem;">
-                <h2 style="font-family: 'Playfair Display', serif; color: #1a237e; margin: 0; font-size: 1.3rem;">
-                    Shopping
-                    Pilón</h2>
-                <button class="modal-close" id="auth-close" style="color: #999;">&times;</button>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Shopping Pilón</h2>
+                <button class="modal-close" id="auth-close">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 1.5rem;">
-                <!-- Pestañas (sin estilos en línea para que el CSS pueda cambiar el color y borde) -->
-                <div class="auth-tabs"
-                    style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #eee;">
+            <div class="modal-body">
+                <div class="auth-tabs">
                     <button class="tab-btn active" data-tab="login">Iniciar sesión</button>
                     <button class="tab-btn" data-tab="register">Registrarme</button>
                 </div>
-
+    
                 <!-- Login form -->
                 <div id="login-form" class="auth-form active">
-                    <input type="email" id="login-email" placeholder="Correo electrónico"
-                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
-                    <input type="password" id="login-password" placeholder="Contraseña"
-                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
-                    <button id="login-submit" class="btn-primary"
-                        style="width: 100%; background: #1a237e; border-radius: 40px; padding: 12px;">Ingresar</button>
+                    <input type="email" id="login-email" placeholder="Correo electrónico">
+                    <input type="password" id="login-password" placeholder="Contraseña">
+                    <button id="login-submit" class="btn-primary">Ingresar</button>
                     <p id="login-error" class="error-msg" style="display:none"></p>
+                    <div class="auth-links">
+                        <a href="#" id="forgot-password-link">¿Olvidaste tu contraseña?</a>
+                        <a href="#" id="resend-confirm-link">¿No recibiste el correo de confirmación?</a>
+                    </div>
                 </div>
-
+    
                 <!-- Register form -->
                 <div id="register-form" class="auth-form">
-                    <input type="text" id="reg-nombre" placeholder="Nombre completo"
-                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
-                    <input type="email" id="reg-email" placeholder="Correo electrónico"
-                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
-                    <input type="tel" id="reg-telefono" placeholder="Teléfono (WhatsApp)"
-                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
-                    <div style="position: relative; margin-bottom: 1rem;">
-                        <input type="password" id="reg-password" placeholder="Contraseña (mínimo 6 caracteres)"
-                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px;">
-                        <i class="fas fa-eye toggle-password" data-target="reg-password"
-                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;"></i>
+                    <input type="text" id="reg-nombre" placeholder="Nombre completo">
+                    <input type="email" id="reg-email" placeholder="Correo electrónico">
+                    <input type="tel" id="reg-telefono" placeholder="Teléfono (WhatsApp)">
+                    <div class="password-wrapper">
+                        <input type="password" id="reg-password" placeholder="Contraseña (mínimo 6 caracteres)">
+                        <i class="fas fa-eye toggle-password" data-target="reg-password"></i>
                     </div>
-                    <div style="position: relative; margin-bottom: 1rem;">
-                        <input type="password" id="reg-confirm" placeholder="Confirmar contraseña"
-                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px;">
-                        <i class="fas fa-eye toggle-password" data-target="reg-confirm"
-                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;"></i>
+                    <div class="password-wrapper">
+                        <input type="password" id="reg-confirm" placeholder="Confirmar contraseña">
+                        <i class="fas fa-eye toggle-password" data-target="reg-confirm"></i>
                     </div>
-                    <select id="reg-role"
-                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 1rem;">
+                    <select id="reg-role">
                         <option value="customer">Cliente</option>
                         <option value="seller">Vendedor</option>
                     </select>
-                    <button id="register-submit" class="btn-primary"
-                        style="width: 100%; background: #1a237e; border-radius: 40px; padding: 12px;">Crear
-                        cuenta</button>
+                    <button id="register-submit" class="btn-primary">Crear cuenta</button>
                     <p id="register-error" class="error-msg" style="display:none"></p>
+                    <div class="auth-links register-link">
+                        <a href="#" id="resend-confirm-register">Reenviar correo de verificación</a>
+                    </div>
+                    <div id="register-info" class="info-msg"
+                        style="display:none; background:#e3f2fd; padding:10px; border-radius:12px; text-align:center; margin-top:1rem;">
+                        <i class="fas fa-envelope"></i> Te hemos enviado un correo de verificación. Revisa tu bandeja (incluye spam) y
+                        confirma tu cuenta.
+                    </div>
                 </div>
-
-                <!-- Social login buttons (estilo Shein) -->
-                <div style="margin-top: 1.5rem; text-align: center;">
-                    <p style="color: #888; font-size: 0.8rem; margin-bottom: 1rem;">O continúa con</p>
-                    <div style="display: flex; gap: 1rem; justify-content: center;">
-                        <button id="login-google"
-                            style="background: white; border: 1px solid #ddd; border-radius: 50px; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
-                            <i class="fab fa-google" style="color: #4285F4;"></i> Google
-                        </button>
-                        <button id="login-facebook"
-                            style="background: white; border: 1px solid #ddd; border-radius: 50px; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
-                            <i class="fab fa-facebook" style="color: #1877F2;"></i> Facebook
-                        </button>
+    
+                <!-- Social login -->
+                <div class="social-login">
+                    <p>O continúa con</p>
+                    <div class="social-buttons">
+                        <button id="login-google"><i class="fab fa-google"></i> Google</button>
+                        <button id="login-facebook"><i class="fab fa-facebook"></i> Facebook</button>
                     </div>
                 </div>
             </div>
@@ -209,8 +216,9 @@
             <div class="footer-brand">
                 <div class="footer-logo">SHOPPING <span>PILÓN</span></div>
                 <p class="footer-desc">El mercado digital de Pilón. Compra y vende desde casa, rápido y seguro.</p>
-                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank"><i class="fab fa-whatsapp"></i>
-                    Escríbenos</a>
+                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank">
+                    <i class="fab fa-whatsapp"></i> Escríbenos
+                </a>
             </div>
             <div class="footer-links">
                 <h4>Navegación</h4>
@@ -227,12 +235,11 @@
         </div>
         <div class="footer-bottom">
             <p>© 2026 Shopping Pilón — Todos los derechos reservados</p>
-            <p>Hecho con <i class="fas fa-heart" style="color:#e53935"></i> en Pilón, Cuba</p>
+            <p>Hecho con <i class="fas fa-heart"></i> en Pilón, Cuba</p>
         </div>
     </footer>
 
     <script type="module" src="js/app.js"></script>
-
 </body>
 
 </html>

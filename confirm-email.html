@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Confirmando cuenta...</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'https://xistchuskgnmjrzlntve.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc3RjaHVza2dubWpyemxudHZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDQzMzIsImV4cCI6MjA5MDgyMDMzMn0.2uQXmRgJ5lQBSMTz5keUhcj9HFhSq0t78Pcpu-CmSS4';
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        window.onload = async () => {
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const access_token = params.get('access_token');
+            const refresh_token = params.get('refresh_token');
+            const type = params.get('type');
+
+            if (type === 'signup' && access_token) {
+                // Establecer la sesión automáticamente
+                const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+                if (error) {
+                    document.body.innerHTML = '<p>Error al confirmar la cuenta. Intenta iniciar sesión manualmente.</p>';
+                } else {
+                    // Redirigir a la página principal después de 1 segundo
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                    document.body.innerHTML = '<p>¡Cuenta confirmada! Redirigiendo a la tienda...</p>';
+                }
+            } else {
+                document.body.innerHTML = '<p>Enlace inválido. Solicita un nuevo correo de verificación.</p>';
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <p>Confirmando tu cuenta, por favor espera...</p>
+</body>
+
+</html>
