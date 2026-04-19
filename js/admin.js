@@ -46,25 +46,27 @@ async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
 
 async function subirImagen(file, productoId = null) {
     if (!file) return null;
+    console.log('Subiendo imagen:', file.name, file.size);
     try {
         const blobOptimizado = await resizeAndOptimizeImage(file);
-        const extension = 'webp';
-        const nombreArchivo = productoId
-            ? `${productoId}_${Date.now()}.${extension}`
-            : `temp_${Date.now()}.${extension}`;
+        const nombreArchivo = productoId ? `${productoId}_${Date.now()}.webp` : `temp_${Date.now()}.webp`;
         const { data, error } = await supabase.storage
-            .from('products')
+            .from('products')   // ✅ cambiado de 'productos' a 'products'
             .upload(nombreArchivo, blobOptimizado, {
                 contentType: 'image/webp',
                 cacheControl: '3600'
             });
-        if (error) throw error;
+        if (error) {
+            console.error('Error de subida:', error);
+            throw error;
+        }
         const { data: publicUrlData } = supabase.storage
-            .from('products')
+            .from('products')   // ✅ mismo nombre
             .getPublicUrl(nombreArchivo);
+        console.log('Imagen subida, URL:', publicUrlData.publicUrl);
         return publicUrlData.publicUrl;
     } catch (err) {
-        console.error('Error subiendo imagen:', err);
+        console.error('Excepción en subirImagen:', err);
         mostrarToast('Error al subir la imagen: ' + err.message, 'error');
         return null;
     }
