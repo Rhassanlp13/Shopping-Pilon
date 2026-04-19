@@ -1,4 +1,4 @@
-// admin.js - Con soporte para admin (URL) y vendedores (file upload a Supabase)
+// admin.js - Con soporte para admin (URL) y vendedores (file upload a Supabase) y aprobación de vendedores
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
@@ -46,27 +46,22 @@ async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
 
 async function subirImagen(file, productoId = null) {
     if (!file) return null;
-    console.log('Subiendo imagen:', file.name, file.size);
     try {
         const blobOptimizado = await resizeAndOptimizeImage(file);
         const nombreArchivo = productoId ? `${productoId}_${Date.now()}.webp` : `temp_${Date.now()}.webp`;
         const { data, error } = await supabase.storage
-            .from('products')   // ✅ cambiado de 'productos' a 'products'
+            .from('products')
             .upload(nombreArchivo, blobOptimizado, {
                 contentType: 'image/webp',
                 cacheControl: '3600'
             });
-        if (error) {
-            console.error('Error de subida:', error);
-            throw error;
-        }
+        if (error) throw error;
         const { data: publicUrlData } = supabase.storage
-            .from('products')   // ✅ mismo nombre
+            .from('products')
             .getPublicUrl(nombreArchivo);
-        console.log('Imagen subida, URL:', publicUrlData.publicUrl);
         return publicUrlData.publicUrl;
     } catch (err) {
-        console.error('Excepción en subirImagen:', err);
+        console.error('Error subiendo imagen:', err);
         mostrarToast('Error al subir la imagen: ' + err.message, 'error');
         return null;
     }
@@ -104,6 +99,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     currentUserRole = profile.role;
 
+    // Si es pending_seller, redirigir
+    if (profile.role === 'pending_seller') {
+        mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
+        window.location.href = '/';
+        return;
+    }
+
     const grupoUrl = document.getElementById('grupo-url-imagen');
     const grupoFile = document.getElementById('grupo-file-imagen');
     if (currentUserRole === 'admin') {
@@ -130,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById(`page-${item.dataset.page}`).classList.add('active');
             if (item.dataset.page === 'resenas') cargarResenas();
             if (item.dataset.page === 'pedidos') cargarPedidos();
+            if (item.dataset.page === 'solicitudes') cargarSolicitudesYRender();
         });
     });
     document.getElementById('btn-nuevo')?.addEventListener('click', () => abrirNuevo());
@@ -300,6 +303,90 @@ function renderResenas() {
         </tr>`).join('')}</tbody></table>`;
 }
 
+// ==================== SOLICITUDES DE VENDEDORES ====================
+async function cargarSolicitudes() {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, nombre_completo, telefono, created_at')
+        .eq('role', 'pending_seller')
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error(error);
+        mostrarToast('Error al cargar solicitudes', 'error');
+        return [];
+    }
+    return data;
+}
+
+function renderSolicitudes(solicitudes) {
+    const tablaDiv = document.getElementById('tabla-solicitudes');
+    if (!tablaDiv) return;
+    if (solicitudes.length === 0) {
+        tablaDiv.innerHTML = `<div class="table-empty"><i class="fas fa-user-check"></i><p>No hay solicitudes pendientes.</p></div>`;
+        return;
+    }
+    tablaDiv.innerHTML = `<table class="admin-table">
+        <thead>
+            <tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            ${solicitudes.map(s => `
+                <tr>
+                    <td>${escapeHtml(s.email)}</td>
+                    <td>${escapeHtml(s.nombre_completo || '—')}</td>
+                    <td>${escapeHtml(s.telefono || '—')}</td>
+                    <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="act-btn aprobar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Aprobar</button>
+                        <button class="act-btn del rechazar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Rechazar</button>
+                    </td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>`;
+    document.querySelectorAll('.aprobar-solicitud').forEach(btn => {
+        btn.addEventListener('click', () => aprobarVendedor(btn.dataset.id, btn.dataset.email));
+    });
+    document.querySelectorAll('.rechazar-solicitud').forEach(btn => {
+        btn.addEventListener('click', () => rechazarVendedor(btn.dataset.id, btn.dataset.email));
+    });
+}
+
+async function aprobarVendedor(userId, email) {
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'seller' })
+        .eq('id', userId);
+    if (error) {
+        mostrarToast(`Error al aprobar a ${email}`, 'error');
+    } else {
+        mostrarToast(`✅ Vendedor ${email} aprobado`, 'ok');
+        const solicitudes = await cargarSolicitudes();
+        renderSolicitudes(solicitudes);
+    }
+}
+
+async function rechazarVendedor(userId, email) {
+    // Opción: cambiar rol a 'customer' (cliente normal)
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'customer' })
+        .eq('id', userId);
+    if (error) {
+        mostrarToast(`Error al rechazar a ${email}`, 'error');
+    } else {
+        mostrarToast(`❌ Vendedor ${email} rechazado`, 'info');
+        const solicitudes = await cargarSolicitudes();
+        renderSolicitudes(solicitudes);
+    }
+}
+
+async function cargarSolicitudesYRender() {
+    const solicitudes = await cargarSolicitudes();
+    renderSolicitudes(solicitudes);
+}
+// ==================== FIN SOLICITUDES ====================
+
 function abrirNuevo() {
     editandoId = null;
     document.getElementById('modal-titulo').innerText = 'Nuevo producto';
@@ -320,7 +407,6 @@ function abrirEditar(id) {
     document.getElementById('f-imagen').value = prod.imagen;
     document.getElementById('f-precio-oferta').value = prod.preciooferta ?? '';
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
-    // Cargar categoría
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = prod.categoria || 'Otros';
     const variantesDiv = document.getElementById('variantes-list');
@@ -338,7 +424,6 @@ function limpiarFormulario() {
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-precio-oferta').value = '';
     document.getElementById('f-en-oferta').checked = false;
-    // Restablecer categoría
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = 'Otros';
     document.getElementById('variantes-list').innerHTML = '';
@@ -376,7 +461,7 @@ async function guardarProducto() {
         let telefonovendedor = document.getElementById('f-telefono-vendedor').value.trim();
         const enOferta = document.getElementById('f-en-oferta').checked;
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
-        const categoria = document.getElementById('f-categoria').value; // <-- CATEGORÍA
+        const categoria = document.getElementById('f-categoria').value;
 
         let imagenUrl = '';
         if (currentUserRole === 'admin') {
@@ -439,7 +524,7 @@ async function guardarProducto() {
             telefonovendedor,
             enoferta: enOferta,
             preciooferta: precioOferta,
-            categoria: categoria,   // <-- Guardar categoría
+            categoria: categoria,
             variantes: variantes.length ? variantes : [],
             seller_id: user.id
         };
