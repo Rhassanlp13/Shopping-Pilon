@@ -1,4 +1,4 @@
-// auth.js - Versión definitiva con reemplazo del botón al iniciar sesión
+// auth.js - Con registro de vendedores pendientes de aprobación
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -91,8 +91,8 @@ async function ensureProfile() {
 function updateUIForLoggedIn() {
     const oldUserBtn = document.getElementById('user-btn');
     if (!oldUserBtn) return;
-
-    // Crear un nuevo botón completamente nuevo (sin listeners heredados)
+    
+    // Crear nuevo botón (sin listeners residuales)
     const newUserBtn = document.createElement('button');
     newUserBtn.className = 'cart-btn';
     newUserBtn.id = 'user-btn';
@@ -100,16 +100,13 @@ function updateUIForLoggedIn() {
     newUserBtn.innerHTML = '<i class="fas fa-user-check"></i>';
     newUserBtn.style.cursor = 'pointer';
     newUserBtn.style.position = 'relative';
-
-    // Reemplazar el botón antiguo por el nuevo
+    
     const container = oldUserBtn.parentNode;
     container.replaceChild(newUserBtn, oldUserBtn);
-
-    // Eliminar menú desplegable anterior si existe
+    
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
-
-    // Crear nuevo menú
+    
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
     const emailText = currentUser?.email || 'Usuario';
@@ -122,8 +119,7 @@ function updateUIForLoggedIn() {
             <i class="fas fa-chalkboard-user"></i> Panel de vendedor
         </a>` : ''}
     `;
-
-    // Botón de cerrar sesión
+    
     const logoutBtn = document.createElement('button');
     logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
     logoutBtn.addEventListener('click', async (e) => {
@@ -149,22 +145,19 @@ function updateUIForLoggedIn() {
     userMenu.appendChild(logoutBtn);
     container.style.position = 'relative';
     container.appendChild(userMenu);
-
-    // Evento para mostrar/ocultar el menú (solo para este botón)
+    
     newUserBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         userMenu.classList.toggle('show');
     });
-
-    // Cerrar menú al hacer clic fuera
+    
     document.addEventListener('click', (e) => {
         const menu = document.querySelector('.user-dropdown');
         if (menu && !menu.contains(e.target) && e.target.id !== 'user-btn') {
             menu.classList.remove('show');
         }
     });
-
-    // Mensaje de bienvenida en el héroe
+    
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -182,8 +175,7 @@ function updateUIForLoggedIn() {
 function updateUIForLoggedOut() {
     const oldUserBtn = document.getElementById('user-btn');
     if (!oldUserBtn) return;
-
-    // Reemplazar el botón por uno nuevo con el icono de usuario (sin listeners)
+    
     const newUserBtn = document.createElement('button');
     newUserBtn.className = 'cart-btn';
     newUserBtn.id = 'user-btn';
@@ -192,12 +184,10 @@ function updateUIForLoggedOut() {
     newUserBtn.style.cursor = 'pointer';
     const container = oldUserBtn.parentNode;
     container.replaceChild(newUserBtn, oldUserBtn);
-
-    // Eliminar menú desplegable si existe
+    
     const dropdown = container.querySelector('.user-dropdown');
     if (dropdown) dropdown.remove();
-
-    // Ocultar mensaje de bienvenida y mostrar botón de registro
+    
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -322,6 +312,9 @@ async function handleRegister() {
         return;
     }
 
+    // Nuevo rol: si es vendedor, se guarda como pending_seller
+    const finalRole = (role === 'seller') ? 'pending_seller' : role;
+
     const btn = document.getElementById('register-submit');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
@@ -334,7 +327,7 @@ async function handleRegister() {
             password,
             options: {
                 emailRedirectTo: 'https://shopping-pilon.pages.dev/confirm-email.html',
-                data: { role, nombre, telefono }
+                data: { role: finalRole, nombre, telefono }
             }
         });
         if (error) throw error;
@@ -346,7 +339,7 @@ async function handleRegister() {
             .upsert({
                 id: user.id,
                 email,
-                role,
+                role: finalRole,
                 nombre_completo: nombre,
                 telefono: telefono || null
             }, { onConflict: 'id' });
@@ -374,7 +367,10 @@ async function handleRegister() {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
         closeAuthModal();
-        if (role === 'seller') {
+        if (finalRole === 'pending_seller') {
+            mostrarToast('Registro exitoso. Tu cuenta será revisada por un administrador. Recibirás un correo cuando sea aprobada.', 'info');
+            setTimeout(() => location.reload(), 2000);
+        } else if (finalRole === 'seller') {
             mostrarToast('Registro exitoso. Ahora puedes acceder al panel de vendedor.', 'info');
             setTimeout(() => window.location.href = '/admin.html', 1500);
         } else {
@@ -479,7 +475,6 @@ export function bindAuthEvents() {
         });
     }
 
-    // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
     function handleTabClick(e) {
         switchTab(e.currentTarget.dataset.tab);
@@ -489,12 +484,10 @@ export function bindAuthEvents() {
         tab.addEventListener('click', handleTabClick);
     });
 
-    // Enlaces de restablecer y reenviar confirmación
     if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); resetPassword(); });
     if (resendLinkLogin) resendLinkLogin.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
     if (resendLinkRegister) resendLinkRegister.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
 
-    // Delegación de eventos para el ojito
     document.body.addEventListener('click', function (e) {
         const icon = e.target.closest('.toggle-password');
         if (!icon) return;
@@ -513,7 +506,6 @@ export function bindAuthEvents() {
         }
     });
 
-    // ========== DELEGACIÓN PARA EL BOTÓN DE USUARIO (SOLO SI NO HAY SESIÓN) ==========
     document.body.addEventListener('click', (e) => {
         const userBtn = e.target.closest('#user-btn');
         if (!userBtn) return;
@@ -521,7 +513,5 @@ export function bindAuthEvents() {
         if (!currentUser) {
             openAuthModal();
         }
-        // Si currentUser existe, el nuevo botón ya tiene su propio listener para el menú,
-        // así que no hacemos nada aquí.
     });
 }
