@@ -1,4 +1,4 @@
-// admin.js - Con soporte para admin (URL) y vendedores (file upload a Supabase) y aprobación de vendedores
+// admin.js - Con soporte para admin (URL) y vendedores (file upload a Supabase)
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
@@ -300,7 +300,7 @@ function renderResenas() {
             <td>${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</td>
             <td>${escapeHtml(r.texto)}</td>
             <td>${new Date(r.fecha).toLocaleDateString()}</td>
-        </tr>`).join('')}</tbody></table>`;
+        </tr>`).join('')}</tbody><tr>`;
 }
 
 // ==================== SOLICITUDES DE VENDEDORES ====================
@@ -367,7 +367,6 @@ async function aprobarVendedor(userId, email) {
 }
 
 async function rechazarVendedor(userId, email) {
-    // Opción: cambiar rol a 'customer' (cliente normal)
     const { error } = await supabase
         .from('profiles')
         .update({ role: 'customer' })
@@ -567,32 +566,40 @@ function cerrarBorrar() {
     borrandoId = null;
 }
 
+// ==================== ELIMINACIÓN DE PRODUCTOS (MEJORADA) ====================
 async function eliminarProducto() {
     if (!borrandoId) return;
 
-    const { data: pedidosRelacionados, error: searchError } = await supabase
-        .from('pedidos')
-        .select('id')
-        .filter('productos::text', 'ilike', `%"id":"${borrandoId}"%`)
-        .limit(1);
+    // Los administradores pueden eliminar sin verificar pedidos
+    if (currentUserRole !== 'admin') {
+        // Verificar si el producto tiene pedidos asociados (solo para vendedores)
+        const { data: pedidosRelacionados, error: searchError } = await supabase
+            .from('pedidos')
+            .select('id')
+            .contains('productos', [{ id: borrandoId }])
+            .limit(1);
 
-    if (searchError) {
-        console.error('Error al verificar pedidos:', searchError);
-        mostrarToast('No se pudo verificar si el producto tiene pedidos', 'error');
-        return;
+        if (searchError) {
+            console.error('Error al verificar pedidos:', searchError);
+            mostrarToast('No se pudo verificar si el producto tiene pedidos', 'error');
+            return;
+        }
+
+        if (pedidosRelacionados && pedidosRelacionados.length > 0) {
+            mostrarToast('❌ No se puede eliminar el producto porque tiene pedidos asociados (incluso confirmados).', 'error');
+            return;
+        }
     }
 
-    if (pedidosRelacionados && pedidosRelacionados.length > 0) {
-        mostrarToast('❌ No se puede eliminar el producto porque tiene pedidos asociados', 'error');
-        return;
-    }
-
+    // Proceder a eliminar
     const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
     if (error) {
-        mostrarToast('Error al eliminar', 'error');
+        console.error(error);
+        mostrarToast('Error al eliminar el producto. ¿Tienes permisos?', 'error');
     } else {
         mostrarToast('Producto eliminado', 'ok');
         cerrarBorrar();
-        cargarProductos();
+        cargarProductos();   // Recargar la lista
     }
 }
+// ==================== FIN ELIMINACIÓN MEJORADA ====================
