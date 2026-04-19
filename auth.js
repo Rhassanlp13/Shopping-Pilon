@@ -1,4 +1,4 @@
-// auth.js - Con reenvío de confirmación, restablecer contraseña, bienvenida en hero y logout fijo
+// auth.js - Versión definitiva con reemplazo del botón al iniciar sesión
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -92,7 +92,7 @@ function updateUIForLoggedIn() {
     const oldUserBtn = document.getElementById('user-btn');
     if (!oldUserBtn) return;
 
-    // Crear un nuevo botón para eliminar cualquier listener anterior
+    // Crear un nuevo botón completamente nuevo (sin listeners heredados)
     const newUserBtn = document.createElement('button');
     newUserBtn.className = 'cart-btn';
     newUserBtn.id = 'user-btn';
@@ -109,7 +109,7 @@ function updateUIForLoggedIn() {
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
 
-    // Crear el menú desplegable
+    // Crear nuevo menú
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
     const emailText = currentUser?.email || 'Usuario';
@@ -123,36 +123,44 @@ function updateUIForLoggedIn() {
         </a>` : ''}
     `;
 
-    // Botón de cerrar sesión con evento directo
+    // Botón de cerrar sesión
     const logoutBtn = document.createElement('button');
     logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
     logoutBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        const originalText = logoutBtn.innerHTML;
+        logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cerrando...';
+        logoutBtn.disabled = true;
         try {
             await supabase.auth.signOut();
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('user_role_expiry');
+            currentUser = null;
+            currentRole = null;
             mostrarToast('Sesión cerrada', 'info');
-            location.reload();
+            setTimeout(() => location.reload(), 200);
         } catch (err) {
             console.error('Error al cerrar sesión:', err);
             mostrarToast('Error al cerrar sesión', 'error');
+            logoutBtn.innerHTML = originalText;
+            logoutBtn.disabled = false;
         }
     });
     userMenu.appendChild(logoutBtn);
-
     container.style.position = 'relative';
     container.appendChild(userMenu);
 
-    // Toggle del menú
-    const toggleDropdown = (e) => {
+    // Evento para mostrar/ocultar el menú (solo para este botón)
+    newUserBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         userMenu.classList.toggle('show');
-    };
-    newUserBtn.addEventListener('click', toggleDropdown);
+    });
 
     // Cerrar menú al hacer clic fuera
     document.addEventListener('click', (e) => {
-        if (!container.contains(e.target)) {
-            userMenu.classList.remove('show');
+        const menu = document.querySelector('.user-dropdown');
+        if (menu && !menu.contains(e.target) && e.target.id !== 'user-btn') {
+            menu.classList.remove('show');
         }
     });
 
@@ -172,15 +180,24 @@ function updateUIForLoggedIn() {
 }
 
 function updateUIForLoggedOut() {
-    const userBtn = document.getElementById('user-btn');
-    if (!userBtn) return;
-    userBtn.innerHTML = `<i class="fas fa-user"></i>`;
-    const dropdown = userBtn.parentNode.querySelector('.user-dropdown');
-    if (dropdown) dropdown.remove();
-    const newUserBtn = userBtn.cloneNode(true);
-    userBtn.parentNode.replaceChild(newUserBtn, userBtn);
-    newUserBtn.addEventListener('click', () => openAuthModal());
+    const oldUserBtn = document.getElementById('user-btn');
+    if (!oldUserBtn) return;
 
+    // Reemplazar el botón por uno nuevo con el icono de usuario (sin listeners)
+    const newUserBtn = document.createElement('button');
+    newUserBtn.className = 'cart-btn';
+    newUserBtn.id = 'user-btn';
+    newUserBtn.setAttribute('aria-label', 'Usuario');
+    newUserBtn.innerHTML = '<i class="fas fa-user"></i>';
+    newUserBtn.style.cursor = 'pointer';
+    const container = oldUserBtn.parentNode;
+    container.replaceChild(newUserBtn, oldUserBtn);
+
+    // Eliminar menú desplegable si existe
+    const dropdown = container.querySelector('.user-dropdown');
+    if (dropdown) dropdown.remove();
+
+    // Ocultar mensaje de bienvenida y mostrar botón de registro
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -324,13 +341,15 @@ async function handleRegister() {
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
 
-        await supabase.from('profiles').upsert({
-            id: user.id,
-            email,
-            role,
-            nombre_completo: nombre,
-            telefono: telefono || null
-        }, { onConflict: 'id' });
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+                id: user.id,
+                email,
+                role,
+                nombre_completo: nombre,
+                telefono: telefono || null
+            }, { onConflict: 'id' });
 
         if (profileError) {
             console.error('Error al guardar perfil:', profileError);
@@ -432,7 +451,6 @@ export function bindAuthEvents() {
     const closeBtn = document.getElementById('auth-close');
     const loginBtn = document.getElementById('login-submit');
     const registerBtn = document.getElementById('register-submit');
-    const userBtn = document.getElementById('user-btn');
     const btnRegistroVendedor = document.getElementById('btn-registro-vendedor');
     const footerRegistro = document.getElementById('footer-registro');
     const googleBtn = document.getElementById('login-google');
@@ -460,11 +478,6 @@ export function bindAuthEvents() {
             openAuthModal('seller');
         });
     }
-    if (userBtn && !currentUser) userBtn.addEventListener('click', () => openAuthModal());
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
-    });
 
     // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
@@ -476,12 +489,12 @@ export function bindAuthEvents() {
         tab.addEventListener('click', handleTabClick);
     });
 
-    // Enlaces
+    // Enlaces de restablecer y reenviar confirmación
     if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); resetPassword(); });
     if (resendLinkLogin) resendLinkLogin.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
     if (resendLinkRegister) resendLinkRegister.addEventListener('click', (e) => { e.preventDefault(); resendConfirmationEmail(); });
 
-    // Ojito
+    // Delegación de eventos para el ojito
     document.body.addEventListener('click', function (e) {
         const icon = e.target.closest('.toggle-password');
         if (!icon) return;
@@ -498,5 +511,17 @@ export function bindAuthEvents() {
             icon.classList.remove('fa-eye-slash');
             icon.classList.add('fa-eye');
         }
+    });
+
+    // ========== DELEGACIÓN PARA EL BOTÓN DE USUARIO (SOLO SI NO HAY SESIÓN) ==========
+    document.body.addEventListener('click', (e) => {
+        const userBtn = e.target.closest('#user-btn');
+        if (!userBtn) return;
+        e.stopPropagation();
+        if (!currentUser) {
+            openAuthModal();
+        }
+        // Si currentUser existe, el nuevo botón ya tiene su propio listener para el menú,
+        // así que no hacemos nada aquí.
     });
 }
