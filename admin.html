@@ -584,6 +584,9 @@
                 <div class="nav-item" data-page="resenas">
                     <i class="fas fa-star"></i> Reseñas
                 </div>
+                <div class="nav-item" data-page="solicitudes">
+                    <i class="fas fa-user-plus"></i> Solicitudes
+                </div>
             </nav>
             <div class="sidebar-footer">
                 <a href="index.html" class="btn-logout">
@@ -645,10 +648,25 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Página de solicitudes de vendedores -->
+            <div class="page" id="page-solicitudes">
+                <div class="topbar">
+                    <h1>Solicitudes de vendedores</h1>
+                </div>
+                <div class="table-card">
+                    <div id="tabla-solicitudes">
+                        <div class="table-empty">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Cargando solicitudes...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- Modal de producto -->
+    <!-- Modal de producto (igual que antes) -->
     <div class="modal-overlay" id="modal-producto" hidden>
         <div class="modal-box">
             <div class="modal-head">
