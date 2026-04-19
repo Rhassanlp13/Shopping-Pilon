@@ -1,4 +1,4 @@
-// auth.js - Con reenvío de confirmación, restablecer contraseña y bienvenida en hero
+// auth.js - Versión definitiva con reemplazo del botón al iniciar sesión
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -89,14 +89,27 @@ async function ensureProfile() {
 }
 
 function updateUIForLoggedIn() {
-    const userBtn = document.getElementById('user-btn');
-    if (!userBtn) return;
-    const container = userBtn.parentNode;
+    const oldUserBtn = document.getElementById('user-btn');
+    if (!oldUserBtn) return;
+
+    // Crear un nuevo botón completamente nuevo (sin listeners heredados)
+    const newUserBtn = document.createElement('button');
+    newUserBtn.className = 'cart-btn';
+    newUserBtn.id = 'user-btn';
+    newUserBtn.setAttribute('aria-label', 'Usuario');
+    newUserBtn.innerHTML = '<i class="fas fa-user-check"></i>';
+    newUserBtn.style.cursor = 'pointer';
+    newUserBtn.style.position = 'relative';
+
+    // Reemplazar el botón antiguo por el nuevo
+    const container = oldUserBtn.parentNode;
+    container.replaceChild(newUserBtn, oldUserBtn);
+
+    // Eliminar menú desplegable anterior si existe
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
-    userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
-    userBtn.style.cursor = 'pointer';
-    userBtn.style.position = 'relative';
+
+    // Crear nuevo menú
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
     const emailText = currentUser?.email || 'Usuario';
@@ -108,30 +121,48 @@ function updateUIForLoggedIn() {
         <a href="/admin.html" id="admin-link">
             <i class="fas fa-chalkboard-user"></i> Panel de vendedor
         </a>` : ''}
-        <button id="logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-        </button>
     `;
-    container.style.position = 'relative';
-    container.appendChild(userMenu);
-    const toggleDropdown = (e) => {
+
+    // Botón de cerrar sesión
+    const logoutBtn = document.createElement('button');
+    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
+    logoutBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        userMenu.classList.toggle('show');
-    };
-    userBtn.addEventListener('click', toggleDropdown);
-    document.addEventListener('click', (e) => {
-        if (!container.contains(e.target)) {
-            userMenu.classList.remove('show');
+        const originalText = logoutBtn.innerHTML;
+        logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cerrando...';
+        logoutBtn.disabled = true;
+        try {
+            await supabase.auth.signOut();
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('user_role_expiry');
+            currentUser = null;
+            currentRole = null;
+            mostrarToast('Sesión cerrada', 'info');
+            setTimeout(() => location.reload(), 200);
+        } catch (err) {
+            console.error('Error al cerrar sesión:', err);
+            mostrarToast('Error al cerrar sesión', 'error');
+            logoutBtn.innerHTML = originalText;
+            logoutBtn.disabled = false;
         }
     });
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            mostrarToast('Sesión cerrada', 'info');
-            location.reload();
-        });
-    }
+    userMenu.appendChild(logoutBtn);
+    container.style.position = 'relative';
+    container.appendChild(userMenu);
+
+    // Evento para mostrar/ocultar el menú (solo para este botón)
+    newUserBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userMenu.classList.toggle('show');
+    });
+
+    // Cerrar menú al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        const menu = document.querySelector('.user-dropdown');
+        if (menu && !menu.contains(e.target) && e.target.id !== 'user-btn') {
+            menu.classList.remove('show');
+        }
+    });
 
     // Mensaje de bienvenida en el héroe
     const heroWelcome = document.getElementById('hero-welcome');
@@ -149,15 +180,24 @@ function updateUIForLoggedIn() {
 }
 
 function updateUIForLoggedOut() {
-    const userBtn = document.getElementById('user-btn');
-    if (!userBtn) return;
-    userBtn.innerHTML = `<i class="fas fa-user"></i>`;
-    const dropdown = userBtn.parentNode.querySelector('.user-dropdown');
-    if (dropdown) dropdown.remove();
-    const newUserBtn = userBtn.cloneNode(true);
-    userBtn.parentNode.replaceChild(newUserBtn, userBtn);
-    newUserBtn.addEventListener('click', () => openAuthModal());
+    const oldUserBtn = document.getElementById('user-btn');
+    if (!oldUserBtn) return;
 
+    // Reemplazar el botón por uno nuevo con el icono de usuario (sin listeners)
+    const newUserBtn = document.createElement('button');
+    newUserBtn.className = 'cart-btn';
+    newUserBtn.id = 'user-btn';
+    newUserBtn.setAttribute('aria-label', 'Usuario');
+    newUserBtn.innerHTML = '<i class="fas fa-user"></i>';
+    newUserBtn.style.cursor = 'pointer';
+    const container = oldUserBtn.parentNode;
+    container.replaceChild(newUserBtn, oldUserBtn);
+
+    // Eliminar menú desplegable si existe
+    const dropdown = container.querySelector('.user-dropdown');
+    if (dropdown) dropdown.remove();
+
+    // Ocultar mensaje de bienvenida y mostrar botón de registro
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -257,7 +297,6 @@ async function handleRegister() {
     const errorDiv = document.getElementById('register-error');
     const infoDiv = document.getElementById('register-info');
 
-    // Validaciones básicas
     if (!nombre || !email || !password || !confirm) {
         errorDiv.textContent = 'Todos los campos son obligatorios';
         errorDiv.style.display = 'block';
@@ -290,7 +329,6 @@ async function handleRegister() {
     if (infoDiv) infoDiv.style.display = 'none';
 
     try {
-        // Registrar usuario en Supabase con redirección personalizada
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -299,13 +337,10 @@ async function handleRegister() {
                 data: { role, nombre, telefono }
             }
         });
-
         if (error) throw error;
-
         const user = data.user;
         if (!user) throw new Error('Error al crear usuario');
 
-        // Insertar perfil en tabla profiles
         const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
@@ -323,27 +358,21 @@ async function handleRegister() {
             console.log('Perfil guardado correctamente para', email);
         }
 
-        // Verificar si requiere confirmación de email
         if (user.confirmed_at === null) {
-            // Mostrar mensaje de verificación en el formulario
             if (infoDiv) {
                 infoDiv.innerHTML = '<i class="fas fa-envelope"></i> Te hemos enviado un correo de verificación. Revisa tu bandeja (incluye spam) y confirma tu cuenta. Luego inicia sesión.';
                 infoDiv.style.display = 'block';
             }
             mostrarToast('✅ Revisa tu correo y confirma tu cuenta.', 'info');
-            // Limpiar campos de contraseña
             document.getElementById('reg-password').value = '';
             document.getElementById('reg-confirm').value = '';
-            // No cerramos el modal para que el usuario vea el mensaje
             btn.disabled = false;
             btn.innerHTML = 'Crear cuenta';
             return;
         }
 
-        // Si no requiere confirmación (o ya está confirmado), iniciar sesión automáticamente
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-
         closeAuthModal();
         if (role === 'seller') {
             mostrarToast('Registro exitoso. Ahora puedes acceder al panel de vendedor.', 'info');
@@ -367,7 +396,6 @@ async function handleRegister() {
     }
 }
 
-// ========== FUNCIONES PARA REENVIAR CONFIRMACIÓN Y RESTABLECER CONTRASEÑA ==========
 async function resendConfirmationEmail() {
     const email = document.getElementById('login-email').value.trim() || document.getElementById('reg-email').value.trim();
     if (!email) {
@@ -377,9 +405,7 @@ async function resendConfirmationEmail() {
     const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
-        options: {
-            emailRedirectTo: window.location.origin
-        }
+        options: { emailRedirectTo: window.location.origin }
     });
     if (error) {
         mostrarToast(`Error: ${error.message}`, 'error');
@@ -403,7 +429,6 @@ async function resetPassword() {
         mostrarToast(`📧 Se ha enviado un enlace para restablecer tu contraseña a ${email}. Revisa tu correo.`, 'info');
     }
 }
-// =================================================================================
 
 async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -426,7 +451,6 @@ export function bindAuthEvents() {
     const closeBtn = document.getElementById('auth-close');
     const loginBtn = document.getElementById('login-submit');
     const registerBtn = document.getElementById('register-submit');
-    const userBtn = document.getElementById('user-btn');
     const btnRegistroVendedor = document.getElementById('btn-registro-vendedor');
     const footerRegistro = document.getElementById('footer-registro');
     const googleBtn = document.getElementById('login-google');
@@ -454,11 +478,6 @@ export function bindAuthEvents() {
             openAuthModal('seller');
         });
     }
-    if (userBtn && !currentUser) userBtn.addEventListener('click', () => openAuthModal());
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) closeAuthModal();
-    });
 
     // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
@@ -492,5 +511,17 @@ export function bindAuthEvents() {
             icon.classList.remove('fa-eye-slash');
             icon.classList.add('fa-eye');
         }
+    });
+
+    // ========== DELEGACIÓN PARA EL BOTÓN DE USUARIO (SOLO SI NO HAY SESIÓN) ==========
+    document.body.addEventListener('click', (e) => {
+        const userBtn = e.target.closest('#user-btn');
+        if (!userBtn) return;
+        e.stopPropagation();
+        if (!currentUser) {
+            openAuthModal();
+        }
+        // Si currentUser existe, el nuevo botón ya tiene su propio listener para el menú,
+        // así que no hacemos nada aquí.
     });
 }
