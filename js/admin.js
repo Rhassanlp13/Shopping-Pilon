@@ -654,18 +654,25 @@ async function eliminarProducto() {
     if (!borrandoId) return;
 
     if (currentUserRole !== 'admin') {
-        const { data: pedidosRelacionados, error: searchError } = await supabase
-            .from('pedidos')
-            .select('id')
-            .contains('productos', [{ id: borrandoId }])
-            .limit(1);
-        if (searchError) {
-            console.error('Error al verificar pedidos:', searchError);
+        try {
+            // Obtener todos los pedidos (solo id y productos) y verificar en cliente
+            const { data: pedidos, error } = await supabase
+                .from('pedidos')
+                .select('id, productos');
+            if (error) throw error;
+
+            const tienePedidos = pedidos.some(pedido => {
+                if (!pedido.productos || !Array.isArray(pedido.productos)) return false;
+                return pedido.productos.some(item => item.id === borrandoId);
+            });
+
+            if (tienePedidos) {
+                mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
+                return;
+            }
+        } catch (err) {
+            console.error('Error al verificar pedidos:', err);
             mostrarToast('No se pudo verificar si el producto tiene pedidos', 'error');
-            return;
-        }
-        if (pedidosRelacionados && pedidosRelacionados.length > 0) {
-            mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
             return;
         }
     }
@@ -676,7 +683,6 @@ async function eliminarProducto() {
         mostrarToast('Error al eliminar el producto. ¿Tienes permisos?', 'error');
     } else {
         mostrarToast('Producto eliminado', 'ok');
-        // ✅ Invalidar caché de la tienda
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
         cerrarBorrar();
