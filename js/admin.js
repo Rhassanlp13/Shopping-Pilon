@@ -106,6 +106,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Ocultar pestaña de solicitudes si no es admin
+    if (currentUserRole !== 'admin') {
+        const navSolicitudes = document.getElementById('nav-solicitudes');
+        if (navSolicitudes) navSolicitudes.style.display = 'none';
+        // También ocultar la página de solicitudes por si acaso
+        const solicitudesPage = document.getElementById('page-solicitudes');
+        if (solicitudesPage) solicitudesPage.style.display = 'none';
+    }
+
     const grupoUrl = document.getElementById('grupo-url-imagen');
     const grupoFile = document.getElementById('grupo-file-imagen');
     if (currentUserRole === 'admin') {
@@ -246,7 +255,7 @@ function renderPedidos() {
             <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
             <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
             <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
-        </tr>`).join('')}</tbody></table>`;
+        </tr>`).join('')}</tbody></tr>`;
     document.querySelectorAll('.confirmar-pedido').forEach(btn => btn.addEventListener('click', () => confirmarPedido(btn.dataset.id)));
 }
 
@@ -300,7 +309,7 @@ function renderResenas() {
             <td>${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</td>
             <td>${escapeHtml(r.texto)}</td>
             <td>${new Date(r.fecha).toLocaleDateString()}</td>
-        </tr>`).join('')}</tbody><tr>`;
+        </tr>`).join('')}</tbody></table>`;
 }
 
 // ==================== SOLICITUDES DE VENDEDORES ====================
@@ -381,6 +390,10 @@ async function rechazarVendedor(userId, email) {
 }
 
 async function cargarSolicitudesYRender() {
+    if (currentUserRole !== 'admin') {
+        mostrarToast('Acceso denegado. Solo administradores.', 'error');
+        return;
+    }
     const solicitudes = await cargarSolicitudes();
     renderSolicitudes(solicitudes);
 }
@@ -602,4 +615,3 @@ async function eliminarProducto() {
         cargarProductos();   // Recargar la lista
     }
 }
-// ==================== FIN ELIMINACIÓN MEJORADA ====================

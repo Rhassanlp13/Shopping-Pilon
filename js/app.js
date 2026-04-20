@@ -2,6 +2,7 @@ import { cargarProductos, mostrarSkeleton } from './productos.js';
 import { carrito } from './carrito.js';
 import { UI } from './ui.js';
 import { initAuth, bindAuthEvents } from './auth.js';
+import { mostrarToast } from './modules/toast.js'; // ✅ Importar la función existente
 
 document.addEventListener('DOMContentLoaded', async () => {
     const grid = document.getElementById('grid');
@@ -51,18 +52,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // =========================================================================
 });
-
-// Función auxiliar para toasts (por si no está disponible globalmente)
-function mostrarToast(mensaje, tipo = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast-item ${tipo}`;
-    toast.textContent = mensaje;
-    container.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 2500);
-}
