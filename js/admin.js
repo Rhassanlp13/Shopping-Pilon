@@ -99,18 +99,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     currentUserRole = profile.role;
 
-    // Si es pending_seller, redirigir
     if (profile.role === 'pending_seller') {
         mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
         window.location.href = '/';
         return;
     }
 
-    // Ocultar pestaña de solicitudes si no es admin
     if (currentUserRole !== 'admin') {
         const navSolicitudes = document.getElementById('nav-solicitudes');
         if (navSolicitudes) navSolicitudes.style.display = 'none';
-        // También ocultar la página de solicitudes por si acaso
         const solicitudesPage = document.getElementById('page-solicitudes');
         if (solicitudesPage) solicitudesPage.style.display = 'none';
     }
@@ -255,7 +252,7 @@ function renderPedidos() {
             <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
             <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
             <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
-        </tr>`).join('')}</tbody></tr>`;
+        </tr>`).join('')}</tbody></table>`;
     document.querySelectorAll('.confirmar-pedido').forEach(btn => btn.addEventListener('click', () => confirmarPedido(btn.dataset.id)));
 }
 
@@ -486,7 +483,13 @@ async function guardarProducto() {
             imagenUrl = document.getElementById('f-imagen').value.trim();
             const fileInput = document.getElementById('f-imagen-file');
             if (fileInput.files.length > 0) {
-                const uploadedUrl = await subirImagen(fileInput.files[0], editandoId);
+                const file = fileInput.files[0];
+                // ✅ Validación de tamaño
+                if (file.size > 2 * 1024 * 1024) {
+                    mostrarToast('La imagen no debe superar los 2MB', 'error');
+                    return;
+                }
+                const uploadedUrl = await subirImagen(file, editandoId);
                 if (!uploadedUrl) throw new Error('No se pudo subir la imagen');
                 imagenUrl = uploadedUrl;
                 document.getElementById('f-imagen').value = imagenUrl;
@@ -583,28 +586,23 @@ function cerrarBorrar() {
 async function eliminarProducto() {
     if (!borrandoId) return;
 
-    // Los administradores pueden eliminar sin verificar pedidos
     if (currentUserRole !== 'admin') {
-        // Verificar si el producto tiene pedidos asociados (solo para vendedores)
         const { data: pedidosRelacionados, error: searchError } = await supabase
             .from('pedidos')
             .select('id')
             .contains('productos', [{ id: borrandoId }])
             .limit(1);
-
         if (searchError) {
             console.error('Error al verificar pedidos:', searchError);
             mostrarToast('No se pudo verificar si el producto tiene pedidos', 'error');
             return;
         }
-
         if (pedidosRelacionados && pedidosRelacionados.length > 0) {
             mostrarToast('❌ No se puede eliminar el producto porque tiene pedidos asociados (incluso confirmados).', 'error');
             return;
         }
     }
 
-    // Proceder a eliminar
     const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
     if (error) {
         console.error(error);
@@ -612,6 +610,6 @@ async function eliminarProducto() {
     } else {
         mostrarToast('Producto eliminado', 'ok');
         cerrarBorrar();
-        cargarProductos();   // Recargar la lista
+        cargarProductos();
     }
 }

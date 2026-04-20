@@ -256,7 +256,7 @@ export const UI = {
 
         const detalleImg = document.getElementById('detalle-img');
         detalleImg.style.cursor = 'pointer';
-        detalleImg.addEventListener('click', () => this.abrirLightbox());
+        detalleImg.onclick = () => this.abrirLightbox();
 
         const contenedor = document.getElementById('detalle-variantes');
         contenedor.innerHTML = `<div class="variantes-titulo"><i class="fas fa-palette"></i> Opciones disponibles:</div><div class="variantes-grid" id="variantes-grid"></div>`;
@@ -362,7 +362,8 @@ export const UI = {
         const producto = this.productos.find(p => p.id === this.productoActualId);
         if (!producto) return;
         const precioFinal = (producto.enoferta && producto.preciooferta) ? producto.preciooferta : producto.precio;
-        const url = `${window.location.origin}/?producto=${this.productoActualId}`;
+        // ✅ Nueva ruta amigable para compartir con imagen
+        const url = `${window.location.origin}/producto/${this.productoActualId}`;
         const texto = `🛍️ *${producto.nombre}* - $${precioFinal.toLocaleString('es')} CUP\n\nMira este producto en Shopping Pilón:\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
     },
@@ -491,7 +492,7 @@ export const UI = {
         }
 
         const linksContainer = document.getElementById('whatsapp-links');
-        linksContainer.innerHTML = `<p style="margin-bottom: 0.5rem;"><strong>👤 Comprador:</strong> ${escapeHtml(clienteNombre)}</p>`;
+        linksContainer.innerHTML += `<p style="margin-bottom: 0.5rem;"><strong>👤 Comprador:</strong> ${escapeHtml(clienteNombre)}</p>`;
         linksContainer.innerHTML += '<p style="margin-bottom: 1rem;">Selecciona el vendedor para enviar el pedido por WhatsApp:</p>';
 
         vendedores.forEach((grupo, i) => {
@@ -643,7 +644,7 @@ export const UI = {
             }
             if (btnD) {
                 const variantId = btnD.dataset.variant === '' ? null : btnD.dataset.variant;
-                const vid = variantId !== null ? parseInt(variantId) : null;
+                const vid = (variantId && variantId !== '') ? parseInt(variantId) : null;
                 carrito.disminuir(btnD.dataset.id, vid);
                 this.actualizarContador();
                 this.renderCarrito();

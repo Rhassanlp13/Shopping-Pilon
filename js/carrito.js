@@ -1,4 +1,4 @@
-// carrito.js — Corregido: validación de variante y stock
+// carrito.js — Corregido: validación de variante y stock + guardia
 export const carrito = {
     _items: [],
 
@@ -20,17 +20,20 @@ export const carrito = {
     },
 
     itemsConDatos(productos) {
+        // ✅ Guardia contra productos nulo o no array
+        if (!productos || !Array.isArray(productos)) {
+            console.warn('[carrito] productos no disponible');
+            return [];
+        }
         return this._items
             .map(item => {
                 const p = productos.find(p => p.id === item.id);
                 if (!p) return null;
-                // Validar que la variante exista si se especifica
                 let variante = null;
                 if (item.variantId !== undefined && item.variantId !== null) {
                     if (p.variantes && p.variantes[item.variantId]) {
                         variante = p.variantes[item.variantId];
                     } else {
-                        // Variante inválida: ignorar este item
                         return null;
                     }
                 }
@@ -56,7 +59,6 @@ export const carrito = {
         const producto = productos.find(p => p.id === idProducto);
         if (!producto) return { ok: false, msg: 'Producto no encontrado' };
 
-        // Validar que la variante exista
         let variante = null;
         if (variantId !== null && variantId !== undefined) {
             if (!producto.variantes || !producto.variantes[variantId]) {

@@ -6,12 +6,7 @@ import { escapeHtml } from './utils/escape.js';
 let currentUser = null;
 let currentRole = null;
 
-// Guard para que bindAuthEvents solo registre los listeners globales UNA vez,
-// sin importar cuántas veces se llame a la función.
 let _bodyListenersBound = false;
-
-// Referencia al handler del dropdown para poder removerlo si el usuario
-// cierra sesión y vuelve a iniciarla (evita acumulación en document).
 let _dropdownCloseHandler = null;
 
 export async function initAuth() {
@@ -66,8 +61,6 @@ async function loadUserRole() {
     let role = data.role;
     if (role === 'administrativo') role = 'admin';
     currentRole = role || 'customer';
-    // FIX: TTL reducido de 1 hora a 5 minutos para que roles revocados
-    // no queden activos en el cliente por demasiado tiempo.
     localStorage.setItem('user_role', currentRole);
     localStorage.setItem('user_role_expiry', Date.now() + 5 * 60 * 1000);
 }
@@ -105,7 +98,6 @@ function updateUIForLoggedIn() {
     const oldUserBtn = document.getElementById('user-btn');
     if (!oldUserBtn) return;
 
-    // Reemplazar el botón completo elimina cualquier listener previo sobre él.
     const newUserBtn = document.createElement('button');
     newUserBtn.className = 'cart-btn';
     newUserBtn.id = 'user-btn';
@@ -116,11 +108,9 @@ function updateUIForLoggedIn() {
     container.replaceChild(newUserBtn, oldUserBtn);
     container.style.position = 'relative';
 
-    // Limpiar dropdown anterior si existía.
     const oldDropdown = container.querySelector('.user-dropdown');
     if (oldDropdown) oldDropdown.remove();
 
-    // Construir menú.
     const userMenu = document.createElement('div');
     userMenu.className = 'user-dropdown';
     const emailText = currentUser?.email || 'Usuario';
@@ -159,14 +149,11 @@ function updateUIForLoggedIn() {
     userMenu.appendChild(logoutBtn);
     container.appendChild(userMenu);
 
-    // Toggle del dropdown al hacer click en el botón de usuario.
     newUserBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         userMenu.classList.toggle('show');
     });
 
-    // FIX: Remover el handler anterior de cierre del dropdown antes de añadir uno nuevo,
-    // para evitar que se acumulen con cada login/logout/login.
     if (_dropdownCloseHandler) {
         document.removeEventListener('click', _dropdownCloseHandler);
     }
@@ -177,7 +164,6 @@ function updateUIForLoggedIn() {
     };
     document.addEventListener('click', _dropdownCloseHandler);
 
-    // Actualizar hero: mostrar bienvenida y ocultar botón de registro.
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -209,7 +195,6 @@ function updateUIForLoggedOut() {
     const dropdown = container.querySelector('.user-dropdown');
     if (dropdown) dropdown.remove();
 
-    // Limpiar el handler del dropdown — ya no hay menú que cerrar.
     if (_dropdownCloseHandler) {
         document.removeEventListener('click', _dropdownCloseHandler);
         _dropdownCloseHandler = null;
@@ -334,7 +319,6 @@ async function handleRegister() {
         return;
     }
 
-    // Los nuevos vendedores quedan en estado pending hasta aprobación de admin.
     const finalRole = (role === 'seller') ? 'pending_seller' : role;
 
     const btn = document.getElementById('register-submit');
@@ -368,9 +352,10 @@ async function handleRegister() {
 
         if (profileError) {
             console.error('Error al guardar perfil:', profileError);
-            mostrarToast('Usuario creado pero error al guardar perfil. Contacta al administrador.', 'error');
-        } else {
-            console.log('Perfil guardado correctamente para', email);
+            mostrarToast('Error al crear perfil. Contacta al administrador.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Crear cuenta';
+            return;
         }
 
         if (user.confirmed_at === null) {
@@ -466,8 +451,6 @@ async function signInWithFacebook() {
 }
 
 export function bindAuthEvents() {
-    // FIX: Guard para que los listeners globales de body y document solo se
-    // registren una vez, sin importar cuántas veces se llame a bindAuthEvents().
     if (_bodyListenersBound) return;
     _bodyListenersBound = true;
 
@@ -506,24 +489,18 @@ export function bindAuthEvents() {
         });
     }
 
-    // Pestañas del modal de auth.
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(tab => {
         tab.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab));
     });
 
-    // Escape para cerrar modal de auth.
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) {
             closeAuthModal();
         }
     });
 
-    // FIX: Un único listener delegado en body que maneja TANTO el toggle de
-    // contraseña COMO la apertura del modal cuando no hay sesión iniciada.
-    // Antes eran dos addEventListener separados que se acumulaban en cada llamada.
     document.body.addEventListener('click', (e) => {
-        // Toggle de visibilidad de contraseña.
         const icon = e.target.closest('.toggle-password');
         if (icon) {
             const targetId = icon.getAttribute('data-target');
@@ -537,7 +514,6 @@ export function bindAuthEvents() {
             return;
         }
 
-        // Abrir modal de auth si el usuario no está logueado y presiona el botón de usuario.
         const userBtn = e.target.closest('#user-btn');
         if (userBtn && !currentUser) {
             e.stopPropagation();
