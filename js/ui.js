@@ -492,7 +492,7 @@ export const UI = {
         }
 
         const linksContainer = document.getElementById('whatsapp-links');
-        linksContainer.innerHTML += `<p style="margin-bottom: 0.5rem;"><strong>👤 Comprador:</strong> ${escapeHtml(clienteNombre)}</p>`;
+        linksContainer.innerHTML = `<p style="margin-bottom: 0.5rem;"><strong>👤 Comprador:</strong> ${escapeHtml(clienteNombre)}</p>`;
         linksContainer.innerHTML += '<p style="margin-bottom: 1rem;">Selecciona el vendedor para enviar el pedido por WhatsApp:</p>';
 
         vendedores.forEach((grupo, i) => {
