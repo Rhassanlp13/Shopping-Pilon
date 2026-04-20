@@ -652,9 +652,14 @@ function cerrarBorrar() {
 
 async function eliminarProducto() {
     if (!borrandoId) return;
+    const confirmarBtn = document.getElementById('borrar-confirmar');
+    const textoOriginal = confirmarBtn.innerHTML;
+    confirmarBtn.disabled = true;
+    confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
 
-    if (currentUserRole !== 'admin') {
-        try {
+    try {
+        // Los administradores pueden eliminar sin verificar pedidos
+        if (currentUserRole !== 'admin') {
             // Obtener todos los pedidos (solo id y productos) y verificar en cliente
             const { data: pedidos, error } = await supabase
                 .from('pedidos')
@@ -668,24 +673,26 @@ async function eliminarProducto() {
 
             if (tienePedidos) {
                 mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
+                confirmarBtn.disabled = false;
+                confirmarBtn.innerHTML = textoOriginal;
                 return;
             }
-        } catch (err) {
-            console.error('Error al verificar pedidos:', err);
-            mostrarToast('No se pudo verificar si el producto tiene pedidos', 'error');
-            return;
         }
-    }
 
-    const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
-    if (error) {
-        console.error(error);
-        mostrarToast('Error al eliminar el producto. ¿Tienes permisos?', 'error');
-    } else {
+        // Proceder a eliminar
+        const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
+        if (error) throw error;
+
         mostrarToast('Producto eliminado', 'ok');
+        // Invalidar caché de la tienda
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
         cerrarBorrar();
         cargarProductos();
+    } catch (err) {
+        console.error('Error al eliminar producto:', err);
+        mostrarToast(err.message || 'Error al eliminar el producto', 'error');
+        confirmarBtn.disabled = false;
+        confirmarBtn.innerHTML = textoOriginal;
     }
 }
