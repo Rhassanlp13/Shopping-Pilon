@@ -93,17 +93,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+
+    // FIX: pending_seller se chequea PRIMERO para poder mostrar el toast
+    // antes de redirigir. Antes este bloque estaba después de la condición
+    // que ya lo bloqueaba, así que el toast nunca se veía.
+    if (profile?.role === 'pending_seller') {
+        mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
+        setTimeout(() => { window.location.href = '/'; }, 2500);
+        return;
+    }
+
     if (!profile || (profile.role !== 'admin' && profile.role !== 'seller')) {
         window.location.href = '/';
         return;
     }
     currentUserRole = profile.role;
-
-    if (profile.role === 'pending_seller') {
-        mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
-        window.location.href = '/';
-        return;
-    }
 
     if (currentUserRole !== 'admin') {
         const navSolicitudes = document.getElementById('nav-solicitudes');
@@ -126,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shell = document.getElementById('shell');
     if (shell) shell.classList.add('visible');
     iniciar();
+
     document.getElementById('btn-logout')?.addEventListener('click', async () => {
         await supabase.auth.signOut();
         window.location.href = '/';
@@ -183,7 +188,13 @@ function renderStats() {
     const conVar = productos.filter(p => p.variantes?.length > 0).length;
     const ofertas = productos.filter(p => p.enoferta && p.preciooferta).length;
     const statsDiv = document.getElementById('stats-productos');
-    if (statsDiv) statsDiv.innerHTML = `<div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div></div><div class="stat-card"><div class="stat-label">Sin stock</div><div class="stat-val" style="color:var(--danger)">${sinStk}</div></div><div class="stat-card"><div class="stat-label">Stock bajo</div><div class="stat-val" style="color:var(--warning)">${bajo}</div></div><div class="stat-card"><div class="stat-label">Con variantes</div><div class="stat-val">${conVar}</div></div><div class="stat-card"><div class="stat-label">En oferta</div><div class="stat-val" style="color:var(--danger)">${ofertas}</div></div>`;
+    if (statsDiv) statsDiv.innerHTML = `
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div></div>
+        <div class="stat-card"><div class="stat-label">Sin stock</div><div class="stat-val" style="color:var(--danger)">${sinStk}</div></div>
+        <div class="stat-card"><div class="stat-label">Stock bajo</div><div class="stat-val" style="color:var(--warning)">${bajo}</div></div>
+        <div class="stat-card"><div class="stat-label">Con variantes</div><div class="stat-val">${conVar}</div></div>
+        <div class="stat-card"><div class="stat-label">En oferta</div><div class="stat-val" style="color:var(--danger)">${ofertas}</div></div>
+    `;
 }
 
 function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
@@ -199,22 +210,55 @@ function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
 }
 
 function renderTabla(filtro = '') {
-    const lista = filtro ? productos.filter(p => p.nombre?.toLowerCase().includes(filtro) || p.vendedor?.toLowerCase().includes(filtro)) : productos;
+    const lista = filtro
+        ? productos.filter(p => p.nombre?.toLowerCase().includes(filtro) || p.vendedor?.toLowerCase().includes(filtro))
+        : productos;
     const tablaDiv = document.getElementById('tabla-productos');
     if (!tablaDiv) return;
     if (lista.length === 0) {
         tablaDiv.innerHTML = `<div class="table-empty"><i class="fas fa-box-open"></i><p>${filtro ? 'Sin resultados' : 'No hay productos aún'}</p></div>`;
         return;
     }
-    tablaDiv.innerHTML = `<table class="admin-table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr></thead><tbody>${lista.map(p => `
-        <tr>
-            <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
-            <td>$${Number(p.precio).toLocaleString('es')} CUP</td>
-            <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
-            <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
-            <td>${p.variantes?.length > 0 ? `<span class="badge badge-variant">${p.variantes.length} var.</span>` : '—'}</td>
-            <td><div class="actions"><button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button><button class="act-btn del" data-del="${p.id}" data-nombre="${escapeHtml(p.nombre)}"><i class="fas fa-trash"></i></button></div></td>
-        </tr>`).join('')}</tbody></table>`;
+    // FIX: Cambiado </td> por </tr> al cerrar cada fila — el HTML malformado
+    // rompía el DOM de la tabla y podía impedir que los botones de editar/borrar
+    // se renderizaran correctamente en algunos navegadores.
+    tablaDiv.innerHTML = `<table class="admin-table">
+        <thead>
+            <tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            ${lista.map(p => `
+            <tr>
+                <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'">
+                    <span>
+                        <div class="prod-name">${escapeHtml(p.nombre)}</div>
+                        <div class="prod-vendedor">${escapeHtml(p.vendedor)}</div>
+                    </span>
+                </td>
+                <td>$${Number(p.precio).toLocaleString('es')} CUP</td>
+                <td>${p.stock <= 0
+            ? '<span class="badge badge-out">Agotado</span>'
+            : p.stock <= 3
+                ? `<span class="badge badge-low">${p.stock} uds</span>`
+                : `<span class="badge badge-ok">${p.stock} uds</span>`
+        }</td>
+                <td>${p.enoferta && p.preciooferta
+            ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>`
+            : '—'
+        }</td>
+                <td>${p.variantes?.length > 0
+            ? `<span class="badge badge-variant">${p.variantes.length} var.</span>`
+            : '—'
+        }</td>
+                <td>
+                    <div class="actions">
+                        <button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button>
+                        <button class="act-btn del" data-del="${p.id}" data-nombre="${escapeHtml(p.nombre)}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
     document.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => abrirEditar(btn.dataset.edit)));
     document.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', () => abrirBorrar(btn.dataset.del, btn.dataset.nombre)));
 }
@@ -243,16 +287,23 @@ function renderPedidos() {
         tablaDiv.innerHTML = `<div class="table-empty"><i class="fas fa-truck"></i><p>No hay pedidos aún</p></div>`;
         return;
     }
-    tablaDiv.innerHTML = `<table class="admin-table"><thead><tr><th>Cliente</th><th>Teléfono</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Productos</th><th>Acciones</th></tr></thead><tbody>${pedidos.map(p => `
-        <tr>
-            <td>${escapeHtml(p.cliente_nombre)}</td>
-            <td>${escapeHtml(p.cliente_telefono)}</td>
-            <td>${new Date(p.created_at).toLocaleString()}</td>
-            <td>$${Number(p.total).toLocaleString('es')}</td>
-            <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
-            <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
-            <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
-        </tr>`).join('')}</tbody></table>`;
+    tablaDiv.innerHTML = `<table class="admin-table">
+        <thead>
+            <tr><th>Cliente</th><th>Teléfono</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Productos</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            ${pedidos.map(p => `
+            <tr>
+                <td>${escapeHtml(p.cliente_nombre)}</td>
+                <td>${escapeHtml(p.cliente_telefono)}</td>
+                <td>${new Date(p.created_at).toLocaleString()}</td>
+                <td>$${Number(p.total).toLocaleString('es')}</td>
+                <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
+                <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
+                <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
     document.querySelectorAll('.confirmar-pedido').forEach(btn => btn.addEventListener('click', () => confirmarPedido(btn.dataset.id)));
 }
 
@@ -299,14 +350,21 @@ function renderResenas() {
         tablaDiv.innerHTML = `<div class="table-empty"><i class="fas fa-star"></i><p>No hay reseñas aún.</p></div>`;
         return;
     }
-    tablaDiv.innerHTML = `<table class="admin-table"><thead><tr><th>Producto ID</th><th>Nombre</th><th>Estrellas</th><th>Comentario</th><th>Fecha</th></tr></thead><tbody>${resenas.map(r => `
-        <tr>
-            <td>${escapeHtml(r.productoid)}</td>
-            <td>${escapeHtml(r.nombre)}</td>
-            <td>${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</td>
-            <td>${escapeHtml(r.texto)}</td>
-            <td>${new Date(r.fecha).toLocaleDateString()}</td>
-        </tr>`).join('')}</tbody></table>`;
+    tablaDiv.innerHTML = `<table class="admin-table">
+        <thead>
+            <tr><th>Producto ID</th><th>Nombre</th><th>Estrellas</th><th>Comentario</th><th>Fecha</th></tr>
+        </thead>
+        <tbody>
+            ${resenas.map(r => `
+            <tr>
+                <td>${escapeHtml(r.productoid)}</td>
+                <td>${escapeHtml(r.nombre)}</td>
+                <td>${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</td>
+                <td>${escapeHtml(r.texto)}</td>
+                <td>${new Date(r.fecha).toLocaleDateString()}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
 }
 
 // ==================== SOLICITUDES DE VENDEDORES ====================
@@ -337,17 +395,16 @@ function renderSolicitudes(solicitudes) {
         </thead>
         <tbody>
             ${solicitudes.map(s => `
-                <tr>
-                    <td>${escapeHtml(s.email)}</td>
-                    <td>${escapeHtml(s.nombre_completo || '—')}</td>
-                    <td>${escapeHtml(s.telefono || '—')}</td>
-                    <td>${new Date(s.created_at).toLocaleDateString()}</td>
-                    <td>
-                        <button class="act-btn aprobar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Aprobar</button>
-                        <button class="act-btn del rechazar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Rechazar</button>
-                    </td>
-                </tr>
-            `).join('')}
+            <tr>
+                <td>${escapeHtml(s.email)}</td>
+                <td>${escapeHtml(s.nombre_completo || '—')}</td>
+                <td>${escapeHtml(s.telefono || '—')}</td>
+                <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                <td>
+                    <button class="act-btn aprobar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Aprobar</button>
+                    <button class="act-btn del rechazar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Rechazar</button>
+                </td>
+            </tr>`).join('')}
         </tbody>
     </table>`;
     document.querySelectorAll('.aprobar-solicitud').forEach(btn => {
@@ -364,9 +421,9 @@ async function aprobarVendedor(userId, email) {
         .update({ role: 'seller' })
         .eq('id', userId);
     if (error) {
-        mostrarToast(`Error al aprobar a ${email}`, 'error');
+        mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
     } else {
-        mostrarToast(`✅ Vendedor ${email} aprobado`, 'ok');
+        mostrarToast(`✅ Vendedor ${escapeHtml(email)} aprobado`, 'ok');
         const solicitudes = await cargarSolicitudes();
         renderSolicitudes(solicitudes);
     }
@@ -378,9 +435,9 @@ async function rechazarVendedor(userId, email) {
         .update({ role: 'customer' })
         .eq('id', userId);
     if (error) {
-        mostrarToast(`Error al rechazar a ${email}`, 'error');
+        mostrarToast(`Error al rechazar a ${escapeHtml(email)}`, 'error');
     } else {
-        mostrarToast(`❌ Vendedor ${email} rechazado`, 'info');
+        mostrarToast(`❌ Vendedor ${escapeHtml(email)} rechazado`, 'info');
         const solicitudes = await cargarSolicitudes();
         renderSolicitudes(solicitudes);
     }
@@ -445,15 +502,23 @@ function limpiarFormulario() {
 function agregarVariante(v = null, index = null) {
     const div = document.createElement('div');
     div.className = 'variante-item';
-    div.innerHTML = `<button class="btn-rm-variante" type="button"><i class="fas fa-times"></i></button><div class="variante-fila"><div class="form-group"><label>Nombre</label><input type="text" class="var-nombre" placeholder="Ej: Rojo, XL" value="${escapeHtml(v?.nombre || '')}"></div><div class="form-group"><label>Precio (CUP)</label><input type="number" class="var-precio" placeholder="Opcional" value="${v?.precio ?? ''}"></div></div><div class="variante-fila"><div class="form-group"><label>Stock</label><input type="number" class="var-stock" placeholder="Cantidad" value="${v?.stock ?? ''}"></div><div class="form-group"><label>Imagen URL</label><input type="url" class="var-imagen" placeholder="https://..." value="${escapeHtml(v?.imagen || '')}"></div></div>`;
+    div.innerHTML = `
+        <button class="btn-rm-variante" type="button"><i class="fas fa-times"></i></button>
+        <div class="variante-fila">
+            <div class="form-group"><label>Nombre</label><input type="text" class="var-nombre" placeholder="Ej: Rojo, XL" value="${escapeHtml(v?.nombre || '')}"></div>
+            <div class="form-group"><label>Precio (CUP)</label><input type="number" class="var-precio" placeholder="Opcional" value="${v?.precio ?? ''}"></div>
+        </div>
+        <div class="variante-fila">
+            <div class="form-group"><label>Stock</label><input type="number" class="var-stock" placeholder="Cantidad" value="${v?.stock ?? ''}"></div>
+            <div class="form-group"><label>Imagen URL</label><input type="url" class="var-imagen" placeholder="https://..." value="${escapeHtml(v?.imagen || '')}"></div>
+        </div>`;
     div.querySelector('.btn-rm-variante').addEventListener('click', () => div.remove());
     document.getElementById('variantes-list').appendChild(div);
 }
 
 function validarTelefonoCubano(tel) {
     const cleaned = tel.replace(/\s+/g, '');
-    const regex = /^5[0-9]{7}$/;
-    return regex.test(cleaned);
+    return /^5[0-9]{7}$/.test(cleaned);
 }
 
 async function guardarProducto() {
@@ -472,6 +537,18 @@ async function guardarProducto() {
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
         const categoria = document.getElementById('f-categoria').value;
 
+        // Validar campos obligatorios PRIMERO, antes de subir nada
+        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
+            mostrarToast('Completa los campos obligatorios', 'error');
+            return;
+        }
+        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) {
+            mostrarToast('El teléfono debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error');
+            return;
+        }
+        if (!telefonovendedor) telefonovendedor = null;
+
+        // Gestión de imagen DESPUÉS de validar campos
         let imagenUrl = '';
         if (currentUserRole === 'admin') {
             imagenUrl = document.getElementById('f-imagen').value.trim();
@@ -484,7 +561,6 @@ async function guardarProducto() {
             const fileInput = document.getElementById('f-imagen-file');
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-                // ✅ Validación de tamaño
                 if (file.size > 2 * 1024 * 1024) {
                     mostrarToast('La imagen no debe superar los 2MB', 'error');
                     return;
@@ -498,16 +574,6 @@ async function guardarProducto() {
                 return;
             }
         }
-
-        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
-            mostrarToast('Completa los campos obligatorios', 'error');
-            return;
-        }
-        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) {
-            mostrarToast('El teléfono del vendedor debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error');
-            return;
-        }
-        if (!telefonovendedor) telefonovendedor = null;
 
         const variantes = [];
         document.querySelectorAll('.variante-item').forEach(item => {
@@ -539,7 +605,7 @@ async function guardarProducto() {
             telefonovendedor,
             enoferta: enOferta,
             preciooferta: precioOferta,
-            categoria: categoria,
+            categoria,
             variantes: variantes.length ? variantes : [],
             seller_id: user.id
         };
@@ -582,7 +648,7 @@ function cerrarBorrar() {
     borrandoId = null;
 }
 
-// ==================== ELIMINACIÓN DE PRODUCTOS (MEJORADA) ====================
+// ==================== ELIMINACIÓN DE PRODUCTOS ====================
 async function eliminarProducto() {
     if (!borrandoId) return;
 
@@ -598,7 +664,7 @@ async function eliminarProducto() {
             return;
         }
         if (pedidosRelacionados && pedidosRelacionados.length > 0) {
-            mostrarToast('❌ No se puede eliminar el producto porque tiene pedidos asociados (incluso confirmados).', 'error');
+            mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
             return;
         }
     }
