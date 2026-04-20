@@ -94,9 +94,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
-    // FIX: pending_seller se chequea PRIMERO para poder mostrar el toast
-    // antes de redirigir. Antes este bloque estaba después de la condición
-    // que ya lo bloqueaba, así que el toast nunca se veía.
     if (profile?.role === 'pending_seller') {
         mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
         setTimeout(() => { window.location.href = '/'; }, 2500);
@@ -219,9 +216,6 @@ function renderTabla(filtro = '') {
         tablaDiv.innerHTML = `<div class="table-empty"><i class="fas fa-box-open"></i><p>${filtro ? 'Sin resultados' : 'No hay productos aún'}</p></div>`;
         return;
     }
-    // FIX: Cambiado </td> por </tr> al cerrar cada fila — el HTML malformado
-    // rompía el DOM de la tabla y podía impedir que los botones de editar/borrar
-    // se renderizaran correctamente en algunos navegadores.
     tablaDiv.innerHTML = `<table class="admin-table">
         <thead>
             <tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
@@ -315,6 +309,9 @@ async function confirmarPedido(pedidoId) {
             mostrarToast('Pedido confirmado y stock actualizado', 'ok');
             cargarPedidos();
             cargarProductos();
+            // Invalidar caché de la tienda
+            localStorage.removeItem('productos_cache');
+            localStorage.removeItem('productos_cache_time');
         } else {
             throw new Error(data?.error || 'Error al confirmar el pedido');
         }
@@ -561,8 +558,9 @@ async function guardarProducto() {
             const fileInput = document.getElementById('f-imagen-file');
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-                if (file.size > 2 * 1024 * 1024) {
-                    mostrarToast('La imagen no debe superar los 2MB', 'error');
+                // ✅ Límite aumentado a 10 MB
+                if (file.size > 10 * 1024 * 1024) {
+                    mostrarToast('La imagen no debe superar los 10MB', 'error');
                     return;
                 }
                 const uploadedUrl = await subirImagen(file, editandoId);
@@ -621,6 +619,10 @@ async function guardarProducto() {
 
         if (error) throw error;
 
+        // ✅ Invalidar caché de la tienda
+        localStorage.removeItem('productos_cache');
+        localStorage.removeItem('productos_cache_time');
+
         mostrarToast('Producto guardado', 'ok');
         cerrarModal();
         cargarProductos();
@@ -648,7 +650,6 @@ function cerrarBorrar() {
     borrandoId = null;
 }
 
-// ==================== ELIMINACIÓN DE PRODUCTOS ====================
 async function eliminarProducto() {
     if (!borrandoId) return;
 
@@ -675,6 +676,9 @@ async function eliminarProducto() {
         mostrarToast('Error al eliminar el producto. ¿Tienes permisos?', 'error');
     } else {
         mostrarToast('Producto eliminado', 'ok');
+        // ✅ Invalidar caché de la tienda
+        localStorage.removeItem('productos_cache');
+        localStorage.removeItem('productos_cache_time');
         cerrarBorrar();
         cargarProductos();
     }
