@@ -1,4 +1,4 @@
-// ui.js - Versión con filtros por categoría
+// ui.js - Versión con filtros por categoría y pago con QvaPay
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -152,6 +152,7 @@ export const UI = {
         if (items.length === 0) {
             this.cartItems.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-bag"></i><p>Tu carrito está vacío</p></div>`;
             this.cartTotal.textContent = '0';
+            this.actualizarBotonQvaPay(); // 👈 NUEVO
             return;
         }
         this.cartItems.innerHTML = items.map(item => {
@@ -159,7 +160,138 @@ export const UI = {
             return `<div class="cart-item" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}"><div class="cart-item-info"><div class="cart-item-name">${escapeHtml(item.nombre)}${escapeHtml(item.variantNombre)}</div><div class="cart-item-price">$${(item.precio * item.cantidad).toLocaleString('es')} CUP</div></div><div class="qty-control"><button class="qty-btn btn-disminuir" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">−</button><span class="qty-num">${item.cantidad}</span><button class="qty-btn btn-aumentar" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button></div></div>`;
         }).join('');
         this.cartTotal.textContent = carrito.total(this.productos).toLocaleString('es');
+        this.actualizarBotonQvaPay(); // 👈 NUEVO
     },
+
+    // ==================== QvaPay ====================
+    actualizarBotonQvaPay() {
+        const items = carrito.itemsConDatos(this.productos);
+        if (items.length === 0) {
+            this.removerBotonQvaPay();
+            return;
+        }
+        const vendedoresUnicos = [...new Set(items.map(i => i.seller_id))];
+        if (vendedoresUnicos.length !== 1) {
+            this.removerBotonQvaPay();
+            return;
+        }
+        const vendedorId = vendedoresUnicos[0];
+        supabase
+            .from('profiles')
+            .select('qvapay_enabled, qvapay_merchant_id')
+            .eq('id', vendedorId)
+            .single()
+            .then(({ data, error }) => {
+                const habilitado = !error && data?.qvapay_enabled && data?.qvapay_merchant_id;
+                if (habilitado) {
+                    this.agregarBotonQvaPay();
+                } else {
+                    this.removerBotonQvaPay();
+                }
+            })
+            .catch(() => this.removerBotonQvaPay());
+    },
+
+    agregarBotonQvaPay() {
+        let btn = document.getElementById('btn-qvapay');
+        if (btn) return;
+        const footer = document.querySelector('#cart-modal .modal-footer');
+        if (!footer) return;
+        btn = document.createElement('button');
+        btn.id = 'btn-qvapay';
+        btn.className = 'btn-primary';
+        btn.style.background = '#1a237e';
+        btn.style.marginBottom = '8px';
+        btn.innerHTML = '<i class="fas fa-dollar-sign"></i> Pagar con QvaPay (dólar digital)';
+        btn.addEventListener('click', () => this.iniciarPagoQvaPay());
+        const whatsappBtn = document.getElementById('btn-whatsapp');
+        if (whatsappBtn) footer.insertBefore(btn, whatsappBtn);
+        else footer.appendChild(btn);
+    },
+
+    removerBotonQvaPay() {
+        const btn = document.getElementById('btn-qvapay');
+        if (btn) btn.remove();
+    },
+
+    async iniciarPagoQvaPay() {
+        const items = carrito.itemsConDatos(this.productos);
+        if (items.length === 0) {
+            mostrarToast('Carrito vacío', 'warning');
+            return;
+        }
+        const vendedoresUnicos = [...new Set(items.map(i => i.seller_id))];
+        if (vendedoresUnicos.length !== 1) {
+            mostrarToast('Pago con QvaPay solo disponible para pedidos de un solo vendedor', 'warning');
+            return;
+        }
+        const vendedorId = vendedoresUnicos[0];
+
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('qvapay_enabled, qvapay_merchant_id')
+            .eq('id', vendedorId)
+            .single();
+
+        if (error || !profile?.qvapay_enabled || !profile?.qvapay_merchant_id) {
+            mostrarToast('Este vendedor no acepta pagos con QvaPay', 'error');
+            return;
+        }
+
+        const clienteNombre = document.getElementById('cliente-nombre')?.value.trim();
+        if (!clienteNombre) {
+            mostrarToast('Por favor ingresa tu nombre', 'error');
+            return;
+        }
+
+        const total = carrito.total(this.productos);
+        const productosParaEnvio = items.map(item => ({
+            id: item.id,
+            variantId: item.variantId,
+            nombre: item.nombre,
+            cantidad: item.cantidad,
+            precio: item.precio,
+            vendedor_id: item.seller_id
+        }));
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            mostrarToast('Debes iniciar sesión para pagar', 'error');
+            return;
+        }
+
+        mostrarToast('Creando orden de pago...', 'info');
+
+        try {
+            const SUPABASE_URL = 'https://xistchuskgnmjrzlntve.supabase.co';
+            const response = await fetch(`${SUPABASE_URL}/functions/v1/create-qvapay-invoice`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    cartItems: productosParaEnvio,
+                    clienteNombre: clienteNombre,
+                    vendedorId: vendedorId,
+                    total: total
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Error al iniciar pago');
+
+            if (result.checkout_url) {
+                window.location.href = result.checkout_url;
+            } else {
+                throw new Error('No se recibió URL de pago');
+            }
+        } catch (err) {
+            console.error(err);
+            mostrarToast(err.message || 'Error al procesar pago', 'error');
+        }
+    },
+    // ==================== Fin QvaPay ====================
 
     abrirLightbox() {
         const imgSrc = document.getElementById('detalle-img').src;
@@ -230,14 +362,17 @@ export const UI = {
 
             const stockEl = document.getElementById('detalle-stock');
             if (stockEl) {
-                if (stockVal <= 0) {
+                const enCarrito = carrito.cantidadDe(id, index); // ya existe como `enC`
+                const stockRestante = Math.max(0, stockVal - enCarrito);
+
+                if (stockRestante <= 0) {
                     stockEl.textContent = 'Agotado';
                     stockEl.className = 'detalle-stock agotado';
-                } else if (stockVal <= 3) {
-                    stockEl.textContent = `¡Solo quedan ${stockVal}!`;
+                } else if (stockRestante <= 3) {
+                    stockEl.textContent = `¡Solo quedan ${stockRestante}!`;
                     stockEl.className = 'detalle-stock low';
                 } else {
-                    stockEl.textContent = `${stockVal} disponibles`;
+                    stockEl.textContent = `${stockRestante} disponibles`;
                     stockEl.className = 'detalle-stock ok';
                 }
             }
@@ -570,6 +705,7 @@ export const UI = {
             this.actualizarContador();
             this.renderProductos();
             this.cerrarModal();
+            this.actualizarBotonQvaPay(); // 👈 NUEVO
             mostrarToast(`✅ Pedido preparado. Selecciona el vendedor para enviar.`, 'ok');
         } catch (err) {
             console.error(err);
@@ -599,6 +735,7 @@ export const UI = {
             this.actualizarContador();
             this.renderCarrito();
             this.renderProductos();
+            this.actualizarBotonQvaPay(); // 👈 NUEVO
             mostrarToast('🗑️ Carrito vaciado', 'info');
         });
 
@@ -641,6 +778,7 @@ export const UI = {
                 this.actualizarContador();
                 this.renderCarrito();
                 this.renderProductos();
+                this.actualizarBotonQvaPay(); // 👈 NUEVO
             }
             if (btnD) {
                 const variantId = btnD.dataset.variant === '' ? null : btnD.dataset.variant;
@@ -649,6 +787,7 @@ export const UI = {
                 this.actualizarContador();
                 this.renderCarrito();
                 this.renderProductos();
+                this.actualizarBotonQvaPay(); // 👈 NUEVO
                 if (carrito.cantidad === 0) mostrarToast('🛒 Carrito vacío', 'info');
             }
         });

@@ -587,6 +587,9 @@
                 <div class="nav-item" data-page="solicitudes" id="nav-solicitudes">
                     <i class="fas fa-user-plus"></i> Solicitudes
                 </div>
+                <div class="nav-item" data-page="configuracion">
+                    <i class="fas fa-credit-card"></i> Configuración pagos
+                </div>
             </nav>
             <div class="sidebar-footer">
                 <a href="index.html" class="btn-logout">
@@ -599,6 +602,7 @@
         </aside>
 
         <main class="main">
+            <!-- página productos -->
             <div class="page active" id="page-productos">
                 <div class="topbar">
                     <h1>Productos</h1>
@@ -621,10 +625,9 @@
                 </div>
             </div>
 
+            <!-- página pedidos -->
             <div class="page" id="page-pedidos">
-                <div class="topbar">
-                    <h1>Pedidos</h1>
-                </div>
+                <div class="topbar"><h1>Pedidos</h1></div>
                 <div class="table-card">
                     <div id="tabla-pedidos">
                         <div class="table-empty">
@@ -635,10 +638,9 @@
                 </div>
             </div>
 
+            <!-- página reseñas -->
             <div class="page" id="page-resenas">
-                <div class="topbar">
-                    <h1>Reseñas</h1>
-                </div>
+                <div class="topbar"><h1>Reseñas</h1></div>
                 <div class="table-card">
                     <div id="tabla-resenas">
                         <div class="table-empty">
@@ -649,11 +651,9 @@
                 </div>
             </div>
 
-            <!-- Página de solicitudes de vendedores -->
+            <!-- página solicitudes vendedores -->
             <div class="page" id="page-solicitudes">
-                <div class="topbar">
-                    <h1>Solicitudes de vendedores</h1>
-                </div>
+                <div class="topbar"><h1>Solicitudes de vendedores</h1></div>
                 <div class="table-card">
                     <div id="tabla-solicitudes">
                         <div class="table-empty">
@@ -663,10 +663,39 @@
                     </div>
                 </div>
             </div>
+
+            <!-- página configuración de pagos -->
+            <div class="page" id="page-configuracion">
+                <div class="topbar">
+                    <h1>Configuración de pagos</h1>
+                </div>
+                <div class="table-card" style="padding: 1.5rem;">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="qvapay-enabled-checkbox">
+                            Aceptar pagos con QvaPay (dólar digital)
+                        </label>
+                        <small style="color: var(--muted);">Al activar esta opción, tus clientes podrán pagar online usando QvaPay.
+                            Los fondos se recibirán directamente en tu cuenta de QvaPay.</small>
+                    </div>
+                    <div class="form-group" id="qvapay-merchant-group" style="display: none; margin-top: 1rem;">
+                        <label>Merchant ID (UUID de QvaPay) *</label>
+                        <input type="text" id="qvapay-merchant-id" placeholder="Ej: 93c09dbb-d0d9-4c14-a70c-d6adfcfef0c7d">
+                        <small>Lo encuentras en tu cuenta de QvaPay → Perfil → UUID (en "Información de cuenta")</small>
+                    </div>
+                    <button id="guardar-config-pagos" class="btn-primary">Guardar configuración</button>
+                    <div id="qvapay-status" class="config-status"
+                        style="margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: #f5f5f7; display: none;">
+                        <i class="fas fa-check-circle" style="color: #2e7d32;"></i>
+                        <span id="qvapay-status-text"></span>
+                    </div>
+                    <div id="config-pagos-mensaje" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- Modal de producto (igual que antes) -->
+    <!-- Modal producto -->
     <div class="modal-overlay" id="modal-producto" hidden>
         <div class="modal-box">
             <div class="modal-head">
@@ -674,67 +703,29 @@
                 <button class="modal-close" id="modal-cerrar">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="section-title">
-                    <span><i class="fas fa-info-circle"></i> Datos del producto</span>
-                </div>
-                <div class="form-group">
-                    <label>Nombre *</label>
-                    <input type="text" id="f-nombre" placeholder="Ej: Camiseta de algodón">
+                <div class="section-title"><span><i class="fas fa-info-circle"></i> Datos del producto</span></div>
+                <div class="form-group"><label>Nombre *</label><input type="text" id="f-nombre" placeholder="Ej: Camiseta de algodón"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Precio (CUP) *</label><input type="number" id="f-precio" placeholder="100" min="0"></div>
+                    <div class="form-group"><label>Stock *</label><input type="number" id="f-stock" placeholder="10" min="0"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Precio (CUP) *</label>
-                        <input type="number" id="f-precio" placeholder="100" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Stock *</label>
-                        <input type="number" id="f-stock" placeholder="10" min="0">
-                    </div>
+                    <div class="form-group"><label>Vendedor *</label><input type="text" id="f-vendedor" placeholder="Nombre del vendedor"></div>
+                    <div class="form-group"><label>Teléfono vendedor *</label><input type="tel" id="f-telefono-vendedor" placeholder="Ej: 53561234"></div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Vendedor *</label>
-                        <input type="text" id="f-vendedor" placeholder="Nombre del vendedor">
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono vendedor *</label>
-                        <input type="tel" id="f-telefono-vendedor" placeholder="Ej: 53561234">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Categoría *</label>
-                    <select id="f-categoria" required>
-                        <option value="Ropa">Ropa</option>
-                        <option value="Calzado">Calzado</option>
-                        <option value="Electrónica">Electrónica</option>
-                        <option value="Hogar">Hogar</option>
-                        <option value="Otros">Otros</option>
-                    </select>
-                </div>
-
-                <!-- Campo URL (solo para admin) -->
-                <div class="form-group" id="grupo-url-imagen">
-                    <label>URL de imagen (externo)</label>
-                    <input type="url" id="f-imagen" placeholder="https://...">
-                </div>
-
-                <!-- Campo file upload (solo para vendedores) -->
-                <div class="form-group" id="grupo-file-imagen" style="display: none;">
-                    <label>Imagen del producto *</label>
+                <div class="form-group"><label>Categoría *</label><select id="f-categoria" required>
+                    <option value="Ropa">Ropa</option><option value="Calzado">Calzado</option><option value="Electrónica">Electrónica</option>
+                    <option value="Hogar">Hogar</option><option value="Otros">Otros</option>
+                </select></div>
+                <div class="form-group" id="grupo-url-imagen"><label>URL de imagen (externo)</label><input type="url" id="f-imagen" placeholder="https://..."></div>
+                <div class="form-group" id="grupo-file-imagen" style="display: none;"><label>Imagen del producto *</label>
                     <input type="file" id="f-imagen-file" accept="image/jpeg,image/png,image/webp">
                     <div id="vista-previa" style="margin-top: 8px;"></div>
-                    <small style="color: var(--muted);">Selecciona una imagen (JPG, PNG, WebP, máx. 10MB). Se optimizará
-                        automáticamente.</small>
+                    <small style="color: var(--muted);">Selecciona una imagen (JPG, PNG, WebP, máx. 10MB). Se optimizará automáticamente.</small>
                 </div>
-
-                <div class="section-title" style="margin-top:0.5rem">
-                    <span><i class="fas fa-fire"></i> Oferta (opcional)</span>
-                </div>
+                <div class="section-title" style="margin-top:0.5rem"><span><i class="fas fa-fire"></i> Oferta (opcional)</span></div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Precio de oferta (CUP)</label>
-                        <input type="number" id="f-precio-oferta" placeholder="Ej: 200" min="0">
-                    </div>
+                    <div class="form-group"><label>Precio de oferta (CUP)</label><input type="number" id="f-precio-oferta" placeholder="Ej: 200" min="0"></div>
                     <div class="form-group" style="justify-content:flex-end;padding-bottom:4px">
                         <label>Activar oferta</label>
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
@@ -743,44 +734,27 @@
                         </label>
                     </div>
                 </div>
-                <div class="section-title" style="margin-top:0.5rem">
-                    <span><i class="fas fa-layer-group"></i> Variantes (opcional)</span>
-                    <button class="btn-primary" id="btn-add-variante" style="padding:5px 12px;font-size:0.78rem">
-                        <i class="fas fa-plus"></i> Añadir variante
-                    </button>
+                <div class="section-title" style="margin-top:0.5rem"><span><i class="fas fa-layer-group"></i> Variantes (opcional)</span>
+                    <button class="btn-primary" id="btn-add-variante" style="padding:5px 12px;font-size:0.78rem"><i class="fas fa-plus"></i> Añadir variante</button>
                 </div>
-                <p style="font-size:0.78rem;color:var(--muted);margin-top:-6px">
-                    Cada variante puede tener su propia foto, precio y stock.
-                </p>
+                <p style="font-size:0.78rem;color:var(--muted);margin-top:-6px">Cada variante puede tener su propia foto, precio y stock.</p>
                 <div id="variantes-list"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" id="btn-cancelar">Cancelar</button>
-                <button class="btn-primary" id="btn-guardar">
-                    <i class="fas fa-save"></i> Guardar
-                </button>
+                <button class="btn-primary" id="btn-guardar"><i class="fas fa-save"></i> Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal confirmar borrar -->
+    <!-- Modal borrar -->
     <div class="modal-overlay" id="modal-borrar" hidden>
         <div class="modal-box" style="max-width:360px">
-            <div class="modal-head">
-                <h2>Confirmar eliminación</h2>
-                <button class="modal-close" id="borrar-cerrar">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="font-size:0.92rem">
-                    ¿Seguro que quieres eliminar <strong id="borrar-nombre"></strong>?
-                    Esta acción no se puede deshacer.
-                </p>
-            </div>
+            <div class="modal-head"><h2>Confirmar eliminación</h2><button class="modal-close" id="borrar-cerrar">&times;</button></div>
+            <div class="modal-body"><p style="font-size:0.92rem">¿Seguro que quieres eliminar <strong id="borrar-nombre"></strong>? Esta acción no se puede deshacer.</p></div>
             <div class="modal-footer">
                 <button class="btn-secondary" id="borrar-cancelar">Cancelar</button>
-                <button class="btn-primary" id="borrar-confirmar" style="background:var(--danger)">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
+                <button class="btn-primary" id="borrar-confirmar" style="background:var(--danger)"><i class="fas fa-trash"></i> Eliminar</button>
             </div>
         </div>
     </div>

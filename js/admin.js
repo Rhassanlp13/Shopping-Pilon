@@ -1,16 +1,20 @@
-// admin.js - Con soporte para admin (URL) y vendedores (file upload a Supabase)
+// admin.js - Panel de administración/vendedor para Shopping Pilón
+// Incluye gestión de productos, pedidos, reseñas, vendedores y configuración de pagos QvaPay
+
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
+import { CONFIG } from './config.js';
 
 let productos = [];
 let pedidos = [];
 let resenas = [];
 let editandoId = null;
 let borrandoId = null;
+let currentUser = null;
 let currentUserRole = null;
 
-// ==================== SUBIDA DE IMÁGENES (SOLO PARA VENDEDORES) ====================
+// ==================== SUBIDA DE IMÁGENES ====================
 async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -34,9 +38,7 @@ async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, 'image/webp', 0.8);
+                canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.8);
             };
             img.onerror = reject;
         };
@@ -56,9 +58,7 @@ async function subirImagen(file, productoId = null) {
                 cacheControl: '3600'
             });
         if (error) throw error;
-        const { data: publicUrlData } = supabase.storage
-            .from('products')
-            .getPublicUrl(nombreArchivo);
+        const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(nombreArchivo);
         return publicUrlData.publicUrl;
     } catch (err) {
         console.error('Error subiendo imagen:', err);
@@ -85,6 +85,68 @@ function setupImagePreview() {
     });
 }
 
+// ==================== ESTADO VISUAL QVAPAY ====================
+function actualizarEstadoVisualConfig(enabled, merchantId) {
+    const statusDiv = document.getElementById('qvapay-status');
+    const statusText = document.getElementById('qvapay-status-text');
+    if (!statusDiv || !statusText) return;
+
+    if (enabled && merchantId) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = '#e8f5e9';
+        statusDiv.style.border = '1px solid #c8e6c9';
+        statusText.innerHTML = `<i class="fas fa-check-circle"></i> <strong>QvaPay activado correctamente</strong><br>Merchant ID: <code>${escapeHtml(merchantId)}</code>`;
+    } else {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = '#fff3e0';
+        statusDiv.style.border = '1px solid #ffe0b2';
+        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>QvaPay no está activado</strong><br>Debes guardar un Merchant ID válido para recibir pagos digitales.`;
+    }
+}
+
+// ==================== CONFIGURACIÓN DE PAGOS QVAPAY ====================
+async function cargarConfiguracionPagos() {
+    const guardarBtn = document.getElementById('guardar-config-pagos');
+    const originalText = guardarBtn?.innerHTML;
+    if (guardarBtn) {
+        guardarBtn.disabled = true;
+        guardarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+    }
+
+    try {
+        if (!currentUser) throw new Error('Usuario no autenticado');
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('qvapay_enabled, qvapay_merchant_id')
+            .eq('id', currentUser.id)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        const enabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
+        const merchantInput = document.getElementById('qvapay-merchant-id');
+        const merchantGroup = document.getElementById('qvapay-merchant-group');
+
+        if (enabledCheckbox) {
+            enabledCheckbox.checked = data?.qvapay_enabled || false;
+            merchantGroup.style.display = data?.qvapay_enabled ? 'block' : 'none';
+        }
+        if (merchantInput) merchantInput.value = data?.qvapay_merchant_id || '';
+
+        actualizarEstadoVisualConfig(data?.qvapay_enabled, data?.qvapay_merchant_id);
+        mostrarToast('Configuración cargada', 'ok');
+    } catch (err) {
+        console.error('Error cargando configuración:', err);
+        mostrarToast('Error al cargar configuración de pagos', 'error');
+    } finally {
+        if (guardarBtn) {
+            guardarBtn.disabled = false;
+            guardarBtn.innerHTML = originalText || 'Guardar configuración';
+        }
+    }
+}
+
 // ==================== FUNCIONES PRINCIPALES ====================
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -92,6 +154,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = '/';
         return;
     }
+    currentUser = user;
+
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
     if (profile?.role === 'pending_seller') {
@@ -132,6 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await supabase.auth.signOut();
         window.location.href = '/';
     });
+
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         item.addEventListener('click', () => {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -141,8 +206,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (item.dataset.page === 'resenas') cargarResenas();
             if (item.dataset.page === 'pedidos') cargarPedidos();
             if (item.dataset.page === 'solicitudes') cargarSolicitudesYRender();
+            if (item.dataset.page === 'configuracion') cargarConfiguracionPagos();
         });
     });
+
     document.getElementById('btn-nuevo')?.addEventListener('click', () => abrirNuevo());
     document.getElementById('modal-cerrar')?.addEventListener('click', () => cerrarModal());
     document.getElementById('btn-cancelar')?.addEventListener('click', () => cerrarModal());
@@ -151,6 +218,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('borrar-cerrar')?.addEventListener('click', () => cerrarBorrar());
     document.getElementById('borrar-cancelar')?.addEventListener('click', () => cerrarBorrar());
     document.getElementById('borrar-confirmar')?.addEventListener('click', () => eliminarProducto());
+
+    // Configuración QvaPay
+    const qvapayEnabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
+    const qvapayMerchantGroup = document.getElementById('qvapay-merchant-group');
+    if (qvapayEnabledCheckbox) {
+        qvapayEnabledCheckbox.addEventListener('change', (e) => {
+            qvapayMerchantGroup.style.display = e.target.checked ? 'block' : 'none';
+        });
+    }
+    const guardarConfigBtn = document.getElementById('guardar-config-pagos');
+    if (guardarConfigBtn) {
+        guardarConfigBtn.addEventListener('click', async () => {
+            const enabled = qvapayEnabledCheckbox?.checked || false;
+            const merchantId = document.getElementById('qvapay-merchant-id')?.value.trim() || null;
+
+            if (enabled && !merchantId) {
+                mostrarToast('Debes ingresar tu Merchant ID (UUID) de QvaPay', 'error');
+                return;
+            }
+
+            const originalText = guardarConfigBtn.innerHTML;
+            guardarConfigBtn.disabled = true;
+            guardarConfigBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ qvapay_enabled: enabled, qvapay_merchant_id: merchantId })
+                    .eq('id', currentUser.id);
+
+                if (error) throw error;
+
+                mostrarToast('✅ Configuración guardada correctamente', 'ok');
+                actualizarEstadoVisualConfig(enabled, merchantId);
+                await cargarConfiguracionPagos(); // refresca campos
+            } catch (err) {
+                console.error(err);
+                mostrarToast('❌ Error al guardar configuración: ' + err.message, 'error');
+            } finally {
+                guardarConfigBtn.disabled = false;
+                guardarConfigBtn.innerHTML = originalText;
+            }
+        });
+    }
 });
 
 async function iniciar() {
@@ -161,12 +272,11 @@ async function iniciar() {
 
 async function cargarProductos() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No hay usuario autenticado');
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!currentUser) throw new Error('No hay usuario autenticado');
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single();
         const isAdmin = profile?.role === 'admin';
         let query = supabase.from('productos').select('*');
-        if (!isAdmin) query = query.eq('seller_id', user.id);
+        if (!isAdmin) query = query.eq('seller_id', currentUser.id);
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
         productos = data;
@@ -207,9 +317,7 @@ function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
 }
 
 function renderTabla(filtro = '') {
-    const lista = filtro
-        ? productos.filter(p => p.nombre?.toLowerCase().includes(filtro) || p.vendedor?.toLowerCase().includes(filtro))
-        : productos;
+    const lista = filtro ? productos.filter(p => p.nombre?.toLowerCase().includes(filtro) || p.vendedor?.toLowerCase().includes(filtro)) : productos;
     const tablaDiv = document.getElementById('tabla-productos');
     if (!tablaDiv) return;
     if (lista.length === 0) {
@@ -223,33 +331,12 @@ function renderTabla(filtro = '') {
         <tbody>
             ${lista.map(p => `
             <tr>
-                <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'">
-                    <span>
-                        <div class="prod-name">${escapeHtml(p.nombre)}</div>
-                        <div class="prod-vendedor">${escapeHtml(p.vendedor)}</div>
-                    </span>
-                </td>
+                <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
                 <td>$${Number(p.precio).toLocaleString('es')} CUP</td>
-                <td>${p.stock <= 0
-            ? '<span class="badge badge-out">Agotado</span>'
-            : p.stock <= 3
-                ? `<span class="badge badge-low">${p.stock} uds</span>`
-                : `<span class="badge badge-ok">${p.stock} uds</span>`
-        }</td>
-                <td>${p.enoferta && p.preciooferta
-            ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>`
-            : '—'
-        }</td>
-                <td>${p.variantes?.length > 0
-            ? `<span class="badge badge-variant">${p.variantes.length} var.</span>`
-            : '—'
-        }</td>
-                <td>
-                    <div class="actions">
-                        <button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button>
-                        <button class="act-btn del" data-del="${p.id}" data-nombre="${escapeHtml(p.nombre)}"><i class="fas fa-trash"></i></button>
-                    </div>
-                </td>
+                <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
+                <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
+                <td>${p.variantes?.length > 0 ? `<span class="badge badge-variant">${p.variantes.length} var.</span>` : '—'}</td>
+                <td><div class="actions"><button class="act-btn" data-edit="${p.id}"><i class="fas fa-pen"></i> Editar</button><button class="act-btn del" data-del="${p.id}" data-nombre="${escapeHtml(p.nombre)}"><i class="fas fa-trash"></i></button></div></td>
             </tr>`).join('')}
         </tbody>
     </table>`;
@@ -259,12 +346,11 @@ function renderTabla(filtro = '') {
 
 async function cargarPedidos() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!currentUser) return;
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single();
         const isAdmin = profile?.role === 'admin';
         let query = supabase.from('pedidos').select('*');
-        if (!isAdmin) query = query.eq('vendedor_id', user.id);
+        if (!isAdmin) query = query.eq('vendedor_id', currentUser.id);
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
         pedidos = data;
@@ -292,9 +378,11 @@ function renderPedidos() {
                 <td>${escapeHtml(p.cliente_telefono)}</td>
                 <td>${new Date(p.created_at).toLocaleString()}</td>
                 <td>$${Number(p.total).toLocaleString('es')}</td>
-                <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
+                <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : (p.status === 'paid' ? 'badge-ok' : 'badge-ok')}">
+                    ${p.status === 'pendiente' ? 'Pendiente' : (p.status === 'paid' ? 'Pagado' : 'Confirmado')}
+                </span></td>
                 <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
-                <td>${p.status === 'pendiente' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
+                <td>${(p.status === 'pendiente' || p.status === 'paid') ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
             </tr>`).join('')}
         </tbody>
     </table>`;
@@ -309,7 +397,6 @@ async function confirmarPedido(pedidoId) {
             mostrarToast('Pedido confirmado y stock actualizado', 'ok');
             cargarPedidos();
             cargarProductos();
-            // Invalidar caché de la tienda
             localStorage.removeItem('productos_cache');
             localStorage.removeItem('productos_cache_time');
         } else {
@@ -322,9 +409,8 @@ async function confirmarPedido(pedidoId) {
 
 async function cargarResenas() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!currentUser) return;
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single();
         const isAdmin = profile?.role === 'admin';
         if (!isAdmin) {
             document.getElementById('tabla-resenas').innerHTML = `<div class="table-empty"><i class="fas fa-lock"></i><p>Solo administradores pueden ver todas las reseñas.</p></div>`;
@@ -368,12 +454,25 @@ function renderResenas() {
 async function cargarSolicitudes() {
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, nombre_completo, telefono, created_at')
+        .select('id, email, nombre_completo, telefono, created_at, role, qvapay_enabled, qvapay_merchant_id')
         .eq('role', 'pending_seller')
         .order('created_at', { ascending: false });
     if (error) {
         console.error(error);
         mostrarToast('Error al cargar solicitudes', 'error');
+        return [];
+    }
+    return data;
+}
+
+async function cargarVendedoresActivos() {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, nombre_completo, telefono, created_at, role, qvapay_enabled, qvapay_merchant_id')
+        .eq('role', 'seller')
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error(error);
         return [];
     }
     return data;
@@ -388,7 +487,7 @@ function renderSolicitudes(solicitudes) {
     }
     tablaDiv.innerHTML = `<table class="admin-table">
         <thead>
-            <tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha</th><th>Acciones</th></tr>
+            <tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha</th><th>QvaPay</th><th>Acciones</th></tr>
         </thead>
         <tbody>
             ${solicitudes.map(s => `
@@ -398,18 +497,19 @@ function renderSolicitudes(solicitudes) {
                 <td>${escapeHtml(s.telefono || '—')}</td>
                 <td>${new Date(s.created_at).toLocaleDateString()}</td>
                 <td>
+                    ${s.qvapay_enabled && s.qvapay_merchant_id
+            ? `<span class="badge badge-ok" title="Merchant ID: ${escapeHtml(s.qvapay_merchant_id)}"><i class="fas fa-check-circle"></i> Activado</span>`
+            : `<span class="badge badge-out"><i class="fas fa-times-circle"></i> Inactivo</span>`}
+                </td>
+                <td>
                     <button class="act-btn aprobar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Aprobar</button>
                     <button class="act-btn del rechazar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Rechazar</button>
                 </td>
             </tr>`).join('')}
         </tbody>
     </table>`;
-    document.querySelectorAll('.aprobar-solicitud').forEach(btn => {
-        btn.addEventListener('click', () => aprobarVendedor(btn.dataset.id, btn.dataset.email));
-    });
-    document.querySelectorAll('.rechazar-solicitud').forEach(btn => {
-        btn.addEventListener('click', () => rechazarVendedor(btn.dataset.id, btn.dataset.email));
-    });
+    document.querySelectorAll('.aprobar-solicitud').forEach(btn => btn.addEventListener('click', () => aprobarVendedor(btn.dataset.id, btn.dataset.email)));
+    document.querySelectorAll('.rechazar-solicitud').forEach(btn => btn.addEventListener('click', () => rechazarVendedor(btn.dataset.id, btn.dataset.email)));
 }
 
 async function aprobarVendedor(userId, email) {
@@ -448,8 +548,8 @@ async function cargarSolicitudesYRender() {
     const solicitudes = await cargarSolicitudes();
     renderSolicitudes(solicitudes);
 }
-// ==================== FIN SOLICITUDES ====================
 
+// ==================== CRUD PRODUCTOS ====================
 function abrirNuevo() {
     editandoId = null;
     document.getElementById('modal-titulo').innerText = 'Nuevo producto';
@@ -534,7 +634,6 @@ async function guardarProducto() {
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
         const categoria = document.getElementById('f-categoria').value;
 
-        // Validar campos obligatorios PRIMERO, antes de subir nada
         if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
             mostrarToast('Completa los campos obligatorios', 'error');
             return;
@@ -545,7 +644,6 @@ async function guardarProducto() {
         }
         if (!telefonovendedor) telefonovendedor = null;
 
-        // Gestión de imagen DESPUÉS de validar campos
         let imagenUrl = '';
         if (currentUserRole === 'admin') {
             imagenUrl = document.getElementById('f-imagen').value.trim();
@@ -558,7 +656,6 @@ async function guardarProducto() {
             const fileInput = document.getElementById('f-imagen-file');
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-                // ✅ Límite aumentado a 10 MB
                 if (file.size > 10 * 1024 * 1024) {
                     mostrarToast('La imagen no debe superar los 10MB', 'error');
                     return;
@@ -588,24 +685,13 @@ async function guardarProducto() {
             });
         });
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            mostrarToast('Debes iniciar sesión', 'error');
-            return;
-        }
+        if (!currentUser) throw new Error('Usuario no autenticado');
 
         const productoData = {
-            nombre,
-            precio,
-            stock,
-            imagen: imagenUrl,
-            vendedor,
-            telefonovendedor,
-            enoferta: enOferta,
-            preciooferta: precioOferta,
-            categoria,
+            nombre, precio, stock, imagen: imagenUrl, vendedor, telefonovendedor,
+            enoferta: enOferta, preciooferta: precioOferta, categoria,
             variantes: variantes.length ? variantes : [],
-            seller_id: user.id
+            seller_id: currentUser.id
         };
 
         let error;
@@ -616,10 +702,8 @@ async function guardarProducto() {
             const { error: insertError } = await supabase.from('productos').insert([productoData]);
             error = insertError;
         }
-
         if (error) throw error;
 
-        // ✅ Invalidar caché de la tienda
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
 
@@ -658,19 +742,13 @@ async function eliminarProducto() {
     confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
 
     try {
-        // Los administradores pueden eliminar sin verificar pedidos
         if (currentUserRole !== 'admin') {
-            // Obtener todos los pedidos (solo id y productos) y verificar en cliente
-            const { data: pedidos, error } = await supabase
-                .from('pedidos')
-                .select('id, productos');
+            const { data: pedidos, error } = await supabase.from('pedidos').select('id, productos');
             if (error) throw error;
-
             const tienePedidos = pedidos.some(pedido => {
                 if (!pedido.productos || !Array.isArray(pedido.productos)) return false;
                 return pedido.productos.some(item => item.id === borrandoId);
             });
-
             if (tienePedidos) {
                 mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
                 confirmarBtn.disabled = false;
@@ -678,20 +756,15 @@ async function eliminarProducto() {
                 return;
             }
         }
-
-        // Proceder a eliminar
         const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
         if (error) throw error;
-
         mostrarToast('Producto eliminado', 'ok');
-        // Invalidar caché de la tienda
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
         cerrarBorrar();
         cargarProductos();
     } catch (err) {
-        console.error('Error al eliminar producto:', err);
-        mostrarToast(err.message || 'Error al eliminar el producto', 'error');
+        mostrarToast(err.message || 'Error al eliminar producto', 'error');
         confirmarBtn.disabled = false;
         confirmarBtn.innerHTML = textoOriginal;
     }
