@@ -1,5 +1,5 @@
 // admin.js - Panel de administración/vendedor para Shopping Pilón
-// Incluye gestión de productos, pedidos, reseñas, vendedores y configuración de pagos QvaPay
+// Incluye gestión de productos, pedidos, reseñas, vendedores, configuración de pagos QvaPay y clientes
 
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
@@ -175,6 +175,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (navSolicitudes) navSolicitudes.style.display = 'none';
         const solicitudesPage = document.getElementById('page-solicitudes');
         if (solicitudesPage) solicitudesPage.style.display = 'none';
+        // Los clientes solo son visibles para admin
+        const navClientes = document.querySelector('.nav-item[data-page="clientes"]');
+        if (navClientes) navClientes.style.display = 'none';
     }
 
     const grupoUrl = document.getElementById('grupo-url-imagen');
@@ -207,6 +210,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (item.dataset.page === 'pedidos') cargarPedidos();
             if (item.dataset.page === 'solicitudes') cargarSolicitudesYRender();
             if (item.dataset.page === 'configuracion') cargarConfiguracionPagos();
+            if (item.dataset.page === 'clientes') {
+                cargarClientes().then(clientes => renderClientes(clientes));
+            }
         });
     });
 
@@ -262,6 +268,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Botón de ayuda flotante (tutorial)
+    document.getElementById('help-button')?.addEventListener('click', () => {
+        const tutorialModal = document.getElementById('tutorial-modal');
+        if (tutorialModal) tutorialModal.removeAttribute('hidden');
+    });
 });
 
 async function iniciar() {
@@ -500,11 +512,11 @@ function renderSolicitudes(solicitudes) {
                     ${s.qvapay_enabled && s.qvapay_merchant_id
             ? `<span class="badge badge-ok" title="Merchant ID: ${escapeHtml(s.qvapay_merchant_id)}"><i class="fas fa-check-circle"></i> Activado</span>`
             : `<span class="badge badge-out"><i class="fas fa-times-circle"></i> Inactivo</span>`}
-                </td>
+                 </td>
                 <td>
                     <button class="act-btn aprobar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Aprobar</button>
                     <button class="act-btn del rechazar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Rechazar</button>
-                </td>
+                 </td>
             </tr>`).join('')}
         </tbody>
     </table>`;
@@ -547,6 +559,70 @@ async function cargarSolicitudesYRender() {
     }
     const solicitudes = await cargarSolicitudes();
     renderSolicitudes(solicitudes);
+}
+
+// ==================== CLIENTES (para administrador) ====================
+async function cargarClientes() {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, nombre_completo, telefono, created_at, role')
+        .eq('role', 'customer')
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error(error);
+        mostrarToast('Error al cargar clientes', 'error');
+        return [];
+    }
+    return data;
+}
+
+function renderClientes(clientes) {
+    const tablaDiv = document.getElementById('tabla-clientes');
+    if (!tablaDiv) return;
+    if (clientes.length === 0) {
+        tablaDiv.innerHTML = `<div class="table-empty"><i class="fas fa-user-slash"></i><p>No hay clientes registrados.</p></div>`;
+        return;
+    }
+    tablaDiv.innerHTML = `<table class="admin-table">
+        <thead>
+            <tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha registro</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            ${clientes.map(c => `
+            <tr>
+                <td>${escapeHtml(c.email)}</td>
+                <td>${escapeHtml(c.nombre_completo || '—')}</td>
+                <td>${escapeHtml(c.telefono || '—')}</td>
+                <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                <td>
+                    <button class="act-btn convertir-seller" data-id="${c.id}" data-email="${escapeHtml(c.email)}">
+                        <i class="fas fa-user-check"></i> Aprobar como vendedor
+                    </button>
+                 </td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+    document.querySelectorAll('.convertir-seller').forEach(btn => {
+        btn.addEventListener('click', () => convertirEnVendedor(btn.dataset.id, btn.dataset.email));
+    });
+}
+
+async function convertirEnVendedor(userId, email) {
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'seller' })
+        .eq('id', userId);
+    if (error) {
+        mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
+    } else {
+        mostrarToast(`✅ ${escapeHtml(email)} ahora es vendedor`, 'ok');
+        // Recargar la lista de clientes
+        const clientes = await cargarClientes();
+        renderClientes(clientes);
+        // Si quieres actualizar también la lista de solicitudes (por si había algo pendiente)
+        const solicitudes = await cargarSolicitudes();
+        renderSolicitudes(solicitudes);
+    }
 }
 
 // ==================== CRUD PRODUCTOS ====================

@@ -9,14 +9,57 @@ let currentRole = null;
 let _bodyListenersBound = false;
 let _dropdownCloseHandler = null;
 
+// Referencias a elementos del DOM
+let userBtn = null;
+let userMenu = null;
+
+// ==================== INICIALIZACIÓN DEL BOTÓN Y MENÚ ====================
+function initUserButtonAndMenu() {
+    userBtn = document.getElementById('user-btn');
+    if (!userBtn) {
+        console.error('No se encontró #user-btn en el DOM');
+        return;
+    }
+    const container = userBtn.parentNode;
+    if (!container) return;
+    container.style.position = 'relative';
+
+    // Crear menú desplegable si no existe
+    if (!userMenu) {
+        userMenu = document.createElement('div');
+        userMenu.className = 'user-dropdown';
+        container.appendChild(userMenu);
+    }
+
+    // Limpiar event listeners antiguos (clonando y reemplazando)
+    const newBtn = userBtn.cloneNode(true);
+    userBtn.parentNode.replaceChild(newBtn, userBtn);
+    userBtn = newBtn;
+}
+
+function toggleUserMenu() {
+    if (!userMenu) return;
+    userMenu.classList.toggle('show');
+}
+
+function closeUserMenu() {
+    if (userMenu) userMenu.classList.remove('show');
+}
+
+// ==================== AUTENTICACIÓN PRINCIPAL ====================
 export async function initAuth() {
+    initUserButtonAndMenu();
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
         currentUser = session.user;
         await loadUserRole();
         await ensureProfile();
         updateUIForLoggedIn();
+    } else {
+        updateUIForLoggedOut();
     }
+
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN') {
             currentUser = session.user;
@@ -31,13 +74,15 @@ export async function initAuth() {
     });
 }
 
-async function loadUserRole() {
+async function loadUserRole(forceRefresh = false) {
     if (!currentUser) return;
-    const cached = localStorage.getItem('user_role');
-    const cachedExpiry = localStorage.getItem('user_role_expiry');
-    if (cached && cachedExpiry && Date.now() < parseInt(cachedExpiry)) {
-        currentRole = cached;
-        return;
+    if (!forceRefresh) {
+        const cached = localStorage.getItem('user_role');
+        const cachedExpiry = localStorage.getItem('user_role_expiry');
+        if (cached && cachedExpiry && Date.now() < parseInt(cachedExpiry)) {
+            currentRole = cached;
+            return;
+        }
     }
     const { data, error } = await supabase
         .from('profiles')
@@ -46,7 +91,6 @@ async function loadUserRole() {
         .maybeSingle();
     if (error) {
         console.error('Error al consultar perfil:', error);
-        mostrarToast('Error al verificar tu cuenta. Intenta recargar la página.', 'error');
         currentRole = 'customer';
         return;
     }
@@ -62,7 +106,17 @@ async function loadUserRole() {
     if (role === 'administrativo') role = 'admin';
     currentRole = role || 'customer';
     localStorage.setItem('user_role', currentRole);
-    localStorage.setItem('user_role_expiry', Date.now() + 5 * 60 * 1000);
+    localStorage.setItem('user_role_expiry', Date.now() + 60 * 1000);
+}
+
+export async function refreshUserRole() {
+    if (!currentUser) return;
+    const oldRole = currentRole;
+    await loadUserRole(true);
+    if (oldRole !== currentRole) {
+        updateUserMenuContent();
+        mostrarToast('Tu rol ha sido actualizado', 'info');
+    }
 }
 
 async function ensureProfile() {
@@ -94,25 +148,9 @@ async function ensureProfile() {
     }
 }
 
-function updateUIForLoggedIn() {
-    const oldUserBtn = document.getElementById('user-btn');
-    if (!oldUserBtn) return;
-
-    const newUserBtn = document.createElement('button');
-    newUserBtn.className = 'cart-btn';
-    newUserBtn.id = 'user-btn';
-    newUserBtn.setAttribute('aria-label', 'Usuario');
-    newUserBtn.innerHTML = '<i class="fas fa-user-check"></i>';
-
-    const container = oldUserBtn.parentNode;
-    container.replaceChild(newUserBtn, oldUserBtn);
-    container.style.position = 'relative';
-
-    const oldDropdown = container.querySelector('.user-dropdown');
-    if (oldDropdown) oldDropdown.remove();
-
-    const userMenu = document.createElement('div');
-    userMenu.className = 'user-dropdown';
+// ==================== ACTUALIZACIÓN DE UI ====================
+function updateUserMenuContent() {
+    if (!userMenu) return;
     const emailText = currentUser?.email || 'Usuario';
     userMenu.innerHTML = `
         <div class="user-dropdown-header">
@@ -122,16 +160,31 @@ function updateUIForLoggedIn() {
         <a href="/admin.html" id="admin-link">
             <i class="fas fa-chalkboard-user"></i> Panel de vendedor
         </a>` : ''}
+        ${(currentRole === 'customer') ? `
+        <button id="request-seller-btn">
+            <i class="fas fa-store"></i> Solicitar ser vendedor
+        </button>` : ''}
+        ${(currentRole === 'pending_seller') ? `
+        <div class="user-dropdown-pending">
+            <i class="fas fa-clock"></i> Solicitud pendiente de aprobación
+        </div>` : ''}
+        <button id="logout-btn-dropdown">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </button>
     `;
 
-    const logoutBtn = document.createElement('button');
-    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
-    logoutBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const originalText = logoutBtn.innerHTML;
-        logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cerrando...';
-        logoutBtn.disabled = true;
-        try {
+    const requestBtn = userMenu.querySelector('#request-seller-btn');
+    if (requestBtn) {
+        requestBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await solicitarSerVendedor();
+            closeUserMenu();
+        });
+    }
+    const logoutBtn = userMenu.querySelector('#logout-btn-dropdown');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
             await supabase.auth.signOut();
             localStorage.removeItem('user_role');
             localStorage.removeItem('user_role_expiry');
@@ -139,31 +192,39 @@ function updateUIForLoggedIn() {
             currentRole = null;
             mostrarToast('Sesión cerrada', 'info');
             setTimeout(() => location.reload(), 200);
-        } catch (err) {
-            console.error('Error al cerrar sesión:', err);
-            mostrarToast('Error al cerrar sesión', 'error');
-            logoutBtn.innerHTML = originalText;
-            logoutBtn.disabled = false;
-        }
-    });
-    userMenu.appendChild(logoutBtn);
-    container.appendChild(userMenu);
+        });
+    }
+}
 
-    newUserBtn.addEventListener('click', (e) => {
+function updateUIForLoggedIn() {
+    if (!userBtn) initUserButtonAndMenu();
+    if (!userBtn) return;
+
+    // Cambiar icono y comportamiento
+    userBtn.innerHTML = '<i class="fas fa-user-check"></i>';
+    userBtn.removeEventListener('click', userBtn._listener); // Limpiar listener anterior
+    const clickHandler = (e) => {
         e.stopPropagation();
-        userMenu.classList.toggle('show');
-    });
+        toggleUserMenu();
+    };
+    userBtn.addEventListener('click', clickHandler);
+    userBtn._listener = clickHandler;
 
+    // Construir menú
+    updateUserMenuContent();
+
+    // Cerrar menú al hacer clic fuera
     if (_dropdownCloseHandler) {
         document.removeEventListener('click', _dropdownCloseHandler);
     }
     _dropdownCloseHandler = (e) => {
-        if (!container.contains(e.target)) {
-            userMenu.classList.remove('show');
+        if (userMenu && !userMenu.contains(e.target) && e.target !== userBtn) {
+            closeUserMenu();
         }
     };
     document.addEventListener('click', _dropdownCloseHandler);
 
+    // Mostrar bienvenida y ocultar botones de registro/ayuda
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -177,23 +238,29 @@ function updateUIForLoggedIn() {
         heroWelcome.style.display = 'block';
         registerBtn.style.display = 'none';
     }
+    const helpBtn = document.getElementById('help-seller-btn');
+    if (helpBtn) helpBtn.style.display = 'none';
 }
 
 function updateUIForLoggedOut() {
-    const oldUserBtn = document.getElementById('user-btn');
-    if (!oldUserBtn) return;
+    if (!userBtn) initUserButtonAndMenu();
+    if (!userBtn) return;
 
-    const newUserBtn = document.createElement('button');
-    newUserBtn.className = 'cart-btn';
-    newUserBtn.id = 'user-btn';
-    newUserBtn.setAttribute('aria-label', 'Usuario');
-    newUserBtn.innerHTML = '<i class="fas fa-user"></i>';
+    // Cambiar icono y comportamiento: abre modal de login
+    userBtn.innerHTML = '<i class="fas fa-user"></i>';
+    userBtn.removeEventListener('click', userBtn._listener);
+    const clickHandler = (e) => {
+        e.stopPropagation();
+        openAuthModal();
+    };
+    userBtn.addEventListener('click', clickHandler);
+    userBtn._listener = clickHandler;
 
-    const container = oldUserBtn.parentNode;
-    container.replaceChild(newUserBtn, oldUserBtn);
-
-    const dropdown = container.querySelector('.user-dropdown');
-    if (dropdown) dropdown.remove();
+    // Vaciar menú y ocultarlo
+    if (userMenu) {
+        userMenu.innerHTML = '';
+        userMenu.classList.remove('show');
+    }
 
     if (_dropdownCloseHandler) {
         document.removeEventListener('click', _dropdownCloseHandler);
@@ -206,8 +273,34 @@ function updateUIForLoggedOut() {
         heroWelcome.style.display = 'none';
         registerBtn.style.display = 'inline-flex';
     }
+    const helpBtn = document.getElementById('help-seller-btn');
+    if (helpBtn) helpBtn.style.display = 'inline-flex';
 }
 
+// ==================== SOLICITAR SER VENDEDOR ====================
+export async function solicitarSerVendedor() {
+    if (!currentUser) {
+        mostrarToast('Debes iniciar sesión para solicitar ser vendedor', 'warning');
+        return;
+    }
+    if (currentRole !== 'customer') {
+        mostrarToast('Ya tienes una solicitud pendiente o ya eres vendedor', 'warning');
+        return;
+    }
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'pending_seller' })
+        .eq('id', currentUser.id);
+    if (error) {
+        console.error(error);
+        mostrarToast('Error al enviar solicitud. Intenta de nuevo.', 'error');
+    } else {
+        mostrarToast('✅ Solicitud enviada. El administrador revisará tu petición.', 'info');
+        await refreshUserRole();
+    }
+}
+
+// ==================== MODAL DE AUTENTICACIÓN ====================
 export function openAuthModal(preselectedRole = null) {
     const modal = document.getElementById('auth-modal');
     if (!modal) return;
@@ -450,6 +543,7 @@ async function signInWithFacebook() {
     if (error) mostrarToast(error.message, 'error');
 }
 
+// ==================== EVENTOS GLOBALES ====================
 export function bindAuthEvents() {
     if (_bodyListenersBound) return;
     _bodyListenersBound = true;
@@ -499,25 +593,9 @@ export function bindAuthEvents() {
             closeAuthModal();
         }
     });
-
-    document.body.addEventListener('click', (e) => {
-        const icon = e.target.closest('.toggle-password');
-        if (icon) {
-            const targetId = icon.getAttribute('data-target');
-            const input = targetId ? document.getElementById(targetId) : null;
-            if (input) {
-                const isPassword = input.type === 'password';
-                input.type = isPassword ? 'text' : 'password';
-                icon.classList.toggle('fa-eye', !isPassword);
-                icon.classList.toggle('fa-eye-slash', isPassword);
-            }
-            return;
-        }
-
-        const userBtn = e.target.closest('#user-btn');
-        if (userBtn && !currentUser) {
-            e.stopPropagation();
-            openAuthModal();
-        }
-    });
 }
+
+// Inicializar el botón al cargar el DOM (por si se llama desde app.js)
+document.addEventListener('DOMContentLoaded', () => {
+    initUserButtonAndMenu();
+});

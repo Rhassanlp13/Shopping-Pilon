@@ -126,50 +126,7 @@ body {
     }
 }
 
-/* HERO */
-.hero {
-    background-image: linear-gradient(160deg, rgba(26, 35, 126, 0.82) 0%, rgba(0, 0, 0, 0.55) 100%),
-        url('https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&q=60&w=1200');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    min-height: 320px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 3rem 1.5rem;
-    color: var(--white);
-}
-
-.hero-subtitle {
-    text-transform: uppercase;
-    letter-spacing: 4px;
-    font-size: 0.75rem;
-    color: var(--accent);
-    margin-bottom: 0.4rem;
-    font-weight: 600;
-}
-
-.hero h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(1.8rem, 5vw, 3rem);
-    font-weight: 900;
-    line-height: 1.15;
-    margin-bottom: 0.8rem;
-}
-
-.hero h1 em {
-    color: var(--accent);
-    font-style: normal;
-}
-
-.hero-desc {
-    font-size: 0.95rem;
-    opacity: 0.85;
-    margin-bottom: 1.5rem;
-}
-
+/* BUTTONS GLOBALES */
 .btn-primary {
     background: var(--whatsapp);
     color: var(--white);
@@ -188,6 +145,31 @@ body {
 }
 
 .btn-primary:hover {
+    transform: translateY(-2px);
+    opacity: 0.95;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1.5px solid var(--white);
+    color: var(--white);
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover {
+    background-color: var(--white);
+    color: var(--primary);
+    border-color: var(--white);
     transform: translateY(-2px);
 }
 
@@ -1595,6 +1577,7 @@ body {
         justify-content: center;
     }
 }
+
 /* ========== DROPDOWN DE USUARIO ========== */
 .user-dropdown {
     position: absolute;
@@ -1813,6 +1796,7 @@ body {
     margin: 0 auto;
     padding: 0 1rem;
 }
+
 .filtros-container {
     display: flex;
     flex-wrap: wrap;
@@ -1820,6 +1804,7 @@ body {
     justify-content: center;
     margin: 1rem 0 1.5rem;
 }
+
 .filtro-btn {
     background: white;
     border: 1px solid var(--border);
@@ -1832,11 +1817,13 @@ body {
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
 }
+
 .filtro-btn.active {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
 }
+
 .filtro-btn:hover:not(.active) {
     background: #f0f0f0;
     border-color: #ccc;
@@ -1924,4 +1911,118 @@ body {
     padding: 2px 6px;
     border-radius: 6px;
     font-size: 0.8rem;
+}
+
+/* Botón de usuario con texto */
+.user-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    width: auto;
+    border-radius: 40px;
+}
+
+.user-btn-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Ajuste responsive: en móviles muy pequeños ocultar texto */
+@media (max-width: 480px) {
+    .user-btn-text {
+        display: none;
+    }
+
+    .user-btn {
+        width: 44px;
+        justify-content: center;
+    }
+}
+
+/* Estilos para el tutorial modal */
+/* ===== TUTORIAL / CÓMO SER VENDEDOR ===== */
+.tutorial-step {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+}
+
+.tutorial-step:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.tutorial-step h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tutorial-step h3::before {
+    content: "📘";
+    font-size: 1rem;
+}
+
+.tutorial-step p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text);
+    margin-left: 1.8rem;
+}
+
+/* Botón de ayuda flotante (opcional) */
+.help-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 999;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.help-button:hover {
+    transform: scale(1.05);
+    background: var(--accent);
+}
+
+/* Ajuste para el modal del tutorial (reutiliza .modal-box y .modal-overlay) */
+#tutorial-seller-modal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+#tutorial-seller-modal .modal-footer {
+    justify-content: center;
+}
+
+.user-dropdown-pending {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    color: #ff9800;
+    background: #fff8e1;
+    border-bottom: 1px solid #eef2f6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.help-btn-small {
+    padding: 5px 12px !important;
+    font-size: 0.75rem !important;
+    gap: 4px !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
 }
