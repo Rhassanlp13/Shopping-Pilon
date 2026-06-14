@@ -724,7 +724,13 @@ export const UI = {
             mostrarToast('⏳ Procesando pedido, espera...', 'warning');
             return;
         }
-
+        // Verificar si el usuario está autenticado
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            mostrarToast('⚠️ Debes iniciar sesión para realizar un pedido', 'warning');
+            openAuthModal(); // Esta función ya existe en auth.js (importada globalmente)
+            return;
+        }
         const items = carrito.itemsConDatos(this.productos);
 
         // 👇 VALIDACIÓN DE MONEDA (NUEVA)
