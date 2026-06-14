@@ -182,14 +182,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const grupoUrl = document.getElementById('grupo-url-imagen');
     const grupoFile = document.getElementById('grupo-file-imagen');
-    if (currentUserRole === 'admin') {
-        grupoUrl.style.display = 'block';
-        grupoFile.style.display = 'none';
-    } else {
-        grupoUrl.style.display = 'none';
-        grupoFile.style.display = 'block';
-        setupImagePreview();
-    }
+   
+    grupoUrl.style.display = 'none';  
+    grupoFile.style.display = 'block';
+    setupImagePreview(); // Para todos
 
     const shell = document.getElementById('shell');
     if (shell) shell.classList.add('visible');
@@ -727,29 +723,25 @@ async function guardarProducto() {
 
         // 3. Obtener imagen (según rol)
         let imagenUrl = '';
-        if (currentUserRole === 'admin') {
-            imagenUrl = document.getElementById('f-imagen').value.trim();
-            if (!imagenUrl) {
-                mostrarToast('Debes ingresar una URL de imagen', 'error');
+        const fileInput = document.getElementById('f-imagen-file');
+        const urlInput = document.getElementById('f-imagen').value.trim();
+
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            if (file.size > 10 * 1024 * 1024) {
+                mostrarToast('La imagen no debe superar los 10MB', 'error');
                 return;
             }
+            const uploadedUrl = await subirImagen(file, editandoId);
+            if (!uploadedUrl) throw new Error('No se pudo subir la imagen');
+            imagenUrl = uploadedUrl;
+            // Actualizar el campo URL con la URL subida (opcional)
+            document.getElementById('f-imagen').value = imagenUrl;
+        } else if (urlInput) {
+            imagenUrl = urlInput;
         } else {
-            imagenUrl = document.getElementById('f-imagen').value.trim();
-            const fileInput = document.getElementById('f-imagen-file');
-            if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                if (file.size > 10 * 1024 * 1024) {
-                    mostrarToast('La imagen no debe superar los 10MB', 'error');
-                    return;
-                }
-                const uploadedUrl = await subirImagen(file, editandoId);
-                if (!uploadedUrl) throw new Error('No se pudo subir la imagen');
-                imagenUrl = uploadedUrl;
-                document.getElementById('f-imagen').value = imagenUrl;
-            } else if (!imagenUrl) {
-                mostrarToast('Debes seleccionar una imagen', 'error');
-                return;
-            }
+            mostrarToast('Debes seleccionar una imagen o ingresar una URL', 'error');
+            return;
         }
 
         // 4. Obtener variantes (después de tener imagenUrl, pero antes de armar el objeto)
@@ -814,7 +806,8 @@ function abrirBorrar(id, nombre) {
 }
 
 function cerrarBorrar() {
-    document.getElementById('modal-borrar').setAttribute('hidden', '');
+    const modal = document.getElementById('modal-borrar');
+    if (modal) modal.setAttribute('hidden', '');
     borrandoId = null;
 }
 
@@ -826,30 +819,46 @@ async function eliminarProducto() {
     confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
 
     try {
+        // Si no es administrador, verificar si el producto tiene pedidos asociados (solo los propios)
         if (currentUserRole !== 'admin') {
-            const { data: pedidos, error } = await supabase.from('pedidos').select('id, productos');
+            // Consultar solo pedidos donde vendedor_id sea el usuario actual (evita RLS y mejora rendimiento)
+            const { data: pedidos, error } = await supabase
+                .from('pedidos')
+                .select('id, productos')
+                .eq('vendedor_id', currentUser.id);  // ← filtrar por vendedor
+
             if (error) throw error;
+
             const tienePedidos = pedidos.some(pedido => {
                 if (!pedido.productos || !Array.isArray(pedido.productos)) return false;
                 return pedido.productos.some(item => item.id === borrandoId);
             });
             if (tienePedidos) {
                 mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
-                confirmarBtn.disabled = false;
-                confirmarBtn.innerHTML = textoOriginal;
-                return;
+                return;  // sale sin eliminar, no cierra modal
             }
         }
+
+        // Eliminar el producto
         const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
         if (error) throw error;
-        mostrarToast('Producto eliminado', 'ok');
+
+        // Éxito
+        mostrarToast('✅ Producto eliminado', 'ok');
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
-        cerrarBorrar();
-        cargarProductos();
+        cerrarBorrar();       // cierra modal y limpia borrandoId
+        cargarProductos();    // recarga lista (no esperamos)
     } catch (err) {
-        mostrarToast(err.message || 'Error al eliminar producto', 'error');
+        console.error('Error al eliminar producto:', err);
+        mostrarToast(err.message || '❌ Error al eliminar producto', 'error');
+        // No cerramos el modal, solo restablecemos el botón
+    } finally {
+        // Siempre restablecer el botón y limpiar borrandoId si no se hizo en cerrarBorrar
         confirmarBtn.disabled = false;
         confirmarBtn.innerHTML = textoOriginal;
+        if (!borrandoId) return; // ya se limpió en cerrarBorrar
+        // Si llegamos aquí sin cerrar modal, limpiar borrandoId manualmente
+        borrandoId = null;
     }
 }
