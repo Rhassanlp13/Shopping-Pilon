@@ -735,6 +735,13 @@
                 <div class="form-row">
                     <div class="form-group"><label>Precio (CUP) *</label><input type="number" id="f-precio"
                             placeholder="100" min="0"></div>
+                <div class="form-group">
+                    <label>Moneda *</label>
+                    <select id="f-moneda" required>
+                        <option value="CUP">Peso Cubano (CUP)</option>
+                        <option value="USD">Dólar estadounidense (USD)</option>
+                    </select>
+                </div>
                     <div class="form-group"><label>Stock *</label><input type="number" id="f-stock" placeholder="10"
                             min="0"></div>
                 </div>
@@ -806,6 +813,7 @@
             </div>
         </div>
     </div>
+    <div id="toast-container"></div>
 
     <button id="help-button"
         style="position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 999;">

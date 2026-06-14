@@ -20,7 +20,6 @@ export const carrito = {
     },
 
     itemsConDatos(productos) {
-        // ✅ Guardia contra productos nulo o no array
         if (!productos || !Array.isArray(productos)) {
             console.warn('[carrito] productos no disponible');
             return [];
@@ -50,6 +49,7 @@ export const carrito = {
                     variantNombre: nombreVariante,
                     stockDisponible,
                     seller_id: p.seller_id,
+                    moneda: p.moneda || 'CUP',   
                 };
             })
             .filter(Boolean);

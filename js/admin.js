@@ -344,7 +344,7 @@ function renderTabla(filtro = '') {
             ${lista.map(p => `
             <tr>
                 <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
-                <td>$${Number(p.precio).toLocaleString('es')} CUP</td>
+                <td>${Number(p.precio).toLocaleString('es')} ${p.moneda === 'USD' ? 'USD' : 'CUP'}</td>
                 <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
                 <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
                 <td>${p.variantes?.length > 0 ? `<span class="badge badge-variant">${p.variantes.length} var.</span>` : '—'}</td>
@@ -652,6 +652,8 @@ function abrirEditar(id) {
     variantesDiv.innerHTML = '';
     if (prod.variantes && prod.variantes.length) prod.variantes.forEach((v, i) => agregarVariante(v, i));
     document.getElementById('modal-producto').removeAttribute('hidden');
+    const monedaSelect = document.getElementById('f-moneda');
+    if (monedaSelect) monedaSelect.value = prod.moneda || 'CUP';
 }
 
 function limpiarFormulario() {
@@ -701,6 +703,7 @@ async function guardarProducto() {
     btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
     try {
+        // 1. Obtener valores del DOM
         const nombre = document.getElementById('f-nombre').value.trim();
         const precio = parseFloat(document.getElementById('f-precio').value);
         const stock = parseInt(document.getElementById('f-stock').value);
@@ -709,7 +712,9 @@ async function guardarProducto() {
         const enOferta = document.getElementById('f-en-oferta').checked;
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
         const categoria = document.getElementById('f-categoria').value;
+        const moneda = document.getElementById('f-moneda')?.value || 'CUP';
 
+        // 2. Validaciones básicas
         if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
             mostrarToast('Completa los campos obligatorios', 'error');
             return;
@@ -720,6 +725,7 @@ async function guardarProducto() {
         }
         if (!telefonovendedor) telefonovendedor = null;
 
+        // 3. Obtener imagen (según rol)
         let imagenUrl = '';
         if (currentUserRole === 'admin') {
             imagenUrl = document.getElementById('f-imagen').value.trim();
@@ -746,6 +752,7 @@ async function guardarProducto() {
             }
         }
 
+        // 4. Obtener variantes (después de tener imagenUrl, pero antes de armar el objeto)
         const variantes = [];
         document.querySelectorAll('.variante-item').forEach(item => {
             const nombreVar = item.querySelector('.var-nombre')?.value.trim();
@@ -761,15 +768,16 @@ async function guardarProducto() {
             });
         });
 
-        if (!currentUser) throw new Error('Usuario no autenticado');
-
+        // 5. Construir objeto productoData
         const productoData = {
             nombre, precio, stock, imagen: imagenUrl, vendedor, telefonovendedor,
             enoferta: enOferta, preciooferta: precioOferta, categoria,
             variantes: variantes.length ? variantes : [],
-            seller_id: currentUser.id
+            seller_id: currentUser.id,
+            moneda: moneda
         };
 
+        // 6. Insertar o actualizar
         let error;
         if (editandoId) {
             const { error: updateError } = await supabase.from('productos').update(productoData).eq('id', editandoId);
@@ -780,9 +788,9 @@ async function guardarProducto() {
         }
         if (error) throw error;
 
+        // 7. Limpiar caché y recargar
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
-
         mostrarToast('Producto guardado', 'ok');
         cerrarModal();
         cargarProductos();

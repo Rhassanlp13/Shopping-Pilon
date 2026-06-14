@@ -66,6 +66,14 @@ export const UI = {
         this.actualizarContador();
         this.bindEventos();
     },
+    validarMonedaCarrito(items) {
+        const monedas = [...new Set(items.map(i => i.moneda || 'CUP'))];
+        if (monedas.length > 1) {
+            mostrarToast('❌ No puedes combinar productos en CUP y USD en un mismo pedido. Separa la compra.', 'error');
+            return false;
+        }
+        return true;
+    },
 
     // Filtrar productos según categoría seleccionada
     filtrarProductos() {
@@ -86,6 +94,7 @@ export const UI = {
         }
         const ofertas = productos.filter(p => p.enoferta && p.preciooferta);
         const normales = productos.filter(p => !p.enoferta || !p.preciooferta);
+
         const renderCard = (p) => {
             const enCarrito = carrito.cantidadDe(p.id, null);
             const precioReal = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
@@ -93,25 +102,32 @@ export const UI = {
             const stockBajo = !agotado && p.stock <= 3;
             const descuento = (p.enoferta && p.preciooferta) ? Math.round((1 - p.preciooferta / p.precio) * 100) : null;
             const imgOptimizada = optimizarImagen(p.imagen, 400, 400);
+
+            // Obtener moneda del producto (por defecto CUP)
+            const moneda = p.moneda || 'CUP';
+            const textoMoneda = moneda === 'USD' ? ' USD' : ' CUP';
+            const simbolo = '$'; // ambos usan $
+
             return `
-                <article class="product-card ${p.enoferta && p.preciooferta ? 'en-oferta' : ''}" data-id="${escapeHtml(p.id)}">
-                    ${descuento ? `<span class="card-badge-oferta">−${descuento}%</span>` : ''}
-                    ${stockBajo && !descuento ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
-                    <img src="${escapeHtml(imgOptimizada)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.src='https://placehold.co/400x400?text=Sin+imagen'">
-                    <div class="product-info">
-                        <span class="vendedor"><i class="fas fa-user-circle"></i> ${escapeHtml(p.vendedor)}</span>
-                        <h3>${escapeHtml(p.nombre)}</h3>
-                        <div class="price-wrap">
-                            ${descuento ? `<span class="price-original">$${Number(p.precio).toLocaleString('es')}</span>` : ''}
-                            <span class="price ${descuento ? 'price-oferta' : ''}">$${Number(precioReal).toLocaleString('es')}</span>
-                            ${descuento ? `<span class="descuento-badge">−${descuento}%</span>` : ''}
-                        </div>
-                        <button class="card-btn-add" data-id="${escapeHtml(p.id)}" ${agotado ? 'disabled' : ''}>
-                            ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir'}
-                        </button>
+            <article class="product-card ${p.enoferta && p.preciooferta ? 'en-oferta' : ''}" data-id="${escapeHtml(p.id)}">
+                ${descuento ? `<span class="card-badge-oferta">−${descuento}%</span>` : ''}
+                ${stockBajo && !descuento ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
+                <img src="${escapeHtml(imgOptimizada)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.src='https://placehold.co/400x400?text=Sin+imagen'">
+                <div class="product-info">
+                    <span class="vendedor"><i class="fas fa-user-circle"></i> ${escapeHtml(p.vendedor)}</span>
+                    <h3>${escapeHtml(p.nombre)}</h3>
+                    <div class="price-wrap">
+                        ${descuento ? `<span class="price-original">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span>` : ''}
+                        <span class="price ${descuento ? 'price-oferta' : ''}">${simbolo}${Number(precioReal).toLocaleString('es')}${textoMoneda}</span>
+                        ${descuento ? `<span class="descuento-badge">−${descuento}%</span>` : ''}
                     </div>
-                </article>`;
+                    <button class="card-btn-add" data-id="${escapeHtml(p.id)}" ${agotado ? 'disabled' : ''}>
+                        ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir'}
+                    </button>
+                </div>
+            </article>`;
         };
+
         let html = '';
         if (ofertas.length > 0) {
             html += `<div class="seccion-header oferta-header"><i class="fas fa-fire"></i> Ofertas destacadas</div>${ofertas.map(renderCard).join('')}<div class="seccion-header normal-header"><i class="fas fa-shopping-bag"></i> Todos los productos</div>`;
@@ -152,21 +168,40 @@ export const UI = {
         if (items.length === 0) {
             this.cartItems.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-bag"></i><p>Tu carrito está vacío</p></div>`;
             this.cartTotal.textContent = '0';
-            this.actualizarBotonQvaPay(); // 👈 NUEVO
+            this.actualizarBotonQvaPay();
             return;
         }
         this.cartItems.innerHTML = items.map(item => {
             const puedeAumentar = item.cantidad < item.stockDisponible;
-            return `<div class="cart-item" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}"><div class="cart-item-info"><div class="cart-item-name">${escapeHtml(item.nombre)}${escapeHtml(item.variantNombre)}</div><div class="cart-item-price">$${(item.precio * item.cantidad).toLocaleString('es')} CUP</div></div><div class="qty-control"><button class="qty-btn btn-disminuir" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">−</button><span class="qty-num">${item.cantidad}</span><button class="qty-btn btn-aumentar" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button></div></div>`;
+            const moneda = item.moneda || 'CUP';
+            const textoMoneda = moneda === 'USD' ? ' USD' : ' CUP';
+            const subtotal = item.precio * item.cantidad;
+            return `<div class="cart-item" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${escapeHtml(item.nombre)}${escapeHtml(item.variantNombre)}</div>
+                        <div class="cart-item-price">$${subtotal.toLocaleString('es')}${textoMoneda}</div>
+                    </div>
+                    <div class="qty-control">
+                        <button class="qty-btn btn-disminuir" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}">−</button>
+                        <span class="qty-num">${item.cantidad}</span>
+                        <button class="qty-btn btn-aumentar" data-id="${escapeHtml(item.id)}" data-variant="${escapeHtml(item.variantId ?? '')}" ${!puedeAumentar ? 'disabled' : ''}>+</button>
+                    </div>
+                </div>`;
         }).join('');
         this.cartTotal.textContent = carrito.total(this.productos).toLocaleString('es');
-        this.actualizarBotonQvaPay(); // 👈 NUEVO
+        this.actualizarBotonQvaPay();
     },
 
     // ==================== QvaPay ====================
     actualizarBotonQvaPay() {
         const items = carrito.itemsConDatos(this.productos);
         if (items.length === 0) {
+            this.removerBotonQvaPay();
+            return;
+        }
+        // ✅ Solo mostrar botón si todos los productos están en USD
+        const todasUSD = items.every(item => (item.moneda || 'CUP') === 'USD');
+        if (!todasUSD) {
             this.removerBotonQvaPay();
             return;
         }
@@ -220,6 +255,15 @@ export const UI = {
             mostrarToast('Carrito vacío', 'warning');
             return;
         }
+
+        // ✅ Validar moneda única y que todos sean USD
+        if (!this.validarMonedaCarrito(items)) return;
+        const todasUSD = items.every(item => (item.moneda || 'CUP') === 'USD');
+        if (!todasUSD) {
+            mostrarToast('El pago con QvaPay solo está disponible para productos en USD.', 'error');
+            return;
+        }
+
         const vendedoresUnicos = [...new Set(items.map(i => i.seller_id))];
         if (vendedoresUnicos.length !== 1) {
             mostrarToast('Pago con QvaPay solo disponible para pedidos de un solo vendedor', 'warning');
@@ -251,6 +295,7 @@ export const UI = {
             nombre: item.nombre,
             cantidad: item.cantidad,
             precio: item.precio,
+            moneda: item.moneda || 'CUP',
             vendedor_id: item.seller_id
         }));
 
@@ -263,8 +308,8 @@ export const UI = {
         mostrarToast('Creando orden de pago...', 'info');
 
         try {
-            const SUPABASE_URL = 'https://xistchuskgnmjrzlntve.supabase.co';
-            const response = await fetch(`${SUPABASE_URL}/functions/v1/create-qvapay-invoice`, {
+            // ✅ Usar la URL de Supabase desde CONFIG
+            const response = await fetch(`${CONFIG.supabaseUrl}/functions/v1/create-qvapay-invoice`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -323,6 +368,10 @@ export const UI = {
         this.varianteActualIndex = null;
 
         const modal = document.getElementById('modal-detalle');
+        // Obtener moneda del producto (por defecto CUP)
+        const monedaProducto = p.moneda || 'CUP';
+        const textoMoneda = monedaProducto === 'USD' ? ' USD' : ' CUP';
+        const simbolo = '$';
 
         const actualizarVista = (index = null) => {
             this.cerrarLightbox();
@@ -354,17 +403,17 @@ export const UI = {
             if (precioEl) {
                 const descuentoBase = (p.enoferta && p.preciooferta && !variante) ? Math.round((1 - Number(p.preciooferta) / Number(p.precio)) * 100) : null;
                 if (descuentoBase && !variante) {
-                    precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">$${Number(p.precio).toLocaleString('es')}</span> <span style="color:#e53935;font-weight:700"> $${Number(p.preciooferta).toLocaleString('es')}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
+                    // Oferta del producto base (sin variante)
+                    precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span> <span style="color:#e53935;font-weight:700"> ${simbolo}${Number(p.preciooferta).toLocaleString('es')}${textoMoneda}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
                 } else {
-                    precioEl.textContent = precio.toLocaleString('es');
+                    // Precio normal (con o sin variante)
+                    precioEl.textContent = `${simbolo}${precio.toLocaleString('es')}${textoMoneda}`;
                 }
             }
 
             const stockEl = document.getElementById('detalle-stock');
             if (stockEl) {
-                const enCarrito = carrito.cantidadDe(id, index); // ya existe como `enC`
-                const stockRestante = Math.max(0, stockVal - enCarrito);
-
+                const stockRestante = Math.max(0, stockVal - enC);
                 if (stockRestante <= 0) {
                     stockEl.textContent = 'Agotado';
                     stockEl.className = 'detalle-stock agotado';
@@ -397,11 +446,12 @@ export const UI = {
         contenedor.innerHTML = `<div class="variantes-titulo"><i class="fas fa-palette"></i> Opciones disponibles:</div><div class="variantes-grid" id="variantes-grid"></div>`;
         const grid = contenedor.querySelector('#variantes-grid');
 
+        // Card para la opción "base" (sin variante)
         const baseCard = document.createElement('div');
         baseCard.className = 'variante-card';
         if (this.varianteActualIndex === null) baseCard.classList.add('selected');
         baseCard.dataset.index = '-1';
-        baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">$${Number(p.precio).toLocaleString('es')}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
+        baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
         baseCard.addEventListener('click', () => {
             if (baseCard.classList.contains('selected')) return;
             document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
@@ -411,6 +461,7 @@ export const UI = {
         });
         grid.appendChild(baseCard);
 
+        // Cards para cada variante
         if (p.variantes && p.variantes.length > 0) {
             p.variantes.forEach((v, i) => {
                 const imagenVar = v.imagen || p.imagen;
@@ -418,7 +469,9 @@ export const UI = {
                 card.className = 'variante-card';
                 if (this.varianteActualIndex === i) card.classList.add('selected');
                 card.dataset.index = i;
-                card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">$${v.precio.toLocaleString('es')}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
+                // Precio de la variante (si no tiene precio, usa el del producto)
+                const precioVar = v.precio !== undefined && v.precio !== null ? v.precio : p.precio;
+                card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">${simbolo}${Number(v.precio).toLocaleString('es')}${textoMoneda}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
                 card.addEventListener('click', () => {
                     if (card.classList.contains('selected')) return;
                     document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
@@ -497,9 +550,10 @@ export const UI = {
         const producto = this.productos.find(p => p.id === this.productoActualId);
         if (!producto) return;
         const precioFinal = (producto.enoferta && producto.preciooferta) ? producto.preciooferta : producto.precio;
-        // ✅ Nueva ruta amigable para compartir con imagen
         const url = `${window.location.origin}/producto/${this.productoActualId}`;
-        const texto = `🛍️ *${producto.nombre}* - $${precioFinal.toLocaleString('es')} CUP\n\nMira este producto en Shopping Pilón:\n${url}`;
+        const moneda = producto.moneda || 'CUP';
+        const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
+        const texto = `🛍️ *${producto.nombre}* - $${precioFinal.toLocaleString('es')} ${textoMoneda}\n\nMira este producto en Shopping Pilón:\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
     },
 
@@ -578,6 +632,7 @@ export const UI = {
             nombre: it.nombre,
             cantidad: it.cantidad,
             precio: it.precio,
+            moneda: it.moneda || 'CUP',   // ← agregar moneda
             vendedor_id: seller_id
         }));
 
@@ -608,14 +663,14 @@ export const UI = {
             modal.id = 'modal-whatsapp';
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <div class="modal-box" style="max-width: 400px;">
-                    <div class="modal-header">
-                        <h2><i class="fab fa-whatsapp"></i> Confirmar pedido</h2>
-                        <button class="modal-close" id="close-whatsapp-modal">&times;</button>
-                    </div>
-                    <div class="modal-body" id="whatsapp-links"></div>
+            <div class="modal-box" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2><i class="fab fa-whatsapp"></i> Confirmar pedido</h2>
+                    <button class="modal-close" id="close-whatsapp-modal">&times;</button>
                 </div>
-            `;
+                <div class="modal-body" id="whatsapp-links"></div>
+            </div>
+        `;
             document.body.appendChild(modal);
             document.getElementById('close-whatsapp-modal')?.addEventListener('click', () => {
                 modal.setAttribute('hidden', '');
@@ -633,23 +688,32 @@ export const UI = {
         vendedores.forEach((grupo, i) => {
             const totalGrupo = grupo.items.reduce((s, it) => s + it.precio * it.cantidad, 0);
             const pedidoId = pedidosIds[i];
+
+            // Determinar la moneda del grupo (todos los items deberían tener la misma moneda, pero tomamos la del primero)
+            const monedaGrupo = grupo.items[0]?.moneda || 'CUP';
+            const textoMonedaGrupo = monedaGrupo === 'USD' ? 'USD' : 'CUP';
+
             let texto = `🛍️ *Nuevo Pedido — Shopping Pilón*\n\n`;
             texto += `👤 *Comprador:* ${clienteNombre}\n`;
             texto += `📦 *Productos:*\n`;
+
             grupo.items.forEach(item => {
-                texto += `• ${item.nombre}${item.variantNombre} x${item.cantidad} — $${(item.precio * item.cantidad).toLocaleString('es')} CUP\n`;
+                const moneda = item.moneda || 'CUP';
+                const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
+                texto += `• ${item.nombre}${item.variantNombre} x${item.cantidad} — $${(item.precio * item.cantidad).toLocaleString('es')} ${textoMoneda}\n`;
             });
-            texto += `\n💰 *Total: $${totalGrupo.toLocaleString('es')} CUP*\n`;
+
+            texto += `\n💰 *Total: $${totalGrupo.toLocaleString('es')} ${textoMonedaGrupo}*\n`;
             if (vendedores.length > 1) texto += `\n_Pedido dividido entre ${vendedores.length} vendedores._\n`;
             texto += `\n🔗 *Confirmar pedido:* ${window.location.origin}/confirmar.html?pedido=${pedidoId}\n`;
             texto += `\nHola, confirma este pedido para continuar. 😊`;
 
             const link = `https://wa.me/${grupo.telefono}?text=${encodeURIComponent(texto)}`;
             linksContainer.innerHTML += `
-                <a href="${link}" target="_blank" class="btn-whatsapp" style="display: block; margin-bottom: 0.75rem; text-align: center; text-decoration: none;">
-                    <i class="fab fa-whatsapp"></i> ${escapeHtml(grupo.vendedor)} - $${totalGrupo.toLocaleString('es')}
-                </a>
-            `;
+            <a href="${link}" target="_blank" class="btn-whatsapp" style="display: block; margin-bottom: 0.75rem; text-align: center; text-decoration: none;">
+                <i class="fab fa-whatsapp"></i> ${escapeHtml(grupo.vendedor)} - $${totalGrupo.toLocaleString('es')} ${textoMonedaGrupo}
+            </a>
+        `;
         });
         modal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
@@ -662,6 +726,10 @@ export const UI = {
         }
 
         const items = carrito.itemsConDatos(this.productos);
+
+        // 👇 VALIDACIÓN DE MONEDA (NUEVA)
+        if (!this.validarMonedaCarrito(items)) return;
+
         if (items.length === 0) {
             mostrarToast('⚠️ Tu carrito está vacío', 'warning');
             return;
@@ -705,7 +773,7 @@ export const UI = {
             this.actualizarContador();
             this.renderProductos();
             this.cerrarModal();
-            this.actualizarBotonQvaPay(); // 👈 NUEVO
+            this.actualizarBotonQvaPay();
             mostrarToast(`✅ Pedido preparado. Selecciona el vendedor para enviar.`, 'ok');
         } catch (err) {
             console.error(err);
