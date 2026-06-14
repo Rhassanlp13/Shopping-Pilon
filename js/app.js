@@ -52,3 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // =========================================================================
 });
+// Detectar cuando el service worker se actualiza
+let refreshing = false;
+navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    mostrarToast('📢 Nueva versión disponible. Recargando...', 'info');
+    window.location.reload();
+});
