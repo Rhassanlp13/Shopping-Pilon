@@ -1,5 +1,5 @@
 // sw.js - Estrategia híbrida: instalable y con actualizaciones controladas
-const CACHE_NAME = 'pilon-v1.0.1'; // Cambia el número cuando actualices la app
+const CACHE_NAME = 'pilon-v1.2'; // Cambia el número cuando actualices la app
 const STATIC_ASSETS = [
     '/',
     '/index.html',
