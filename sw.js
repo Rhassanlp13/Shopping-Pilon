@@ -1,9 +1,7 @@
-// sw.js - Estrategia híbrida: instalable y con actualizaciones controladas
-const CACHE_NAME = 'pilon-v1.2'; // Cambia el número cuando actualices la app
+// sw.js - Estrategia: network-first para HTML, cache-first para recursos estáticos
+const CACHE_NAME = 'pilon-v1.0.3'; // Cambia la versión cada vez que actualices
+
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/admin.html',
     '/style.css',
     '/manifest.json',
     '/js/app.js',
@@ -21,7 +19,7 @@ const STATIC_ASSETS = [
     '/icon-512.png'
 ];
 
-// Instalación: descarga y cachea los recursos estáticos
+// Instalación: cachear solo recursos estáticos (no HTML)
 self.addEventListener('install', event => {
     console.log('[SW] Instalando...');
     event.waitUntil(
@@ -29,10 +27,10 @@ self.addEventListener('install', event => {
             return cache.addAll(STATIC_ASSETS);
         }).catch(err => console.error('[SW] Error al cachear:', err))
     );
-    self.skipWaiting(); // Activa el nuevo SW inmediatamente
+    self.skipWaiting();
 });
 
-// Activación: elimina cachés antiguos
+// Activación: eliminar cachés antiguos
 self.addEventListener('activate', event => {
     console.log('[SW] Activado y limpiando cachés antiguos');
     event.waitUntil(
@@ -45,36 +43,49 @@ self.addEventListener('activate', event => {
             })
         ))
     );
-    self.clients.claim(); // Toma control de las páginas abiertas
+    self.clients.claim();
 });
 
-// Estrategia: cache-first para estáticos, network-first para el resto
+// Estrategia: network-first para HTML, cache-first para el resto
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
-    // Si es un archivo estático (de la lista), usa cache-first
+    const request = event.request;
+    
+    // Para páginas HTML (admin.html, index.html, etc.) - siempre de la red
+    if (request.mode === 'navigate' || url.pathname.endsWith('.html')) {
+        event.respondWith(
+            fetch(request).catch(() => {
+                return caches.match('/index.html');
+            })
+        );
+        return;
+    }
+    
+    // Para recursos estáticos (CSS, JS, iconos) - cache-first
     if (STATIC_ASSETS.includes(url.pathname)) {
         event.respondWith(
-            caches.match(event.request).then(response => {
+            caches.match(request).then(response => {
                 if (response) {
-                    // Devuelve del caché y actualiza en segundo plano (stale-while-revalidate)
-                    fetch(event.request).then(networkResponse => {
+                    // Actualizar caché en segundo plano
+                    fetch(request).then(networkResponse => {
                         if (networkResponse && networkResponse.status === 200) {
                             caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, networkResponse.clone());
+                                cache.put(request, networkResponse.clone());
                             });
                         }
                     }).catch(console.warn);
                     return response;
                 }
-                return fetch(event.request);
+                return fetch(request);
             })
         );
-    } else {
-        // Para otros recursos (API, imágenes externas), solo red
-        event.respondWith(
-            fetch(event.request).catch(() => {
-                return new Response('Sin conexión. Revisa tu internet.', { status: 503 });
-            })
-        );
+        return;
     }
+    
+    // Para el resto (API, imágenes externas) - solo red
+    event.respondWith(
+        fetch(request).catch(() => {
+            return new Response('Sin conexión. Revisa tu internet.', { status: 503 });
+        })
+    );
 });
