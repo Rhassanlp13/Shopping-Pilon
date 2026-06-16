@@ -314,14 +314,17 @@ function renderStats() {
 
 function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
     if (!url) return '';
-    if (url.includes('unsplash.com')) {
-        const baseUrl = url.split('?')[0];
+    // Si hay comas, tomar la primera URL
+    const primeraUrl = url.split(',')[0].trim();
+    if (!primeraUrl) return '';
+    if (primeraUrl.includes('unsplash.com')) {
+        const baseUrl = primeraUrl.split('?')[0];
         return `${baseUrl}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
     }
-    if (url.includes('cloudinary.com')) {
-        return url.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
+    if (primeraUrl.includes('cloudinary.com')) {
+        return primeraUrl.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
     }
-    return url;
+    return primeraUrl;
 }
 
 function renderTabla(filtro = '') {
@@ -339,7 +342,14 @@ function renderTabla(filtro = '') {
         <tbody>
             ${lista.map(p => `
             <tr>
-                <td><img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'"><span><div class="prod-name">${escapeHtml(p.nombre)}</div><div class="prod-vendedor">${escapeHtml(p.vendedor)}</div></span></td>
+                <td>
+                    <img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'">
+                    ${p.imagen && p.imagen.includes(',') ? `<span class="badge badge-variant" style="font-size:0.6rem; margin-left:4px;">+${p.imagen.split(',').length - 1}</span>` : ''}
+                    <span>
+                    <div class="prod-name">${escapeHtml(p.nombre)}</div>
+                    <div class="prod-vendedor">${escapeHtml(p.vendedor)}</div>
+                    </span>
+                </td>
                 <td>${Number(p.precio).toLocaleString('es')} ${p.moneda === 'USD' ? 'USD' : 'CUP'}</td>
                 <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
                 <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
