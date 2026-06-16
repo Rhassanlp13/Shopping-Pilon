@@ -1,6 +1,5 @@
-// sw.js - Estrategia: network-first para HTML, cache-first para recursos estáticos
-const CACHE_NAME = 'pilon-v1.0.3'; // Cambia la versión cada vez que actualices
-
+// sw.js - Estrategia híbrida: admin.html siempre de red, el resto cache-first
+const CACHE_NAME = 'pilon-v1.0.5';
 const STATIC_ASSETS = [
     '/style.css',
     '/manifest.json',
@@ -19,9 +18,8 @@ const STATIC_ASSETS = [
     '/icon-512.png'
 ];
 
-// Instalación: cachear solo recursos estáticos (no HTML)
+// Instalación
 self.addEventListener('install', event => {
-    console.log('[SW] Instalando...');
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return cache.addAll(STATIC_ASSETS);
@@ -30,9 +28,8 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
-// Activación: eliminar cachés antiguos
+// Activación
 self.addEventListener('activate', event => {
-    console.log('[SW] Activado y limpiando cachés antiguos');
     event.waitUntil(
         caches.keys().then(keys => Promise.all(
             keys.map(key => {
@@ -46,12 +43,17 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
-// Estrategia: network-first para HTML, cache-first para el resto
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     const request = event.request;
-    
-    // Para páginas HTML (admin.html, index.html, etc.) - siempre de la red
+
+    // 🔹 admin.html NO se intercepta (siempre de la red)
+    if (url.pathname === '/admin.html') {
+        event.respondWith(fetch(request));
+        return;
+    }
+
+    // 🔹 Otras páginas HTML (index.html, confirmar.html, etc.) - network-first
     if (request.mode === 'navigate' || url.pathname.endsWith('.html')) {
         event.respondWith(
             fetch(request).catch(() => {
@@ -60,8 +62,8 @@ self.addEventListener('fetch', event => {
         );
         return;
     }
-    
-    // Para recursos estáticos (CSS, JS, iconos) - cache-first
+
+    // 🔹 Recursos estáticos (CSS, JS, iconos) - cache-first con actualización en segundo plano
     if (STATIC_ASSETS.includes(url.pathname)) {
         event.respondWith(
             caches.match(request).then(response => {
@@ -81,8 +83,8 @@ self.addEventListener('fetch', event => {
         );
         return;
     }
-    
-    // Para el resto (API, imágenes externas) - solo red
+
+    // 🔹 Otros recursos (API, imágenes externas) - solo red
     event.respondWith(
         fetch(request).catch(() => {
             return new Response('Sin conexión. Revisa tu internet.', { status: 503 });
