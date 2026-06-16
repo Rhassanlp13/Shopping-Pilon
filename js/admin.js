@@ -71,17 +71,25 @@ function setupImagePreview() {
     const fileInput = document.getElementById('f-imagen-file');
     const previewDiv = document.getElementById('vista-previa');
     if (!fileInput) return;
+
     fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
+        previewDiv.innerHTML = '';
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
             const reader = new FileReader();
             reader.onload = (event) => {
-                previewDiv.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 150px; border-radius: 8px; border: 1px solid #ddd; padding: 4px;">`;
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.style.width = '80px';
+                img.style.height = '80px';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '6px';
+                img.style.border = '1px solid #ddd';
+                img.style.padding = '2px';
+                previewDiv.appendChild(img);
             };
             reader.readAsDataURL(file);
-        } else {
-            previewDiv.innerHTML = '';
-        }
+        });
     });
 }
 
@@ -182,8 +190,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const grupoUrl = document.getElementById('grupo-url-imagen');
     const grupoFile = document.getElementById('grupo-file-imagen');
-   
-    grupoUrl.style.display = 'none';  
+
+    grupoUrl.style.display = 'none';
     grupoFile.style.display = 'block';
     setupImagePreview(); // Para todos
 
@@ -654,12 +662,33 @@ function abrirEditar(id) {
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = prod.categoria || 'Otros';
+    const monedaSelect = document.getElementById('f-moneda');
+    if (monedaSelect) monedaSelect.value = prod.moneda || 'CUP';
+
+    // Cargar galería existente (previsualización)
+    const previewDiv = document.getElementById('vista-previa');
+    if (previewDiv) {
+        previewDiv.innerHTML = '';
+        const imagenes = [prod.imagen, ...(prod.galeria || [])].filter(url => url && url !== '');
+        imagenes.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.width = '80px';
+            img.style.height = '80px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '6px';
+            img.style.border = '1px solid #ddd';
+            img.style.padding = '2px';
+            previewDiv.appendChild(img);
+        });
+    }
+
+    // Cargar variantes
     const variantesDiv = document.getElementById('variantes-list');
     variantesDiv.innerHTML = '';
     if (prod.variantes && prod.variantes.length) prod.variantes.forEach((v, i) => agregarVariante(v, i));
+
     document.getElementById('modal-producto').removeAttribute('hidden');
-    const monedaSelect = document.getElementById('f-moneda');
-    if (monedaSelect) monedaSelect.value = prod.moneda || 'CUP';
 }
 
 function limpiarFormulario() {
@@ -731,30 +760,42 @@ async function guardarProducto() {
         }
         if (!telefonovendedor) telefonovendedor = null;
 
-        // 3. Obtener imagen (según rol)
-        let imagenUrl = '';
+        // 3. Obtener imágenes (múltiples archivos)
+        let imagenPrincipal = '';
+        let galeriaUrls = [];
         const fileInput = document.getElementById('f-imagen-file');
         const urlInput = document.getElementById('f-imagen').value.trim();
 
         if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            if (file.size > 10 * 1024 * 1024) {
-                mostrarToast('La imagen no debe superar los 10MB', 'error');
+            const files = Array.from(fileInput.files);
+            if (files.length > 6) {
+                mostrarToast('Máximo 6 imágenes por producto', 'error');
                 return;
             }
-            const uploadedUrl = await subirImagen(file, editandoId);
-            if (!uploadedUrl) throw new Error('No se pudo subir la imagen');
-            imagenUrl = uploadedUrl;
-            // Actualizar el campo URL con la URL subida (opcional)
-            document.getElementById('f-imagen').value = imagenUrl;
+            for (const file of files) {
+                if (file.size > 10 * 1024 * 1024) {
+                    mostrarToast(`La imagen "${file.name}" supera los 10MB`, 'error');
+                    return;
+                }
+                const uploadedUrl = await subirImagen(file, editandoId);
+                if (!uploadedUrl) throw new Error('No se pudo subir una de las imágenes');
+                if (!imagenPrincipal) {
+                    imagenPrincipal = uploadedUrl; // La primera es la principal
+                } else {
+                    galeriaUrls.push(uploadedUrl);
+                }
+            }
         } else if (urlInput) {
-            imagenUrl = urlInput;
+            imagenPrincipal = urlInput;
         } else {
-            mostrarToast('Debes seleccionar una imagen o ingresar una URL', 'error');
+            mostrarToast('Debes seleccionar al menos una imagen', 'error');
             return;
         }
 
-        // 4. Obtener variantes (después de tener imagenUrl, pero antes de armar el objeto)
+        // Actualizar el campo URL (oculto) con la imagen principal (para compatibilidad)
+        document.getElementById('f-imagen').value = imagenPrincipal;
+
+        // 4. Obtener variantes
         const variantes = [];
         document.querySelectorAll('.variante-item').forEach(item => {
             const nombreVar = item.querySelector('.var-nombre')?.value.trim();
@@ -770,13 +811,21 @@ async function guardarProducto() {
             });
         });
 
-        // 5. Construir objeto productoData
+        // 5. Construir objeto productoData (CORREGIDO)
         const productoData = {
-            nombre, precio, stock, imagen: imagenUrl, vendedor, telefonovendedor,
-            enoferta: enOferta, preciooferta: precioOferta, categoria,
+            nombre,
+            precio,
+            stock,
+            imagen: imagenPrincipal,   // ← ahora usa imagenPrincipal
+            vendedor,
+            telefonovendedor,
+            enoferta: enOferta,
+            preciooferta: precioOferta,
+            categoria,
             variantes: variantes.length ? variantes : [],
             seller_id: currentUser.id,
-            moneda: moneda
+            moneda: moneda,
+            galeria: galeriaUrls       // ← NUEVO: guarda todas las imágenes adicionales
         };
 
         // 6. Insertar o actualizar

@@ -362,189 +362,235 @@ export const UI = {
     },
 
     async abrirDetalle(id) {
-        const p = this.productos.find(p => p.id === id);
-        if (!p) return;
-        this.productoActualId = id;
-        this.varianteActualIndex = null;
+    const p = this.productos.find(p => p.id === id);
+    if (!p) return;
+    this.productoActualId = id;
+    this.varianteActualIndex = null;
 
-        const modal = document.getElementById('modal-detalle');
-        // Obtener moneda del producto (por defecto CUP)
-        const monedaProducto = p.moneda || 'CUP';
-        const textoMoneda = monedaProducto === 'USD' ? ' USD' : ' CUP';
-        const simbolo = '$';
+    const modal = document.getElementById('modal-detalle');
+    // Obtener moneda del producto (por defecto CUP)
+    const monedaProducto = p.moneda || 'CUP';
+    const textoMoneda = monedaProducto === 'USD' ? ' USD' : ' CUP';
+    const simbolo = '$';
 
-        const actualizarVista = (index = null) => {
-            this.cerrarLightbox();
-            this.varianteActualIndex = index;
+    // Obtener imagen principal y galería
+    const imagenPrincipal = p.imagen || '';
+    const galeriaUrls = p.galeria || [];
+    const todasLasImagenes = [imagenPrincipal, ...galeriaUrls].filter(url => url && url !== '');
 
-            const variante = (index !== null && p.variantes?.[index]) ? p.variantes[index] : null;
-            let precio = variante
-                ? (variante.precio !== undefined && variante.precio !== null ? Number(variante.precio) : Number(p.precio))
-                : Number(p.precio);
-            if (isNaN(precio)) precio = 0;
-            const stockVal = variante ? (variante.stock ?? p.stock) : p.stock;
-            const imagenUrl = variante ? (variante.imagen || p.imagen) : p.imagen;
-            const enC = carrito.cantidadDe(id, index);
-            const agotado = stockVal <= 0 || enC >= stockVal;
+    // Establecer la primera como principal (si existe)
+    if (todasLasImagenes.length > 0) {
+        document.getElementById('detalle-img').src = optimizarImagen(todasLasImagenes[0], 600, 600);
+    } else {
+        document.getElementById('detalle-img').src = 'https://placehold.co/600x600?text=Sin+imagen';
+    }
+    document.getElementById('detalle-img').alt = escapeHtml(p.nombre);
 
-            const img = document.getElementById('detalle-img');
-            if (img) {
-                img.style.opacity = '0';
-                img.style.transform = 'scale(0.97)';
-                setTimeout(() => {
-                    img.src = optimizarImagen(imagenUrl, 600, 600);
-                    img.style.transition = 'opacity .25s, transform .25s';
-                    img.style.opacity = '1';
-                    img.style.transform = 'scale(1)';
-                }, 150);
-            }
-
-            const precioEl = document.getElementById('detalle-precio');
-            if (precioEl) {
-                const descuentoBase = (p.enoferta && p.preciooferta && !variante) ? Math.round((1 - Number(p.preciooferta) / Number(p.precio)) * 100) : null;
-                if (descuentoBase && !variante) {
-                    // Oferta del producto base (sin variante)
-                    precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span> <span style="color:#e53935;font-weight:700"> ${simbolo}${Number(p.preciooferta).toLocaleString('es')}${textoMoneda}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
-                } else {
-                    // Precio normal (con o sin variante)
-                    precioEl.textContent = `${simbolo}${precio.toLocaleString('es')}${textoMoneda}`;
-                }
-            }
-
-            const stockEl = document.getElementById('detalle-stock');
-            if (stockEl) {
-                const stockRestante = Math.max(0, stockVal - enC);
-                if (stockRestante <= 0) {
-                    stockEl.textContent = 'Agotado';
-                    stockEl.className = 'detalle-stock agotado';
-                } else if (stockRestante <= 3) {
-                    stockEl.textContent = `¡Solo quedan ${stockRestante}!`;
-                    stockEl.className = 'detalle-stock low';
-                } else {
-                    stockEl.textContent = `${stockRestante} disponibles`;
-                    stockEl.className = 'detalle-stock ok';
-                }
-            }
-
-            const btnAdd = document.getElementById('detalle-btn-add');
-            if (btnAdd) {
-                btnAdd.disabled = agotado;
-                btnAdd.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Sin stock' : '<i class="fas fa-cart-plus"></i> Añadir al carrito';
-            }
-        };
-
-        document.getElementById('detalle-img').src = optimizarImagen(p.imagen, 600, 600);
-        document.getElementById('detalle-img').alt = escapeHtml(p.nombre);
-        document.getElementById('detalle-vendedor').textContent = p.vendedor;
-        document.getElementById('detalle-nombre').textContent = p.nombre;
-
-        const detalleImg = document.getElementById('detalle-img');
-        detalleImg.style.cursor = 'pointer';
-        detalleImg.onclick = () => this.abrirLightbox();
-
-        const contenedor = document.getElementById('detalle-variantes');
-        contenedor.innerHTML = `<div class="variantes-titulo"><i class="fas fa-palette"></i> Opciones disponibles:</div><div class="variantes-grid" id="variantes-grid"></div>`;
-        const grid = contenedor.querySelector('#variantes-grid');
-
-        // Card para la opción "base" (sin variante)
-        const baseCard = document.createElement('div');
-        baseCard.className = 'variante-card';
-        if (this.varianteActualIndex === null) baseCard.classList.add('selected');
-        baseCard.dataset.index = '-1';
-        baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
-        baseCard.addEventListener('click', () => {
-            if (baseCard.classList.contains('selected')) return;
-            document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
-            baseCard.classList.add('selected');
-            this.varianteActualIndex = null;
-            actualizarVista(null);
-        });
-        grid.appendChild(baseCard);
-
-        // Cards para cada variante
-        if (p.variantes && p.variantes.length > 0) {
-            p.variantes.forEach((v, i) => {
-                const imagenVar = v.imagen || p.imagen;
-                const card = document.createElement('div');
-                card.className = 'variante-card';
-                if (this.varianteActualIndex === i) card.classList.add('selected');
-                card.dataset.index = i;
-                // Precio de la variante (si no tiene precio, usa el del producto)
-                const precioVar = v.precio !== undefined && v.precio !== null ? v.precio : p.precio;
-                card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">${simbolo}${Number(v.precio).toLocaleString('es')}${textoMoneda}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
-                card.addEventListener('click', () => {
-                    if (card.classList.contains('selected')) return;
-                    document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    this.varianteActualIndex = i;
-                    actualizarVista(i);
+    // Construir miniaturas (solo si hay más de una imagen)
+    const miniaturasContainer = document.getElementById('detalle-miniaturas');
+    if (miniaturasContainer) {
+        miniaturasContainer.innerHTML = '';
+        if (todasLasImagenes.length > 1) {
+            miniaturasContainer.style.display = 'flex';
+            todasLasImagenes.forEach((url, index) => {
+                const thumb = document.createElement('img');
+                thumb.src = optimizarImagen(url, 80, 80);
+                thumb.alt = `${p.nombre} - imagen ${index + 1}`;
+                thumb.style.width = '60px';
+                thumb.style.height = '60px';
+                thumb.style.objectFit = 'cover';
+                thumb.style.cursor = 'pointer';
+                thumb.style.borderRadius = '6px';
+                thumb.style.border = index === 0 ? '2px solid #1a237e' : '2px solid transparent';
+                thumb.style.transition = 'border-color 0.2s';
+                thumb.addEventListener('click', () => {
+                    document.getElementById('detalle-img').src = optimizarImagen(url, 600, 600);
+                    document.querySelectorAll('.detalle-miniaturas img').forEach(img => img.style.borderColor = 'transparent');
+                    thumb.style.borderColor = '#1a237e';
                 });
-                grid.appendChild(card);
+                // Efecto hover
+                thumb.addEventListener('mouseenter', () => {
+                    if (thumb.style.borderColor !== '#1a237e') thumb.style.borderColor = '#ff9800';
+                });
+                thumb.addEventListener('mouseleave', () => {
+                    if (thumb.style.borderColor !== '#1a237e') thumb.style.borderColor = 'transparent';
+                });
+                miniaturasContainer.appendChild(thumb);
             });
+        } else {
+            miniaturasContainer.style.display = 'none';
+        }
+    }
+
+    const actualizarVista = (index = null) => {
+        this.cerrarLightbox();
+        this.varianteActualIndex = index;
+
+        const variante = (index !== null && p.variantes?.[index]) ? p.variantes[index] : null;
+        let precio = variante
+            ? (variante.precio !== undefined && variante.precio !== null ? Number(variante.precio) : Number(p.precio))
+            : Number(p.precio);
+        if (isNaN(precio)) precio = 0;
+        const stockVal = variante ? (variante.stock ?? p.stock) : p.stock;
+        const imagenUrl = variante ? (variante.imagen || p.imagen) : p.imagen;
+        const enC = carrito.cantidadDe(id, index);
+        const agotado = stockVal <= 0 || enC >= stockVal;
+
+        const img = document.getElementById('detalle-img');
+        if (img) {
+            img.style.opacity = '0';
+            img.style.transform = 'scale(0.97)';
+            setTimeout(() => {
+                img.src = optimizarImagen(imagenUrl, 600, 600);
+                img.style.transition = 'opacity .25s, transform .25s';
+                img.style.opacity = '1';
+                img.style.transform = 'scale(1)';
+            }, 150);
         }
 
-        contenedor.style.display = 'block';
+        const precioEl = document.getElementById('detalle-precio');
+        if (precioEl) {
+            const descuentoBase = (p.enoferta && p.preciooferta && !variante) ? Math.round((1 - Number(p.preciooferta) / Number(p.precio)) * 100) : null;
+            if (descuentoBase && !variante) {
+                // Oferta del producto base (sin variante)
+                precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span> <span style="color:#e53935;font-weight:700"> ${simbolo}${Number(p.preciooferta).toLocaleString('es')}${textoMoneda}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
+            } else {
+                // Precio normal (con o sin variante)
+                precioEl.textContent = `${simbolo}${precio.toLocaleString('es')}${textoMoneda}`;
+            }
+        }
+
+        const stockEl = document.getElementById('detalle-stock');
+        if (stockEl) {
+            const stockRestante = Math.max(0, stockVal - enC);
+            if (stockRestante <= 0) {
+                stockEl.textContent = 'Agotado';
+                stockEl.className = 'detalle-stock agotado';
+            } else if (stockRestante <= 3) {
+                stockEl.textContent = `¡Solo quedan ${stockRestante}!`;
+                stockEl.className = 'detalle-stock low';
+            } else {
+                stockEl.textContent = `${stockRestante} disponibles`;
+                stockEl.className = 'detalle-stock ok';
+            }
+        }
 
         const btnAdd = document.getElementById('detalle-btn-add');
-        btnAdd.onclick = () => {
-            const variantId = this.varianteActualIndex !== null ? this.varianteActualIndex : null;
-            const res = carrito.agregar(id, variantId, this.productos);
-            if (res.ok) {
-                this.actualizarContador();
-                mostrarToast(`🛒 ${res.msg}`, 'ok');
-                actualizarVista(this.varianteActualIndex);
-                const originalText = btnAdd.innerHTML;
-                btnAdd.innerHTML = '<i class="fas fa-check"></i> Añadido';
-                setTimeout(() => {
-                    if (!btnAdd.disabled) btnAdd.innerHTML = originalText;
-                }, 1500);
+        if (btnAdd) {
+            btnAdd.disabled = agotado;
+            btnAdd.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Sin stock' : '<i class="fas fa-cart-plus"></i> Añadir al carrito';
+        }
+    };
 
-                const targetCard = document.querySelector(`.product-card[data-id="${id}"]`);
-                if (targetCard) {
-                    const btnGrid = targetCard.querySelector('.card-btn-add');
-                    if (p) {
-                        const cantidadEnCarrito = carrito.cantidadDe(id, null);
-                        const agotado = p.stock <= 0 || cantidadEnCarrito >= p.stock;
-                        if (btnGrid) {
-                            btnGrid.disabled = agotado;
-                            btnGrid.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir';
+    document.getElementById('detalle-vendedor').textContent = p.vendedor;
+    document.getElementById('detalle-nombre').textContent = p.nombre;
+
+    const detalleImg = document.getElementById('detalle-img');
+    detalleImg.style.cursor = 'pointer';
+    detalleImg.onclick = () => this.abrirLightbox();
+
+    const contenedor = document.getElementById('detalle-variantes');
+    contenedor.innerHTML = `<div class="variantes-titulo"><i class="fas fa-palette"></i> Opciones disponibles:</div><div class="variantes-grid" id="variantes-grid"></div>`;
+    const grid = contenedor.querySelector('#variantes-grid');
+
+    // Card para la opción "base" (sin variante)
+    const baseCard = document.createElement('div');
+    baseCard.className = 'variante-card';
+    if (this.varianteActualIndex === null) baseCard.classList.add('selected');
+    baseCard.dataset.index = '-1';
+    baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
+    baseCard.addEventListener('click', () => {
+        if (baseCard.classList.contains('selected')) return;
+        document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
+        baseCard.classList.add('selected');
+        this.varianteActualIndex = null;
+        actualizarVista(null);
+    });
+    grid.appendChild(baseCard);
+
+    // Cards para cada variante
+    if (p.variantes && p.variantes.length > 0) {
+        p.variantes.forEach((v, i) => {
+            const imagenVar = v.imagen || p.imagen;
+            const card = document.createElement('div');
+            card.className = 'variante-card';
+            if (this.varianteActualIndex === i) card.classList.add('selected');
+            card.dataset.index = i;
+            const precioVar = v.precio !== undefined && v.precio !== null ? v.precio : p.precio;
+            card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">${simbolo}${Number(v.precio).toLocaleString('es')}${textoMoneda}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
+            card.addEventListener('click', () => {
+                if (card.classList.contains('selected')) return;
+                document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.varianteActualIndex = i;
+                actualizarVista(i);
+            });
+            grid.appendChild(card);
+        });
+    }
+
+    contenedor.style.display = 'block';
+
+    const btnAdd = document.getElementById('detalle-btn-add');
+    btnAdd.onclick = () => {
+        const variantId = this.varianteActualIndex !== null ? this.varianteActualIndex : null;
+        const res = carrito.agregar(id, variantId, this.productos);
+        if (res.ok) {
+            this.actualizarContador();
+            mostrarToast(`🛒 ${res.msg}`, 'ok');
+            actualizarVista(this.varianteActualIndex);
+            const originalText = btnAdd.innerHTML;
+            btnAdd.innerHTML = '<i class="fas fa-check"></i> Añadido';
+            setTimeout(() => {
+                if (!btnAdd.disabled) btnAdd.innerHTML = originalText;
+            }, 1500);
+
+            const targetCard = document.querySelector(`.product-card[data-id="${id}"]`);
+            if (targetCard) {
+                const btnGrid = targetCard.querySelector('.card-btn-add');
+                if (p) {
+                    const cantidadEnCarrito = carrito.cantidadDe(id, null);
+                    const agotado = p.stock <= 0 || cantidadEnCarrito >= p.stock;
+                    if (btnGrid) {
+                        btnGrid.disabled = agotado;
+                        btnGrid.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir';
+                    }
+                    const existingBadge = targetCard.querySelector('.card-stock-badge');
+                    if (p.stock > 0 && p.stock <= 3 && !agotado) {
+                        if (!existingBadge) {
+                            const badge = document.createElement('span');
+                            badge.className = 'card-stock-badge';
+                            badge.textContent = `¡Solo ${p.stock}!`;
+                            targetCard.querySelector('.product-info')?.prepend(badge);
+                        } else {
+                            existingBadge.textContent = `¡Solo ${p.stock}!`;
                         }
-                        const existingBadge = targetCard.querySelector('.card-stock-badge');
-                        if (p.stock > 0 && p.stock <= 3 && !agotado) {
-                            if (!existingBadge) {
-                                const badge = document.createElement('span');
-                                badge.className = 'card-stock-badge';
-                                badge.textContent = `¡Solo ${p.stock}!`;
-                                targetCard.querySelector('.product-info')?.prepend(badge);
-                            } else {
-                                existingBadge.textContent = `¡Solo ${p.stock}!`;
-                            }
-                        } else if (existingBadge) {
-                            existingBadge.remove();
-                        }
+                    } else if (existingBadge) {
+                        existingBadge.remove();
                     }
                 }
-            } else {
-                mostrarToast(`❌ ${res.msg}`, 'error');
             }
-        };
-
-        const btnShare = document.getElementById('detalle-btn-share');
-        if (btnShare) {
-            btnShare.onclick = () => this.compartirProducto();
+        } else {
+            mostrarToast(`❌ ${res.msg}`, 'error');
         }
+    };
 
-        modal.removeAttribute('hidden');
-        document.body.style.overflow = 'hidden';
+    const btnShare = document.getElementById('detalle-btn-share');
+    if (btnShare) {
+        btnShare.onclick = () => this.compartirProducto();
+    }
 
-        document.getElementById('resena-nombre').value = '';
-        document.getElementById('resena-texto').value = '';
-        this.estrellaSeleccionada = 0;
-        this.actualizarEstrellas(0);
-        await this.cargarResenas(id);
+    modal.removeAttribute('hidden');
+    document.body.style.overflow = 'hidden';
 
-        actualizarVista(this.varianteActualIndex);
-    },
+    document.getElementById('resena-nombre').value = '';
+    document.getElementById('resena-texto').value = '';
+    this.estrellaSeleccionada = 0;
+    this.actualizarEstrellas(0);
+    await this.cargarResenas(id);
+
+    actualizarVista(this.varianteActualIndex);
+},
 
     compartirProducto() {
         const producto = this.productos.find(p => p.id === this.productoActualId);

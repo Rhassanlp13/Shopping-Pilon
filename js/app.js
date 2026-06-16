@@ -60,3 +60,37 @@ navigator.serviceWorker.addEventListener('controllerchange', () => {
     mostrarToast('📢 Nueva versión disponible. Recargando...', 'info');
     window.location.reload();
 });
+
+// ========== INSTALACIÓN DE PWA ==========
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Previene que el navegador muestre el banner automáticamente
+    e.preventDefault();
+    // Guarda el evento para usarlo después
+    deferredPrompt = e;
+    // Muestra el botón de instalación
+    const btnInstalar = document.getElementById('btn-instalar');
+    if (btnInstalar) btnInstalar.style.display = 'inline-flex';
+    console.log('✅ PWA instalable');
+});
+
+// Cuando el usuario hace clic en el botón de instalación
+document.getElementById('btn-instalar')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    // Muestra el diálogo de instalación
+    deferredPrompt.prompt();
+    // Espera a que el usuario responda
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
+    // Limpia el evento y oculta el botón
+    deferredPrompt = null;
+    document.getElementById('btn-instalar').style.display = 'none';
+});
+
+// Si la app ya está instalada, oculta el botón (opcional)
+window.addEventListener('appinstalled', () => {
+    console.log('App instalada correctamente');
+    const btnInstalar = document.getElementById('btn-instalar');
+    if (btnInstalar) btnInstalar.style.display = 'none';
+});
