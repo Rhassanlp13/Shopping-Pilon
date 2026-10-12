@@ -1,5 +1,5 @@
-// admin.js - Panel de administración/vendedor para Shopping Pilón
-// Incluye gestión de productos, pedidos, reseñas, vendedores, configuración de pagos QvaPay y clientes
+// admin.js - Panel de administración/vendedor para Granma Market
+// Incluye gestión de productos, pedidos con envío, reseñas, vendedores, QvaPay y clientes
 
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
@@ -183,7 +183,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (navSolicitudes) navSolicitudes.style.display = 'none';
         const solicitudesPage = document.getElementById('page-solicitudes');
         if (solicitudesPage) solicitudesPage.style.display = 'none';
-        // Los clientes solo son visibles para admin
         const navClientes = document.querySelector('.nav-item[data-page="clientes"]');
         if (navClientes) navClientes.style.display = 'none';
     }
@@ -193,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     grupoUrl.style.display = 'none';
     grupoFile.style.display = 'block';
-    setupImagePreview(); // Para todos
+    setupImagePreview();
 
     const shell = document.getElementById('shell');
     if (shell) shell.classList.add('visible');
@@ -262,7 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 mostrarToast('✅ Configuración guardada correctamente', 'ok');
                 actualizarEstadoVisualConfig(enabled, merchantId);
-                await cargarConfiguracionPagos(); // refresca campos
+                await cargarConfiguracionPagos();
             } catch (err) {
                 console.error(err);
                 mostrarToast('❌ Error al guardar configuración: ' + err.message, 'error');
@@ -273,7 +272,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Botón de ayuda flotante (tutorial)
     document.getElementById('help-button')?.addEventListener('click', () => {
         const tutorialModal = document.getElementById('tutorial-modal');
         if (tutorialModal) tutorialModal.removeAttribute('hidden');
@@ -322,7 +320,6 @@ function renderStats() {
 
 function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
     if (!url) return '';
-    // Si hay comas, tomar la primera URL
     const primeraUrl = url.split(',')[0].trim();
     if (!primeraUrl) return '';
     if (primeraUrl.includes('unsplash.com')) {
@@ -345,7 +342,7 @@ function renderTabla(filtro = '') {
     }
     tablaDiv.innerHTML = `<table class="admin-table">
         <thead>
-            <tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
+            <tr><th>Producto</th><th>Municipio</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
         </thead>
         <tbody>
             ${lista.map(p => `
@@ -358,6 +355,7 @@ function renderTabla(filtro = '') {
                     <div class="prod-vendedor">${escapeHtml(p.vendedor)}</div>
                     </span>
                 </td>
+                <td>${p.municipio ? `<span class="badge" style="background:#e8eaf6; color:#1a237e;"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}</span>` : '—'}</td>
                 <td>${Number(p.precio).toLocaleString('es')} ${p.moneda === 'USD' ? 'USD' : 'CUP'}</td>
                 <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
                 <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
@@ -382,6 +380,7 @@ async function cargarPedidos() {
         pedidos = data;
         renderPedidos();
     } catch (err) {
+        console.error(err);
         mostrarToast('Error al cargar pedidos', 'error');
     }
 }
@@ -395,24 +394,171 @@ function renderPedidos() {
     }
     tablaDiv.innerHTML = `<table class="admin-table">
         <thead>
-            <tr><th>Cliente</th><th>Teléfono</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Productos</th><th>Acciones</th></tr>
+            <tr>
+                <th>Cliente</th>
+                <th>Entrega</th>
+                <th>Productos</th>
+                <th>Subtotal</th>
+                <th>Envío</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
         </thead>
         <tbody>
-            ${pedidos.map(p => `
-            <tr>
-                <td>${escapeHtml(p.cliente_nombre)}</td>
-                <td>${escapeHtml(p.cliente_telefono)}</td>
-                <td>${new Date(p.created_at).toLocaleString()}</td>
-                <td>$${Number(p.total).toLocaleString('es')}</td>
-                <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : (p.status === 'paid' ? 'badge-ok' : 'badge-ok')}">
-                    ${p.status === 'pendiente' ? 'Pendiente' : (p.status === 'paid' ? 'Pagado' : 'Confirmado')}
-                </span></td>
-                <td><ul>${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad} - $${Number(prod.precio * prod.cantidad).toLocaleString('es')}</li>`).join('')}</ul></td>
-                <td>${(p.status === 'pendiente' || p.status === 'paid') ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : '—'}</td>
-            </tr>`).join('')}
+            ${pedidos.map(p => {
+                const subtotal = Number(p.total).toLocaleString('es');
+                const envioTxt = p.costo_envio != null
+                    ? `$${Number(p.costo_envio).toLocaleString('es')}`
+                    : '<span class="badge badge-low">Por confirmar</span>';
+                const totalConEnvio = p.costo_envio != null
+                    ? `$${(Number(p.total) + Number(p.costo_envio)).toLocaleString('es')}`
+                    : null;
+
+                return `
+                <tr>
+                    <td>
+                        <strong>${escapeHtml(p.cliente_nombre)}</strong><br>
+                        <small style="color:#888;">📞 ${escapeHtml(p.cliente_telefono || 'N/D')}</small>
+                    </td>
+                    <td>
+                        <small>
+                            📍 <strong>${escapeHtml(p.municipio_entrega || 'No especificado')}</strong><br>
+                            ${escapeHtml(p.direccion_entrega || '')}
+                            ${p.referencia_entrega ? `<br><em>Ref: ${escapeHtml(p.referencia_entrega)}</em>` : ''}
+                        </small>
+                    </td>
+                    <td><ul style="margin:0; padding-left:1rem; font-size:0.8rem;">${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad}</li>`).join('')}</ul></td>
+                    <td>$${subtotal}</td>
+                    <td>${envioTxt}${totalConEnvio ? `<br><small style="color:#2e7d32;"><strong>Total: ${totalConEnvio}</strong></small>` : ''}</td>
+                    <td>
+                        <span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">
+                            ${p.status === 'pendiente' ? 'Pendiente' : (p.status === 'paid' ? 'Pagado' : 'Confirmado')}
+                        </span>
+                    </td>
+                    <td>
+                        ${p.costo_envio == null && p.status === 'pendiente'
+                            ? `<button class="act-btn asignar-envio" data-id="${escapeHtml(p.id)}" style="background:#1a237e; color:white; border:none;"><i class="fas fa-dollar-sign"></i> Asignar envío</button>`
+                            : ''}
+                        ${p.status === 'pendiente' && p.costo_envio != null
+                            ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>`
+                            : ''}
+                        ${p.status === 'paid' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('')}
         </tbody>
     </table>`;
+
     document.querySelectorAll('.confirmar-pedido').forEach(btn => btn.addEventListener('click', () => confirmarPedido(btn.dataset.id)));
+    document.querySelectorAll('.asignar-envio').forEach(btn => btn.addEventListener('click', () => abrirModalEnvio(btn.dataset.id)));
+}
+
+// Abrir modal para asignar costo de envío
+function abrirModalEnvio(pedidoId) {
+    const p = pedidos.find(x => x.id === pedidoId);
+    if (!p) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modal-envio-admin';
+    overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1rem;';
+    overlay.innerHTML = `
+        <div style="background: white; border-radius: 16px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 1.5rem; border-bottom: 1px solid #e0e0e0;">
+                <h2 style="font-size: 1rem; font-weight: 700; color: #1a237e; margin: 0;"><i class="fas fa-truck"></i> Asignar costo de envío</h2>
+                <button id="cerrar-envio-admin" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #888;">&times;</button>
+            </div>
+            <div style="padding: 1.5rem;">
+                <div style="background:#f8f9fa; padding:12px; border-radius:10px; margin-bottom:1rem; font-size:0.85rem; line-height:1.6;">
+                    <p style="margin:0 0 4px;"><strong>👤 Cliente:</strong> ${escapeHtml(p.cliente_nombre)}</p>
+                    <p style="margin:0 0 4px;"><strong>📞 Teléfono:</strong> ${escapeHtml(p.cliente_telefono || 'N/D')}</p>
+                    <p style="margin:0 0 4px;"><strong>📍 Municipio:</strong> ${escapeHtml(p.municipio_entrega || 'N/D')}</p>
+                    <p style="margin:0 0 4px;"><strong>🏠 Dirección:</strong> ${escapeHtml(p.direccion_entrega || 'N/D')}</p>
+                    ${p.referencia_entrega ? `<p style="margin:0 0 4px;"><strong>🧭 Referencia:</strong> ${escapeHtml(p.referencia_entrega)}</p>` : ''}
+                    <p style="margin:8px 0 0; padding-top:8px; border-top:1px dashed #ddd;"><strong>💰 Subtotal productos:</strong> $${Number(p.total).toLocaleString('es')}</p>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Costo de envío (CUP) *</label>
+                    <input type="number" id="costo-envio-input" placeholder="Ej: 500" min="0" step="50" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:0.95rem; font-family:'DM Sans',sans-serif; outline:none; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Nota para el cliente (opcional)</label>
+                    <textarea id="nota-envio-input" rows="2" placeholder="Ej: Entrega en 2-3 días hábiles" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:0.9rem; font-family:'DM Sans',sans-serif; outline:none; box-sizing:border-box; resize:vertical;"></textarea>
+                </div>
+            </div>
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="cancelar-envio-admin" style="background:none; border:1.5px solid #e0e0e0; border-radius:8px; padding:9px 18px; font-size:0.88rem; cursor:pointer; font-family:'DM Sans',sans-serif;">Cancelar</button>
+                <button id="confirmar-envio-admin" style="background:#1a237e; color:white; border:none; border-radius:8px; padding:9px 18px; font-size:0.88rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; display:inline-flex; align-items:center; gap:6px;"><i class="fas fa-check"></i> Confirmar costo</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('cerrar-envio-admin').onclick = () => overlay.remove();
+    document.getElementById('cancelar-envio-admin').onclick = () => overlay.remove();
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    document.getElementById('confirmar-envio-admin').onclick = async () => {
+        const costo = parseFloat(document.getElementById('costo-envio-input').value);
+        const nota = document.getElementById('nota-envio-input').value.trim();
+
+        if (isNaN(costo) || costo < 0) {
+            mostrarToast('Ingresa un costo válido', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('confirmar-envio-admin');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+        try {
+            const { error } = await supabase
+                .from('pedidos')
+                .update({
+                    costo_envio: costo,
+                    envio_confirmado: true
+                })
+                .eq('id', pedidoId);
+
+            if (error) throw error;
+
+            // Generar link de WhatsApp para notificar al cliente
+            const totalFinal = Number(p.total) + costo;
+            const moneda = p.productos?.[0]?.moneda || 'CUP';
+            const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
+
+            let textoCliente = `🚚 *Granma Market — Costo de envío confirmado*\n\n`;
+            textoCliente += `Hola ${p.cliente_nombre}, tu pedido ya tiene costo de envío asignado:\n\n`;
+            textoCliente += `📦 Subtotal productos: $${Number(p.total).toLocaleString('es')} ${textoMoneda}\n`;
+            textoCliente += `🚚 Costo de envío a *${p.municipio_entrega}*: $${costo.toLocaleString('es')} ${textoMoneda}\n`;
+            textoCliente += `\n💰 *TOTAL A PAGAR: $${totalFinal.toLocaleString('es')} ${textoMoneda}*\n`;
+            if (nota) textoCliente += `\n📝 ${nota}\n`;
+            textoCliente += `\nCuando estés de acuerdo, responde este mensaje para coordinar el pago y la entrega. ¡Gracias!`;
+
+            const telCliente = (p.cliente_telefono || '').replace(/\s+/g, '').replace(/^53/, '');
+            const linkWa = telCliente
+                ? `https://wa.me/53${telCliente}?text=${encodeURIComponent(textoCliente)}`
+                : null;
+
+            overlay.remove();
+            cargarPedidos();
+
+            if (linkWa) {
+                setTimeout(() => {
+                    if (confirm('✅ Costo de envío guardado.\n\n¿Notificar al cliente por WhatsApp ahora?')) {
+                        window.open(linkWa, '_blank');
+                    }
+                }, 300);
+            } else {
+                mostrarToast('✅ Costo de envío asignado (sin teléfono para notificar)', 'ok');
+            }
+        } catch (err) {
+            console.error(err);
+            mostrarToast('Error al asignar costo: ' + err.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Confirmar costo';
+        }
+    };
 }
 
 async function confirmarPedido(pedidoId) {
@@ -486,19 +632,6 @@ async function cargarSolicitudes() {
     if (error) {
         console.error(error);
         mostrarToast('Error al cargar solicitudes', 'error');
-        return [];
-    }
-    return data;
-}
-
-async function cargarVendedoresActivos() {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, nombre_completo, telefono, created_at, role, qvapay_enabled, qvapay_merchant_id')
-        .eq('role', 'seller')
-        .order('created_at', { ascending: false });
-    if (error) {
-        console.error(error);
         return [];
     }
     return data;
@@ -630,10 +763,8 @@ async function convertirEnVendedor(userId, email) {
         mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
     } else {
         mostrarToast(`✅ ${escapeHtml(email)} ahora es vendedor`, 'ok');
-        // Recargar la lista de clientes
         const clientes = await cargarClientes();
         renderClientes(clientes);
-        // Si quieres actualizar también la lista de solicitudes (por si había algo pendiente)
         const solicitudes = await cargarSolicitudes();
         renderSolicitudes(solicitudes);
     }
@@ -660,12 +791,16 @@ function abrirEditar(id) {
     document.getElementById('f-imagen').value = prod.imagen;
     document.getElementById('f-precio-oferta').value = prod.preciooferta ?? '';
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
+
+    // Municipio
+    const municipioSelect = document.getElementById('f-municipio');
+    if (municipioSelect) municipioSelect.value = prod.municipio || '';
+
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = prod.categoria || 'Otros';
     const monedaSelect = document.getElementById('f-moneda');
     if (monedaSelect) monedaSelect.value = prod.moneda || 'CUP';
 
-    // Cargar galería existente (previsualización)
     const previewDiv = document.getElementById('vista-previa');
     if (previewDiv) {
         previewDiv.innerHTML = '';
@@ -683,7 +818,6 @@ function abrirEditar(id) {
         });
     }
 
-    // Cargar variantes
     const variantesDiv = document.getElementById('variantes-list');
     variantesDiv.innerHTML = '';
     if (prod.variantes && prod.variantes.length) prod.variantes.forEach((v, i) => agregarVariante(v, i));
@@ -700,6 +834,10 @@ function limpiarFormulario() {
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-precio-oferta').value = '';
     document.getElementById('f-en-oferta').checked = false;
+
+    const municipioSelect = document.getElementById('f-municipio');
+    if (municipioSelect) municipioSelect.value = '';
+
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = 'Otros';
     document.getElementById('variantes-list').innerHTML = '';
@@ -738,7 +876,6 @@ async function guardarProducto() {
     btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
     try {
-        // 1. Obtener valores del DOM
         const nombre = document.getElementById('f-nombre').value.trim();
         const precio = parseFloat(document.getElementById('f-precio').value);
         const stock = parseInt(document.getElementById('f-stock').value);
@@ -748,10 +885,14 @@ async function guardarProducto() {
         const precioOferta = enOferta ? parseFloat(document.getElementById('f-precio-oferta').value) : null;
         const categoria = document.getElementById('f-categoria').value;
         const moneda = document.getElementById('f-moneda')?.value || 'CUP';
+        const municipio = document.getElementById('f-municipio')?.value.trim() || null;
 
-        // 2. Validaciones básicas
         if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
             mostrarToast('Completa los campos obligatorios', 'error');
+            return;
+        }
+        if (!municipio) {
+            mostrarToast('Selecciona el municipio del producto', 'error');
             return;
         }
         if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) {
@@ -760,7 +901,6 @@ async function guardarProducto() {
         }
         if (!telefonovendedor) telefonovendedor = null;
 
-        // 3. Obtener imágenes (múltiples archivos)
         let imagenPrincipal = '';
         let galeriaUrls = [];
         const fileInput = document.getElementById('f-imagen-file');
@@ -780,7 +920,7 @@ async function guardarProducto() {
                 const uploadedUrl = await subirImagen(file, editandoId);
                 if (!uploadedUrl) throw new Error('No se pudo subir una de las imágenes');
                 if (!imagenPrincipal) {
-                    imagenPrincipal = uploadedUrl; // La primera es la principal
+                    imagenPrincipal = uploadedUrl;
                 } else {
                     galeriaUrls.push(uploadedUrl);
                 }
@@ -792,10 +932,8 @@ async function guardarProducto() {
             return;
         }
 
-        // Actualizar el campo URL (oculto) con la imagen principal (para compatibilidad)
         document.getElementById('f-imagen').value = imagenPrincipal;
 
-        // 4. Obtener variantes
         const variantes = [];
         document.querySelectorAll('.variante-item').forEach(item => {
             const nombreVar = item.querySelector('.var-nombre')?.value.trim();
@@ -811,12 +949,11 @@ async function guardarProducto() {
             });
         });
 
-        // 5. Construir objeto productoData (CORREGIDO)
         const productoData = {
             nombre,
             precio,
             stock,
-            imagen: imagenPrincipal,   // ← ahora usa imagenPrincipal
+            imagen: imagenPrincipal,
             vendedor,
             telefonovendedor,
             enoferta: enOferta,
@@ -825,10 +962,10 @@ async function guardarProducto() {
             variantes: variantes.length ? variantes : [],
             seller_id: currentUser.id,
             moneda: moneda,
-            galeria: galeriaUrls       // ← NUEVO: guarda todas las imágenes adicionales
+            galeria: galeriaUrls,
+            municipio: municipio
         };
 
-        // 6. Insertar o actualizar
         let error;
         if (editandoId) {
             const { error: updateError } = await supabase.from('productos').update(productoData).eq('id', editandoId);
@@ -839,7 +976,6 @@ async function guardarProducto() {
         }
         if (error) throw error;
 
-        // 7. Limpiar caché y recargar
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
         mostrarToast('Producto guardado', 'ok');
@@ -878,13 +1014,11 @@ async function eliminarProducto() {
     confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
 
     try {
-        // Si no es administrador, verificar si el producto tiene pedidos asociados (solo los propios)
         if (currentUserRole !== 'admin') {
-            // Consultar solo pedidos donde vendedor_id sea el usuario actual (evita RLS y mejora rendimiento)
             const { data: pedidos, error } = await supabase
                 .from('pedidos')
                 .select('id, productos')
-                .eq('vendedor_id', currentUser.id);  // ← filtrar por vendedor
+                .eq('vendedor_id', currentUser.id);
 
             if (error) throw error;
 
@@ -894,30 +1028,25 @@ async function eliminarProducto() {
             });
             if (tienePedidos) {
                 mostrarToast('❌ No se puede eliminar: el producto tiene pedidos asociados.', 'error');
-                return;  // sale sin eliminar, no cierra modal
+                return;
             }
         }
 
-        // Eliminar el producto
         const { error } = await supabase.from('productos').delete().eq('id', borrandoId);
         if (error) throw error;
 
-        // Éxito
         mostrarToast('✅ Producto eliminado', 'ok');
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
-        cerrarBorrar();       // cierra modal y limpia borrandoId
-        cargarProductos();    // recarga lista (no esperamos)
+        cerrarBorrar();
+        cargarProductos();
     } catch (err) {
         console.error('Error al eliminar producto:', err);
         mostrarToast(err.message || '❌ Error al eliminar producto', 'error');
-        // No cerramos el modal, solo restablecemos el botón
     } finally {
-        // Siempre restablecer el botón y limpiar borrandoId si no se hizo en cerrarBorrar
         confirmarBtn.disabled = false;
         confirmarBtn.innerHTML = textoOriginal;
-        if (!borrandoId) return; // ya se limpió en cerrarBorrar
-        // Si llegamos aquí sin cerrar modal, limpiar borrandoId manualmente
+        if (!borrandoId) return;
         borrandoId = null;
     }
 }
