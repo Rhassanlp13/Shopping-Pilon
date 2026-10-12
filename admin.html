@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin — Shopping Pilón</title>
+    <title>Admin — Granma Market</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
         rel="stylesheet">
@@ -571,7 +571,7 @@
     <div class="shell" id="shell">
         <aside class="sidebar">
             <div class="sidebar-logo">
-                SHOPPING <span>PILÓN</span>
+                GRANMA <span>MARKET</span>
                 <span class="sidebar-badge">Panel Admin</span>
             </div>
             <nav>
@@ -761,15 +761,36 @@
                         <input type="tel" id="f-telefono-vendedor" placeholder="Ej: 53561234">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Categoría *</label>
-                    <select id="f-categoria" required>
-                        <option value="Ropa">Ropa</option>
-                        <option value="Calzado">Calzado</option>
-                        <option value="Electrónica">Electrónica</option>
-                        <option value="Hogar">Hogar</option>
-                        <option value="Otros">Otros</option>
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Municipio del vendedor *</label>
+                        <select id="f-municipio" required>
+                            <option value="">-- Selecciona el municipio --</option>
+                            <option value="Bayamo">Bayamo</option>
+                            <option value="Bartolomé Masó">Bartolomé Masó</option>
+                            <option value="Buey Arriba">Buey Arriba</option>
+                            <option value="Campechuela">Campechuela</option>
+                            <option value="Cauto Cristo">Cauto Cristo</option>
+                            <option value="Guisa">Guisa</option>
+                            <option value="Jiguaní">Jiguaní</option>
+                            <option value="Manzanillo">Manzanillo</option>
+                            <option value="Media Luna">Media Luna</option>
+                            <option value="Niquero">Niquero</option>
+                            <option value="Pilón">Pilón</option>
+                            <option value="Río Cauto">Río Cauto</option>
+                            <option value="Yara">Yara</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría *</label>
+                        <select id="f-categoria" required>
+                            <option value="Ropa">Ropa</option>
+                            <option value="Calzado">Calzado</option>
+                            <option value="Electrónica">Electrónica</option>
+                            <option value="Hogar">Hogar</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Campo de imagen: múltiples archivos -->
