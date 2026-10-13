@@ -12,8 +12,29 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
     <link rel="stylesheet" href="style.css">
+
+    <!-- Tailwind CSS (solo para componentes nuevos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a237e',
+                        accent: '#ff9800',
+                        whatsapp: '#25d366',
+                        danger: '#e53935',
+                    },
+                    fontFamily: {
+                        sans: ['DM Sans', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        /* Estilos específicos para admin (complementan style.css) */
         .shell {
             display: none;
             min-height: 100vh;
@@ -605,7 +626,6 @@
         </aside>
 
         <main class="main">
-            <!-- página productos -->
             <div class="page active" id="page-productos">
                 <div class="topbar">
                     <h1>Productos</h1>
@@ -628,7 +648,6 @@
                 </div>
             </div>
 
-            <!-- página pedidos -->
             <div class="page" id="page-pedidos">
                 <div class="topbar">
                     <h1>Pedidos</h1>
@@ -643,7 +662,6 @@
                 </div>
             </div>
 
-            <!-- página reseñas -->
             <div class="page" id="page-resenas">
                 <div class="topbar">
                     <h1>Reseñas</h1>
@@ -658,7 +676,6 @@
                 </div>
             </div>
 
-            <!-- página solicitudes vendedores -->
             <div class="page" id="page-solicitudes">
                 <div class="topbar">
                     <h1>Solicitudes de vendedores</h1>
@@ -673,7 +690,6 @@
                 </div>
             </div>
 
-            <!-- página configuración de pagos -->
             <div class="page" id="page-configuracion">
                 <div class="topbar">
                     <h1>Configuración de pagos</h1>
@@ -704,7 +720,6 @@
                 </div>
             </div>
 
-            <!-- página clientes (para administradores) -->
             <div class="page" id="page-clientes">
                 <div class="topbar">
                     <h1>Clientes registrados</h1>
@@ -793,7 +808,6 @@
                     </div>
                 </div>
 
-                <!-- Campo de imagen: múltiples archivos -->
                 <div class="form-group" id="grupo-file-imagen">
                     <label>Imágenes del producto *</label>
                     <input type="file" id="f-imagen-file" accept="image/jpeg,image/png,image/webp" multiple>

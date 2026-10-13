@@ -1,5 +1,5 @@
 // sw.js - Estrategia híbrida: admin.html siempre de red, el resto cache-first
-const CACHE_NAME = 'pilon-v1.0.7';
+const CACHE_NAME = 'v1';
 const STATIC_ASSETS = [
     '/style.css',
     '/manifest.json',

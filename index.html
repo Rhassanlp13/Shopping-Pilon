@@ -23,6 +23,27 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Granma Market">
     <link rel="apple-touch-icon" href="/icon-192.png">
+
+    <!-- Tailwind CSS (solo para componentes nuevos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a237e',
+                        accent: '#ff9800',
+                        whatsapp: '#25d366',
+                        danger: '#e53935',
+                    },
+                    fontFamily: {
+                        sans: ['DM Sans', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -247,8 +268,7 @@
                     <h3>1. Regístrate como vendedor</h3>
                     <p>Haz clic en el botón <strong>"Registrarme como vendedor"</strong> o en el icono de usuario →
                         "Registrarme" y selecciona <strong>"Vendedor"</strong>. Completa todos los campos (nombre,
-                        correo,
-                        teléfono, contraseña).</p>
+                        correo, teléfono, contraseña).</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>2. Confirma tu correo electrónico</h3>
@@ -259,23 +279,19 @@
                 <div class="tutorial-step">
                     <h3>3. Espera la aprobación del administrador</h3>
                     <p>Una vez confirmado el correo, tu cuenta quedará como <strong>"pendiente"</strong>. El
-                        administrador
-                        revisará tu solicitud y la aprobará manualmente. Recibirás una notificación en la web cuando tu
+                        administrador revisará tu solicitud y la aprobará manualmente. Recibirás una notificación en la web cuando tu
                         cuenta esté activa.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>4. Accede al panel de vendedor</h3>
                     <p>Inicia sesión con tu correo y contraseña. Luego haz clic en el icono de usuario (arriba a la
-                        derecha)
-                        y selecciona <strong>"Panel de vendedor"</strong>. Ahí podrás publicar productos, gestionar
-                        pedidos
-                        y configurar pagos.</p>
+                        derecha) y selecciona <strong>"Panel de vendedor"</strong>. Ahí podrás publicar productos, gestionar
+                        pedidos y configurar pagos.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>5. Publica tu primer producto</h3>
                     <p>En el panel, ve a "Productos" → "Nuevo producto". Completa los datos (nombre, precio, stock,
-                        imagen,
-                        etc.) y guarda. Tu producto aparecerá en la tienda.</p>
+                        imagen, etc.) y guarda. Tu producto aparecerá en la tienda.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>6. (Opcional) Activa pagos con QvaPay</h3>
@@ -289,29 +305,40 @@
         </div>
     </div>
 
-    <!-- Modal de Envío (NUEVO) -->
-    <div id="modal-envio" class="modal-overlay" hidden>
-        <div class="modal-box" style="max-width: 480px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-truck"></i> Datos de envío</h2>
-                <button class="modal-close" id="envio-cerrar">&times;</button>
+    <!-- Modal de Envío (Tailwind) -->
+    <div id="modal-envio" class="fixed inset-0 bg-black/50 backdrop-blur-sm items-center justify-center z-[999] p-4 hidden" hidden>
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-primary text-white px-5 py-4 flex items-center justify-between">
+                <h2 class="font-serif text-lg font-bold flex items-center gap-2 m-0">
+                    <i class="fas fa-truck"></i> Datos de envío
+                </h2>
+                <button class="bg-transparent border-0 text-white text-2xl cursor-pointer opacity-80 hover:opacity-100 leading-none" id="envio-cerrar">&times;</button>
             </div>
-            <div class="modal-body">
-                <p style="font-size:0.85rem; color:#666; margin-bottom:1rem; background:#f0f2ff; padding:10px; border-radius:8px;">
-                    <i class="fas fa-info-circle" style="color:#1a237e;"></i>
+
+            <!-- Body -->
+            <div class="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+                <p class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg m-0 leading-relaxed">
+                    <i class="fas fa-info-circle text-primary mr-1"></i>
                     Completa tus datos. El costo de envío a tu municipio será confirmado por nuestro equipo y te lo notificaremos por WhatsApp.
                 </p>
-                <div class="form-group">
-                    <label>Nombre completo *</label>
-                    <input type="text" id="envio-nombre" placeholder="Tu nombre completo">
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Nombre completo *</label>
+                    <input type="text" id="envio-nombre" placeholder="Tu nombre completo"
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
                 </div>
-                <div class="form-group">
-                    <label>Teléfono (WhatsApp) *</label>
-                    <input type="tel" id="envio-telefono" placeholder="Ej: 55512345">
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Teléfono (WhatsApp) *</label>
+                    <input type="tel" id="envio-telefono" placeholder="Ej: 55512345"
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
                 </div>
-                <div class="form-group">
-                    <label>Municipio de entrega *</label>
-                    <select id="envio-municipio">
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Municipio de entrega *</label>
+                    <select id="envio-municipio"
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
                         <option value="">-- Selecciona tu municipio --</option>
                         <option value="Bayamo">Bayamo</option>
                         <option value="Bartolomé Masó">Bartolomé Masó</option>
@@ -328,22 +355,34 @@
                         <option value="Yara">Yara</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Dirección exacta *</label>
-                    <input type="text" id="envio-direccion" placeholder="Calle, número, reparto...">
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Dirección exacta *</label>
+                    <input type="text" id="envio-direccion" placeholder="Calle, número, reparto..."
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
                 </div>
-                <div class="form-group">
-                    <label>Punto de referencia</label>
-                    <input type="text" id="envio-referencia" placeholder="Ej: cerca del parque, escuela...">
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Punto de referencia</label>
+                    <input type="text" id="envio-referencia" placeholder="Ej: cerca del parque, escuela..."
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
                 </div>
-                <div class="form-group">
-                    <label>Notas adicionales (opcional)</label>
-                    <textarea id="envio-notas" rows="2" placeholder="Alguna indicación especial..."></textarea>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Notas adicionales (opcional)</label>
+                    <textarea id="envio-notas" rows="2" placeholder="Alguna indicación especial..."
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition resize-y min-h-[60px]"></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" id="envio-cancelar">Cancelar</button>
-                <button class="btn-primary" id="envio-confirmar">
+
+            <!-- Footer -->
+            <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
+                <button id="envio-cancelar"
+                    class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary transition">
+                    Cancelar
+                </button>
+                <button id="envio-confirmar"
+                    class="bg-primary text-white border-0 rounded-lg px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition shadow-md">
                     <i class="fas fa-paper-plane"></i> Enviar pedido
                 </button>
             </div>
@@ -380,7 +419,6 @@
 
     <script type="module" src="js/app.js"></script>
     <script type="module">
-        // Modal de tutorial para vendedores (en index.html)
         const helpBtn = document.getElementById('help-seller-btn');
         const modal = document.getElementById('tutorial-seller-modal');
         const closeModalBtn = document.getElementById('close-tutorial-seller-modal');
@@ -401,7 +439,6 @@
                 modal.setAttribute('hidden', '');
             });
         }
-        // Cerrar si se hace clic fuera del modal
         modal?.addEventListener('click', (e) => {
             if (e.target === modal) modal.setAttribute('hidden', '');
         });

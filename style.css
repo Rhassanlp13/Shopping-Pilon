@@ -2026,3 +2026,149 @@ body {
     gap: 4px !important;
     background-color: rgba(255, 255, 255, 0.2) !important;
 }
+
+/* ========== MODAL DE ENVÍO (GRANMA MARKET) ========== */
+#modal-envio .modal-box {
+    max-width: 480px;
+    width: 100%;
+    border-radius: 20px;
+    background: var(--white);
+}
+
+#modal-envio .modal-header {
+    background: var(--primary);
+    color: var(--white);
+    padding: 1rem 1.4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#modal-envio .modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+#modal-envio .modal-close {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 1.6rem;
+    cursor: pointer;
+    opacity: 0.8;
+    line-height: 1;
+}
+
+#modal-envio .modal-close:hover {
+    opacity: 1;
+}
+
+#modal-envio .modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem; /* Espacio entre cada campo */
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Estilo para los grupos de campos */
+#modal-envio .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#modal-envio .form-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Estilo para los inputs, selects y textareas */
+#modal-envio .form-group input,
+#modal-envio .form-group select,
+#modal-envio .form-group textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    box-sizing: border-box; /* Para que el padding no rompa el ancho */
+}
+
+#modal-envio .form-group input:focus,
+#modal-envio .form-group select:focus,
+#modal-envio .form-group textarea:focus {
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+}
+
+#modal-envio .form-group textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+/* Estilo para el pie del modal (los botones) */
+#modal-envio .modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: row; /* Poner los botones uno al lado del otro */
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--white);
+    border-radius: 0 0 20px 20px;
+}
+
+/* Botón Cancelar (secundario) */
+#modal-envio .btn-secondary {
+    background: none;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+}
+
+#modal-envio .btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Botón Enviar pedido (principal) */
+#modal-envio .btn-primary {
+    background: var(--primary); /* Azul para combinar con el tema */
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity 0.2s;
+}
+
+#modal-envio .btn-primary:hover {
+    opacity: 0.88;
+}
