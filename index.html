@@ -4,21 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Granma Market | Tienda Online</title>
+    <title>Granma Market | El Marketplace de Granma</title>
 
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
-        rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#1a237e">
+    <meta name="theme-color" content="#064e3b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Granma Market">
@@ -28,17 +27,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            corePlugins: {
+                preflight: false,
+            },
             theme: {
                 extend: {
                     colors: {
-                        primary: '#1a237e',
-                        accent: '#ff9800',
+                        primary: '#064e3b',
+                        'primary-light': '#059669',
+                        accent: '#f59e0b',
+                        'accent-dark': '#d97706',
                         whatsapp: '#25d366',
                         danger: '#e53935',
                     },
                     fontFamily: {
-                        sans: ['DM Sans', 'sans-serif'],
-                        serif: ['Playfair Display', 'serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                        serif: ['Outfit', 'sans-serif'],
                     }
                 }
             }
@@ -48,37 +53,94 @@
 
 <body>
 
-    <header class="navbar">
-        <div class="logo">GRANMA <span>MARKET</span></div>
-        <div class="nav-buttons">
-            <button class="cart-btn" id="user-btn" aria-label="Usuario">
-                <i class="fas fa-user"></i>
-            </button>
-            <button class="cart-btn" id="cart-btn" aria-label="Ver carrito">
-                <i class="fas fa-shopping-bag"></i>
-                <span class="cart-badge" id="cart-count">0</span>
-            </button>
+    <!-- ========== NAVBAR FLOTANTE ========== -->
+    <header class="gm-navbar">
+        <div class="gm-navbar-inner">
+            <a href="index.html" class="gm-logo">
+                <span class="gm-logo-icon"><i class="fas fa-store"></i></span>
+                <span class="gm-logo-text">GRANMA<span>MARKET</span></span>
+            </a>
+
+            <nav class="gm-nav-links">
+                <a href="#productos" class="gm-nav-link active"><i class="fas fa-compass"></i> Explorar</a>
+                <a href="#" id="nav-como-vender" class="gm-nav-link"><i class="fas fa-tags"></i> Vender</a>
+            </nav>
+
+            <div class="nav-buttons">
+                <button class="cart-btn" id="user-btn" aria-label="Usuario">
+                    <i class="fas fa-user"></i>
+                </button>
+                <button class="cart-btn" id="cart-btn" aria-label="Ver carrito">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </button>
+            </div>
         </div>
     </header>
 
-    <section class="hero">
-        <div class="hero-content">
-            <p class="hero-subtitle">Bienvenido a</p>
-            <h1>Tu Mercado<br>en <em>Granma</em></h1>
-            <p class="hero-desc">Directo del vendedor a tu casa.</p>
+    <!-- ========== HERO NUEVO ========== -->
+    <section class="gm-hero">
+        <div class="gm-hero-bg">
+            <div class="gm-blob gm-blob-1"></div>
+            <div class="gm-blob gm-blob-2"></div>
+            <div class="gm-blob gm-blob-3"></div>
+        </div>
+
+        <div class="gm-hero-content">
+            <span class="gm-hero-badge">
+                <span class="gm-badge-dot"></span>
+                Marketplace oficial de Granma
+            </span>
+
+            <h1 class="gm-hero-title">
+                Compra y vende en toda la <em>provincia</em>
+            </h1>
+
+            <p class="gm-hero-subtitle">
+                Del vendedor de Bayamo a tu casa en cualquier municipio.
+            </p>
+
+            <div class="gm-hero-search">
+                <i class="fas fa-search gm-search-icon"></i>
+                <input type="text" id="gm-buscador-hero" placeholder="¿Qué estás buscando hoy?">
+                <button class="gm-search-btn">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <div class="gm-hero-cta">
+                <a href="#" id="btn-registro-vendedor" class="gm-btn gm-btn-primary">
+                    <i class="fas fa-user-plus"></i> Ser vendedor
+                </a>
+                <button id="help-seller-btn" class="gm-btn gm-btn-ghost">
+                    <i class="fas fa-play-circle"></i> Cómo funciona
+                </button>
+            </div>
 
             <div class="hero-welcome" id="hero-welcome" style="display: none;">
                 <p class="welcome-message" id="welcome-message"></p>
             </div>
 
-            <a href="#" id="btn-registro-vendedor" class="btn-primary">
-                <i class="fas fa-user-plus"></i> Registrarme como vendedor
-            </a>
-            <button id="help-seller-btn" class="btn-secondary" style="margin-left: 10px;">
-                <i class="fas fa-question-circle"></i> ¿Cómo ser vendedor?
-            </button>
+            <div class="gm-hero-stats">
+                <div class="gm-stat">
+                    <strong>13</strong>
+                    <span>Municipios</span>
+                </div>
+                <div class="gm-stat-divider"></div>
+                <div class="gm-stat">
+                    <strong>100%</strong>
+                    <span>Verificado</span>
+                </div>
+                <div class="gm-stat-divider"></div>
+                <div class="gm-stat">
+                    <strong>24h</strong>
+                    <span>Confirmación</span>
+                </div>
+            </div>
         </div>
     </section>
+
+    <a id="productos"></a>
 
     <section class="section-title">
         <h2>Productos disponibles</h2>
@@ -206,7 +268,6 @@
                     <button class="tab-btn" data-tab="register">Registrarme</button>
                 </div>
 
-                <!-- Login form -->
                 <div id="login-form" class="auth-form active">
                     <input type="email" id="login-email" placeholder="Correo electrónico">
                     <input type="password" id="login-password" placeholder="Contraseña">
@@ -218,7 +279,6 @@
                     </div>
                 </div>
 
-                <!-- Register form -->
                 <div id="register-form" class="auth-form">
                     <input type="text" id="reg-nombre" placeholder="Nombre completo">
                     <input type="email" id="reg-email" placeholder="Correo electrónico">
@@ -244,7 +304,6 @@
                     </div>
                 </div>
 
-                <!-- Social login -->
                 <div class="social-login">
                     <p>O continúa con</p>
                     <div class="social-buttons">
@@ -267,8 +326,7 @@
                 <div class="tutorial-step">
                     <h3>1. Regístrate como vendedor</h3>
                     <p>Haz clic en el botón <strong>"Registrarme como vendedor"</strong> o en el icono de usuario →
-                        "Registrarme" y selecciona <strong>"Vendedor"</strong>. Completa todos los campos (nombre,
-                        correo, teléfono, contraseña).</p>
+                        "Registrarme" y selecciona <strong>"Vendedor"</strong>. Completa todos los campos.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>2. Confirma tu correo electrónico</h3>
@@ -279,24 +337,23 @@
                 <div class="tutorial-step">
                     <h3>3. Espera la aprobación del administrador</h3>
                     <p>Una vez confirmado el correo, tu cuenta quedará como <strong>"pendiente"</strong>. El
-                        administrador revisará tu solicitud y la aprobará manualmente. Recibirás una notificación en la web cuando tu
-                        cuenta esté activa.</p>
+                        administrador revisará tu solicitud y la aprobará manualmente.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>4. Accede al panel de vendedor</h3>
-                    <p>Inicia sesión con tu correo y contraseña. Luego haz clic en el icono de usuario (arriba a la
-                        derecha) y selecciona <strong>"Panel de vendedor"</strong>. Ahí podrás publicar productos, gestionar
-                        pedidos y configurar pagos.</p>
+                    <p>Inicia sesión con tu correo y contraseña. Luego haz clic en el icono de usuario y selecciona
+                        <strong>"Panel de vendedor"</strong>. Ahí podrás publicar productos, gestionar pedidos y
+                        configurar pagos.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>5. Publica tu primer producto</h3>
-                    <p>En el panel, ve a "Productos" → "Nuevo producto". Completa los datos (nombre, precio, stock,
-                        imagen, etc.) y guarda. Tu producto aparecerá en la tienda.</p>
+                    <p>En el panel, ve a "Productos" → "Nuevo producto". Completa los datos y guarda. Tu producto
+                        aparecerá en la tienda.</p>
                 </div>
                 <div class="tutorial-step">
                     <h3>6. (Opcional) Activa pagos con QvaPay</h3>
                     <p>Dentro del panel, en "Configuración pagos", activa QvaPay y pega tu <strong>ID de comerciante
-                            (UUID)</strong> que obtienes en tu perfil de QvaPay. Así podrás recibir pagos digitales.</p>
+                            (UUID)</strong> que obtienes en tu perfil de QvaPay.</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -308,15 +365,13 @@
     <!-- Modal de Envío (Tailwind) -->
     <div id="modal-envio" class="fixed inset-0 bg-black/50 backdrop-blur-sm items-center justify-center z-[999] p-4 hidden" hidden>
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            <!-- Header -->
             <div class="bg-primary text-white px-5 py-4 flex items-center justify-between">
-                <h2 class="font-serif text-lg font-bold flex items-center gap-2 m-0">
+                <h2 class="text-lg font-bold flex items-center gap-2 m-0" style="font-family: 'Outfit', sans-serif;">
                     <i class="fas fa-truck"></i> Datos de envío
                 </h2>
                 <button class="bg-transparent border-0 text-white text-2xl cursor-pointer opacity-80 hover:opacity-100 leading-none" id="envio-cerrar">&times;</button>
             </div>
 
-            <!-- Body -->
             <div class="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
                 <p class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg m-0 leading-relaxed">
                     <i class="fas fa-info-circle text-primary mr-1"></i>
@@ -375,7 +430,6 @@
                 </div>
             </div>
 
-            <!-- Footer -->
             <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
                 <button id="envio-cancelar"
                     class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary transition">
@@ -419,25 +473,20 @@
 
     <script type="module" src="js/app.js"></script>
     <script type="module">
+        // ========== Tutorial vendedores ==========
         const helpBtn = document.getElementById('help-seller-btn');
         const modal = document.getElementById('tutorial-seller-modal');
         const closeModalBtn = document.getElementById('close-tutorial-seller-modal');
         const closeBtn = document.getElementById('close-tutorial-seller-btn');
 
         if (helpBtn && modal) {
-            helpBtn.addEventListener('click', () => {
-                modal.removeAttribute('hidden');
-            });
+            helpBtn.addEventListener('click', () => modal.removeAttribute('hidden'));
         }
         if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => {
-                modal.setAttribute('hidden', '');
-            });
+            closeModalBtn.addEventListener('click', () => modal.setAttribute('hidden', ''));
         }
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                modal.setAttribute('hidden', '');
-            });
+            closeBtn.addEventListener('click', () => modal.setAttribute('hidden', ''));
         }
         modal?.addEventListener('click', (e) => {
             if (e.target === modal) modal.setAttribute('hidden', '');
@@ -450,6 +499,33 @@
                 localStorage.setItem('tutorial_vendedor_visto', 'true');
             }, 1500);
         }
+
+        // ========== Buscador del hero (filtra en tiempo real) ==========
+        document.getElementById('gm-buscador-hero')?.addEventListener('input', (e) => {
+            const term = e.target.value.trim().toLowerCase();
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach(card => {
+                const name = card.querySelector('h3')?.textContent.toLowerCase() || '';
+                const vendedor = card.querySelector('.vendedor')?.textContent.toLowerCase() || '';
+                const match = !term || name.includes(term) || vendedor.includes(term);
+                card.style.display = match ? '' : 'none';
+            });
+            if (term.length > 0) {
+                document.querySelector('.section-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        // ========== Nav "Cómo vender" abre el tutorial ==========
+        document.getElementById('nav-como-vender')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('tutorial-seller-modal')?.removeAttribute('hidden');
+        });
+
+        // ========== Scroll suave al hacer clic en "Explorar" ==========
+        document.querySelector('a[href="#productos"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     </script>
 </body>
 
