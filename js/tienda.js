@@ -1,4 +1,4 @@
-// tienda.js - Página de perfil del vendedor (robusta y con nombre_tienda)
+// tienda.js - Página de perfil del vendedor (con logo_tienda)
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { mostrarToast } from './modules/toast.js';
@@ -65,7 +65,7 @@ async function cargarTienda() {
     let productos = [];
     let seller = null;
 
-    // 1. Cargar productos por seller_id (solo si es UUID válido)
+    // 1. Cargar productos por seller_id (UUID válido)
     if (sellerId && esUUIDValido(sellerId)) {
         const { data, error } = await supabase
             .from('productos')
@@ -75,7 +75,7 @@ async function cargarTienda() {
         if (!error && data && data.length > 0) productos = data;
     }
 
-    // 2. Fallback: buscar por nombre de vendedor
+    // 2. Fallback por nombre
     if (productos.length === 0 && sellerNombre) {
         const { data, error } = await supabase
             .from('productos')
@@ -85,7 +85,7 @@ async function cargarTienda() {
         if (!error && data && data.length > 0) productos = data;
     }
 
-    // 3. Fallback extra: intentar por seller_id aunque no sea UUID válido
+    // 3. Fallback por seller_id aunque no sea UUID
     if (productos.length === 0 && sellerId) {
         const { data, error } = await supabase
             .from('productos')
@@ -95,52 +95,51 @@ async function cargarTienda() {
         if (!error && data && data.length > 0) productos = data;
     }
 
-    // 4. Cargar perfil del vendedor con nombre_tienda
+    // 4. Cargar perfil con logo_tienda
     if (sellerId && esUUIDValido(sellerId)) {
         const { data } = await supabase
             .from('profiles')
-            .select('id, nombre_completo, nombre_tienda, email, municipio, telefono, role')
+            .select('id, nombre_completo, nombre_tienda, logo_tienda, email, municipio, telefono, role')
             .eq('id', sellerId)
             .maybeSingle();
         if (data) seller = data;
     }
 
-    // 5. Si no hay perfil pero sí productos, extraer del primer producto
+    // 5. Fallback: extraer info del producto
     if (!seller && productos.length > 0) {
         seller = {
             id: productos[0].seller_id,
             nombre_completo: productos[0].vendedor,
             nombre_tienda: productos[0].vendedor,
+            logo_tienda: null,
             municipio: productos[0].municipio,
             email: null,
             telefono: productos[0].telefonovendedor,
         };
     }
 
-    // 6. Si tampoco hay productos pero tenemos nombre, seller mínimo
     if (!seller && sellerNombre) {
         seller = {
             id: sellerId,
             nombre_completo: sellerNombre,
             nombre_tienda: sellerNombre,
+            logo_tienda: null,
             municipio: null,
         };
     }
 
-    // 7. Si no hay nada, error
     if (!seller) {
         mostrarError('Esta tienda no existe o fue eliminada.');
         return;
     }
 
-    // 8. Nombre a mostrar (prioridad: nombre_tienda > nombre_completo > email > nombre URL)
     const nombreVendedor = seller.nombre_tienda
         || seller.nombre_completo
         || seller.email?.split('@')[0]
         || sellerNombre
         || 'Vendedor';
 
-    renderPerfil(nombreVendedor, seller.municipio, productos.length);
+    renderPerfil(nombreVendedor, seller.municipio, productos.length, seller.logo_tienda);
     renderProductos(productos);
 
     window._productosActuales = productos;
@@ -148,14 +147,19 @@ async function cargarTienda() {
 }
 
 // ==================== RENDER PERFIL ====================
-function renderPerfil(nombre, municipio, totalProductos) {
+function renderPerfil(nombre, municipio, totalProductos, logoUrl = null) {
     const iniciales = generarIniciales(nombre);
     const color = generarColorAvatar(nombre);
 
-    document.getElementById('tienda-iniciales').textContent = iniciales;
-
     const avatarEl = document.getElementById('tienda-avatar');
-    avatarEl.style.background = `linear-gradient(135deg, ${color} 0%, ${ajustarBrillo(color, 20)} 100%)`;
+
+    if (logoUrl) {
+        avatarEl.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(nombre)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        avatarEl.style.background = 'transparent';
+    } else {
+        avatarEl.innerHTML = `<span id="tienda-iniciales">${iniciales}</span>`;
+        avatarEl.style.background = `linear-gradient(135deg, ${color} 0%, ${ajustarBrillo(color, 20)} 100%)`;
+    }
 
     document.getElementById('tienda-nombre').textContent = nombre;
 
@@ -254,7 +258,7 @@ function renderProductos(productos) {
     });
 }
 
-// ==================== DETALLE SIMPLIFICADO ====================
+// ==================== DETALLE ====================
 function abrirDetalleProducto(id, productos) {
     const p = productos.find(x => x.id === id);
     if (!p) return;

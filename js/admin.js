@@ -12,6 +12,11 @@ let borrandoId = null;
 let currentUser = null;
 let currentUserRole = null;
 
+// Estados del logo
+let logoPendiente = null;
+let logoActualUrl = null;
+let logoEliminar = false;
+
 // ==================== SUBIDA DE IMÁGENES ====================
 async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
     return new Promise((resolve, reject) => {
@@ -30,7 +35,7 @@ async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.8);
+                canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.85);
             };
             img.onerror = reject;
         };
@@ -56,6 +61,29 @@ async function subirImagen(file, productoId = null) {
     }
 }
 
+async function subirLogo(file) {
+    if (!file) return null;
+    try {
+        // Los logos son cuadrados 400x400
+        const blobOptimizado = await resizeAndOptimizeImage(file, 400, 400);
+        const nombreArchivo = `logos/${currentUser.id}_${Date.now()}.webp`;
+        const { error } = await supabase.storage
+            .from('products')
+            .upload(nombreArchivo, blobOptimizado, {
+                contentType: 'image/webp',
+                cacheControl: '3600',
+                upsert: true
+            });
+        if (error) throw error;
+        const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(nombreArchivo);
+        return publicUrlData.publicUrl;
+    } catch (err) {
+        console.error('Error subiendo logo:', err);
+        mostrarToast('Error al subir el logo: ' + err.message, 'error');
+        return null;
+    }
+}
+
 function setupImagePreview() {
     const fileInput = document.getElementById('f-imagen-file');
     const previewDiv = document.getElementById('vista-previa');
@@ -76,14 +104,57 @@ function setupImagePreview() {
     });
 }
 
-// ==================== MI TIENDA (NUEVO) ====================
+// ==================== MI TIENDA ====================
+function generarIniciales(nombre) {
+    if (!nombre) return '??';
+    const palabras = nombre.trim().split(/\s+/).filter(p => p.length > 1);
+    if (palabras.length === 0) return nombre.substring(0, 2).toUpperCase();
+    if (palabras.length === 1) return palabras[0].substring(0, 2).toUpperCase();
+    return (palabras[0][0] + palabras[1][0]).toUpperCase();
+}
+
 function actualizarPreviewTienda() {
     const nombre = document.getElementById('mi-nombre-tienda')?.value.trim();
     const municipio = document.getElementById('mi-municipio')?.value;
     const previewNombre = document.getElementById('preview-nombre');
     const previewMunicipio = document.getElementById('preview-municipio');
+    const previewIniciales = document.getElementById('preview-iniciales');
+    const previewAvatar = document.getElementById('preview-avatar');
+
     if (previewNombre) previewNombre.textContent = nombre || 'Sin nombre';
     if (previewMunicipio) previewMunicipio.textContent = municipio ? `📍 ${municipio}` : 'Sin municipio';
+
+    if (previewIniciales && !previewAvatar?.querySelector('img')) {
+        previewIniciales.textContent = generarIniciales(nombre || 'Sin nombre');
+    }
+}
+
+function renderLogoPreview() {
+    const preview = document.getElementById('logo-preview');
+    const quitarBtn = document.getElementById('quitar-logo-btn');
+    const previewAvatar = document.getElementById('preview-avatar');
+    if (!preview) return;
+
+    if (logoPendiente) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.innerHTML = `<img src="${e.target.result}" alt="Logo">`;
+            if (quitarBtn) quitarBtn.style.display = 'inline-flex';
+            if (previewAvatar) previewAvatar.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+        };
+        reader.readAsDataURL(logoPendiente);
+    } else if (logoActualUrl && !logoEliminar) {
+        preview.innerHTML = `<img src="${logoActualUrl}" alt="Logo">`;
+        if (quitarBtn) quitarBtn.style.display = 'inline-flex';
+        if (previewAvatar) previewAvatar.innerHTML = `<img src="${logoActualUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+    } else {
+        preview.innerHTML = '<i class="fas fa-store"></i>';
+        if (quitarBtn) quitarBtn.style.display = 'none';
+        if (previewAvatar) {
+            const nombre = document.getElementById('mi-nombre-tienda')?.value.trim() || 'Sin nombre';
+            previewAvatar.innerHTML = `<span id="preview-iniciales">${generarIniciales(nombre)}</span>`;
+        }
+    }
 }
 
 async function cargarMiTienda() {
@@ -91,17 +162,24 @@ async function cargarMiTienda() {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('nombre_tienda, nombre_completo, municipio')
+            .select('nombre_tienda, nombre_completo, municipio, logo_tienda')
             .eq('id', currentUser.id)
             .single();
         if (error && error.code !== 'PGRST116') throw error;
 
         const nombreInput = document.getElementById('mi-nombre-tienda');
         const municipioSelect = document.getElementById('mi-municipio');
-
         if (nombreInput) nombreInput.value = data?.nombre_tienda || data?.nombre_completo || '';
         if (municipioSelect) municipioSelect.value = data?.municipio || '';
 
+        logoPendiente = null;
+        logoEliminar = false;
+        logoActualUrl = data?.logo_tienda || null;
+
+        const logoInput = document.getElementById('mi-logo-input');
+        if (logoInput) logoInput.value = '';
+
+        renderLogoPreview();
         actualizarPreviewTienda();
     } catch (err) {
         console.error(err);
@@ -122,25 +200,45 @@ async function guardarMiTienda() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
     try {
-        // 1. Actualizar perfil
+        let logoUrl = logoActualUrl;
+
+        if (logoPendiente) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo logo...';
+            const urlSubida = await subirLogo(logoPendiente);
+            if (urlSubida) logoUrl = urlSubida;
+            else throw new Error('No se pudo subir el logo');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        } else if (logoEliminar) {
+            logoUrl = null;
+        }
+
         const { error: profileError } = await supabase
             .from('profiles')
-            .update({ nombre_tienda: nombreTienda, municipio: municipio })
+            .update({
+                nombre_tienda: nombreTienda,
+                municipio: municipio,
+                logo_tienda: logoUrl
+            })
             .eq('id', currentUser.id);
         if (profileError) throw profileError;
 
-        // 2. Actualizar TODOS los productos del vendedor
         const { error: prodError } = await supabase
             .from('productos')
             .update({ vendedor: nombreTienda, municipio: municipio })
             .eq('seller_id', currentUser.id);
         if (prodError) console.warn('Error actualizando productos:', prodError);
 
-        // 3. Limpiar caché
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
 
+        logoPendiente = null;
+        logoEliminar = false;
+        logoActualUrl = logoUrl;
+        const logoInput = document.getElementById('mi-logo-input');
+        if (logoInput) logoInput.value = '';
+
         mostrarToast('✅ Tienda actualizada correctamente', 'ok');
+        renderLogoPreview();
         cargarProductos();
     } catch (err) {
         console.error(err);
@@ -165,7 +263,7 @@ function actualizarEstadoVisualConfig(enabled, merchantId) {
         statusDiv.style.display = 'block';
         statusDiv.style.background = '#fff3e0';
         statusDiv.style.border = '1px solid #ffe0b2';
-        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>QvaPay no está activado</strong><br>Debes guardar un Merchant ID válido para recibir pagos digitales.`;
+        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>QvaPay no está activado</strong><br>Debes guardar un Merchant ID válido.`;
     }
 }
 
@@ -194,7 +292,6 @@ async function cargarConfiguracionPagos() {
             merchantGroup.style.display = data?.qvapay_enabled ? 'block' : 'none';
         }
         if (merchantInput) merchantInput.value = data?.qvapay_merchant_id || '';
-
         actualizarEstadoVisualConfig(data?.qvapay_enabled, data?.qvapay_merchant_id);
     } catch (err) {
         console.error(err);
@@ -214,7 +311,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser = user;
 
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-
     if (profile?.role === 'pending_seller') {
         mostrarToast('Tu cuenta está pendiente de aprobación.', 'warning');
         setTimeout(() => { window.location.href = '/'; }, 2500);
@@ -240,7 +336,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (shell) shell.classList.add('visible');
     iniciar();
 
-    // ========== NAV ITEMS ==========
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         item.addEventListener('click', () => {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -257,7 +352,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // ========== BOTONES PRINCIPALES ==========
     document.getElementById('btn-nuevo')?.addEventListener('click', () => abrirNuevo());
     document.getElementById('modal-cerrar')?.addEventListener('click', () => cerrarModal());
     document.getElementById('btn-cancelar')?.addEventListener('click', () => cerrarModal());
@@ -267,18 +361,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('borrar-cancelar')?.addEventListener('click', () => cerrarBorrar());
     document.getElementById('borrar-confirmar')?.addEventListener('click', () => eliminarProducto());
 
-    // ========== MI TIENDA ==========
-    document.getElementById('mi-nombre-tienda')?.addEventListener('input', actualizarPreviewTienda);
+    // ========== MI TIENDA LISTENERS ==========
+    document.getElementById('mi-nombre-tienda')?.addEventListener('input', () => {
+        actualizarPreviewTienda();
+        if (!logoPendiente && (!logoActualUrl || logoEliminar)) {
+            renderLogoPreview();
+        }
+    });
     document.getElementById('mi-municipio')?.addEventListener('change', actualizarPreviewTienda);
     document.getElementById('guardar-mi-tienda')?.addEventListener('click', guardarMiTienda);
 
-    // ========== LOGOUT ==========
+    document.getElementById('mi-logo-input')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            mostrarToast('El logo supera los 2MB', 'error');
+            e.target.value = '';
+            return;
+        }
+        logoPendiente = file;
+        logoEliminar = false;
+        renderLogoPreview();
+    });
+
+    document.getElementById('quitar-logo-btn')?.addEventListener('click', () => {
+        logoPendiente = null;
+        logoEliminar = true;
+        const logoInput = document.getElementById('mi-logo-input');
+        if (logoInput) logoInput.value = '';
+        renderLogoPreview();
+    });
+
     document.getElementById('btn-logout')?.addEventListener('click', async () => {
         await supabase.auth.signOut();
         window.location.href = '/';
     });
 
-    // ========== QVAPAY ==========
     const qvapayEnabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
     const qvapayMerchantGroup = document.getElementById('qvapay-merchant-group');
     if (qvapayEnabledCheckbox) {
@@ -768,21 +886,101 @@ function limpiarFormulario() {
     if (fileInput) fileInput.value = '';
 }
 
+// ==================== VARIANTES ====================
 function agregarVariante(v = null, index = null) {
     const div = document.createElement('div');
     div.className = 'variante-item';
+
+    const imagenActual = v?.imagen || '';
+    const tieneImagen = !!imagenActual;
+
     div.innerHTML = `
         <button class="btn-rm-variante" type="button"><i class="fas fa-times"></i></button>
         <div class="variante-fila">
-            <div class="form-group"><label>Nombre</label><input type="text" class="var-nombre" placeholder="Ej: Rojo, XL" value="${escapeHtml(v?.nombre || '')}"></div>
-            <div class="form-group"><label>Precio (CUP)</label><input type="number" class="var-precio" placeholder="Opcional" value="${v?.precio ?? ''}"></div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" class="var-nombre" placeholder="Ej: Rojo, XL" value="${escapeHtml(v?.nombre || '')}">
+            </div>
+            <div class="form-group">
+                <label>Precio (CUP)</label>
+                <input type="number" class="var-precio" placeholder="Opcional" value="${v?.precio ?? ''}">
+            </div>
         </div>
         <div class="variante-fila">
-            <div class="form-group"><label>Stock</label><input type="number" class="var-stock" placeholder="Cantidad" value="${v?.stock ?? ''}"></div>
-            <div class="form-group"><label>Imagen URL</label><input type="url" class="var-imagen" placeholder="https://..." value="${escapeHtml(v?.imagen || '')}"></div>
+            <div class="form-group">
+                <label>Stock</label>
+                <input type="number" class="var-stock" placeholder="Cantidad" value="${v?.stock ?? ''}">
+            </div>
+            <div class="form-group">
+                <label>Imagen de la variante</label>
+                <div class="variante-imagen-fila">
+                    <div class="variante-preview ${tieneImagen ? 'tiene-imagen' : ''}" data-url="${escapeHtml(imagenActual)}">
+                        ${tieneImagen
+                            ? `<img src="${escapeHtml(imagenActual)}" alt="Variante" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-image\\'></i>';"><button type="button" class="variante-preview-quitar" title="Quitar imagen"><i class="fas fa-times"></i></button>`
+                            : `<i class="fas fa-image"></i>`
+                        }
+                    </div>
+                    <div class="variante-upload">
+                        <label class="variante-upload-label">
+                            <i class="fas fa-cloud-upload-alt"></i> Subir imagen
+                            <input type="file" class="var-imagen-input" accept="image/jpeg,image/png,image/webp">
+                        </label>
+                        <span class="variante-upload-hint">JPG, PNG o WebP · máx. 5MB</span>
+                    </div>
+                </div>
+            </div>
         </div>`;
+
     div.querySelector('.btn-rm-variante').addEventListener('click', () => div.remove());
+
+    const previewEl = div.querySelector('.variante-preview');
+    const fileInput = div.querySelector('.var-imagen-input');
+    const quitarBtn = div.querySelector('.variante-preview-quitar');
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            mostrarToast('La imagen supera los 5MB', 'error');
+            fileInput.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            previewEl.innerHTML = `
+                <img src="${event.target.result}" alt="Nueva imagen">
+                <button type="button" class="variante-preview-quitar" title="Quitar imagen"><i class="fas fa-times"></i></button>
+            `;
+            previewEl.classList.add('tiene-imagen');
+            previewEl.dataset.url = '';
+            previewEl.dataset.pendiente = 'true';
+
+            previewEl.querySelector('.variante-preview-quitar').addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                quitarImagenVariante(previewEl, fileInput);
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    if (quitarBtn) {
+        quitarBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            quitarImagenVariante(previewEl, fileInput);
+        });
+    }
+
     document.getElementById('variantes-list').appendChild(div);
+}
+
+function quitarImagenVariante(previewEl, fileInput) {
+    previewEl.innerHTML = '<i class="fas fa-image"></i>';
+    previewEl.classList.remove('tiene-imagen');
+    previewEl.dataset.url = '';
+    previewEl.dataset.pendiente = 'false';
+    if (fileInput) fileInput.value = '';
 }
 
 function validarTelefonoCubano(tel) {
@@ -829,6 +1027,10 @@ async function guardarProducto() {
             }
         } else if (urlInput) {
             imagenPrincipal = urlInput;
+        } else if (editandoId) {
+            const prodActual = productos.find(p => p.id === editandoId);
+            imagenPrincipal = prodActual?.imagen || '';
+            galeriaUrls = prodActual?.galeria || [];
         } else {
             mostrarToast('Debes seleccionar al menos una imagen', 'error');
             return;
@@ -837,19 +1039,35 @@ async function guardarProducto() {
         document.getElementById('f-imagen').value = imagenPrincipal;
 
         const variantes = [];
-        document.querySelectorAll('.variante-item').forEach(item => {
+        const varianteItems = document.querySelectorAll('.variante-item');
+
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando variantes...';
+
+        for (const item of varianteItems) {
             const nombreVar = item.querySelector('.var-nombre')?.value.trim();
-            if (!nombreVar) return;
+            if (!nombreVar) continue;
+
             const precioVar = parseFloat(item.querySelector('.var-precio')?.value);
             const stockVar = parseInt(item.querySelector('.var-stock')?.value);
-            const imagenVar = item.querySelector('.var-imagen')?.value.trim();
+            const previewEl = item.querySelector('.variante-preview');
+            const fileInputVar = item.querySelector('.var-imagen-input');
+
+            let imagenVarUrl = null;
+
+            if (fileInputVar && fileInputVar.files && fileInputVar.files[0]) {
+                const uploadedUrl = await subirImagen(fileInputVar.files[0], editandoId);
+                if (uploadedUrl) imagenVarUrl = uploadedUrl;
+            } else if (previewEl?.dataset.url) {
+                imagenVarUrl = previewEl.dataset.url;
+            }
+
             variantes.push({
                 nombre: nombreVar,
                 precio: isNaN(precioVar) ? null : precioVar,
                 stock: isNaN(stockVar) ? 0 : stockVar,
-                imagen: imagenVar || null
+                imagen: imagenVarUrl
             });
-        });
+        }
 
         const productoData = {
             nombre, precio, stock,

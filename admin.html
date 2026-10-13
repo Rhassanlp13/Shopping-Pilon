@@ -5,584 +5,126 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Granma Market</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
     <link rel="stylesheet" href="style.css">
-
-    <!-- Tailwind CSS (solo para componentes nuevos) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            corePlugins: { preflight: false },
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#1a237e',
-                        accent: '#ff9800',
-                        whatsapp: '#25d366',
-                        danger: '#e53935',
-                    },
-                    fontFamily: {
-                        sans: ['DM Sans', 'sans-serif'],
-                        serif: ['Playfair Display', 'serif'],
-                    }
+                    colors: { primary: '#064e3b', accent: '#f59e0b', whatsapp: '#25d366', danger: '#e53935' },
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'], serif: ['Outfit', 'sans-serif'] }
                 }
             }
         }
     </script>
-
     <style>
-        .shell {
-            display: none;
-            min-height: 100vh;
-        }
-
-        .shell.visible {
-            display: grid;
-            grid-template-columns: 220px 1fr;
-        }
-
-        .sidebar {
-            background: var(--primary);
-            color: var(--white);
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            position: sticky;
-            top: 0;
-        }
-
-        .sidebar-logo {
-            padding: 1.4rem 1.2rem 1rem;
-            font-family: 'Playfair Display', serif;
-            font-size: 1.1rem;
-            font-weight: 900;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 0.5rem;
-        }
-
-        .sidebar-logo span {
-            color: var(--accent);
-        }
-
-        .sidebar-badge {
-            display: block;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.7rem;
-            font-weight: 400;
-            opacity: 0.5;
-            margin-top: 2px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 1.2rem;
-            font-size: 0.88rem;
-            color: rgba(255, 255, 255, 0.65);
-            cursor: pointer;
-            border-left: 3px solid transparent;
-            transition: all 0.2s ease;
-            user-select: none;
-        }
-
-        .nav-item:hover {
-            color: var(--white);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .nav-item.active {
-            color: var(--white);
-            background: rgba(255, 255, 255, 0.1);
-            border-left-color: var(--accent);
-        }
-
-        .nav-item i {
-            width: 16px;
-            text-align: center;
-            font-size: 0.85rem;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 1rem 1.2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .btn-logout {
-            width: 100%;
-            background: none;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.6);
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 0.82rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .btn-logout:hover {
-            color: var(--white);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .main {
-            padding: 1.5rem 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .page {
-            display: none;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .page.active {
-            display: flex;
-        }
-
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .topbar h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
-            color: var(--primary);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-        }
-
-        .stat-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1rem 1.2rem;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
-
-        .stat-val {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .table-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow-x: auto;
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 1.2rem;
-            border-bottom: 1px solid var(--border);
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .table-header h2 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .search-input {
-            padding: 7px 12px;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            width: 200px;
-            transition: border-color 0.2s;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-
-        th {
-            background: var(--bg);
-            padding: 10px 12px;
-            text-align: left;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #f0f0f0;
-            vertical-align: middle;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background: #fafafa;
-        }
-
-        .prod-thumb {
-            width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            object-fit: cover;
-            border: 1px solid var(--border);
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-
-        .prod-name {
-            font-weight: 500;
-        }
-
-        .prod-vendedor {
-            font-size: 0.78rem;
-            color: var(--muted);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .badge-ok {
-            background: #e8f5e9;
-            color: var(--success);
-        }
-
-        .badge-low {
-            background: #fff8e1;
-            color: var(--warning);
-        }
-
-        .badge-out {
-            background: #ffebee;
-            color: var(--danger);
-        }
-
-        .badge-variant {
-            background: #e8eaf6;
-            color: var(--primary);
-        }
-
-        .actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .act-btn {
-            background: none;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: 0.78rem;
-            cursor: pointer;
-            color: var(--text);
-            transition: all 0.2s;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .act-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .act-btn.del:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: var(--white);
-            border: none;
-            border-radius: 8px;
-            padding: 9px 18px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            font-family: 'DM Sans', sans-serif;
-            transition: opacity 0.2s;
-        }
-
-        .btn-primary:hover {
-            opacity: 0.88;
-        }
-
-        .btn-secondary {
-            background: none;
-            color: var(--text);
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 18px;
-            font-size: 0.88rem;
-            font-weight: 500;
-            cursor: pointer;
-            font-family: 'DM Sans', sans-serif;
-            transition: border-color 0.2s;
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.45);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-            padding: 1rem;
-        }
-
-        .modal-overlay[hidden] {
-            display: none;
-        }
-
-        .modal-box {
-            background: var(--white);
-            border-radius: 16px;
-            width: 100%;
-            max-width: 520px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .modal-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.2rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            background: var(--white);
-            z-index: 1;
-        }
-
-        .modal-head h2 {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.3rem;
-            cursor: pointer;
-            color: var(--muted);
-            line-height: 1;
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .form-group label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            padding: 10px 12px;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            transition: border-color 0.2s;
-            background: var(--bg);
-            color: var(--text);
-            width: 100%;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: var(--primary);
-            background: var(--white);
-        }
-
-        .section-title {
-            font-size: 0.78rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: var(--primary);
-            padding-bottom: 6px;
-            border-bottom: 2px solid var(--bg);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .variante-item {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: var(--bg);
-            position: relative;
-        }
-
-        .variante-fila {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .variante-item input {
-            padding: 8px 10px;
-            border: 1.5px solid var(--border);
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            background: var(--white);
-            width: 100%;
-            transition: border-color 0.2s;
-        }
-
-        .variante-item input:focus {
-            border-color: var(--primary);
-        }
-
-        .btn-rm-variante {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: none;
-            border: none;
-            color: var(--danger);
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 2px 5px;
-            line-height: 1;
-        }
-
-        .modal-footer {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            position: sticky;
-            bottom: 0;
-            background: var(--white);
-        }
-
-        .table-empty {
-            text-align: center;
-            padding: 3rem;
-            color: var(--muted);
-        }
-
-        .table-empty i {
-            font-size: 2rem;
-            display: block;
-            margin-bottom: 0.8rem;
-            opacity: 0.4;
-        }
+        .shell { display: none; min-height: 100vh; }
+        .shell.visible { display: grid; grid-template-columns: 220px 1fr; }
+        .sidebar { background: var(--primary); color: var(--white); display: flex; flex-direction: column; min-height: 100vh; position: sticky; top: 0; }
+        .sidebar-logo { padding: 1.4rem 1.2rem 1rem; font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 900; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 0.5rem; }
+        .sidebar-logo span { color: var(--accent); }
+        .sidebar-badge { display: block; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.7rem; font-weight: 400; opacity: 0.5; margin-top: 2px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 1.2rem; font-size: 0.88rem; color: rgba(255, 255, 255, 0.65); cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s ease; user-select: none; }
+        .nav-item:hover { color: var(--white); background: rgba(255, 255, 255, 0.05); }
+        .nav-item.active { color: var(--white); background: rgba(255, 255, 255, 0.1); border-left-color: var(--accent); }
+        .nav-item i { width: 16px; text-align: center; font-size: 0.85rem; }
+        .sidebar-footer { margin-top: auto; padding: 1rem 1.2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; }
+        .btn-logout { width: 100%; background: none; border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.6); border-radius: 8px; padding: 8px; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; text-decoration: none; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .btn-logout:hover { color: var(--white); border-color: rgba(255, 255, 255, 0.4); }
+        .main { padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        .page { display: none; flex-direction: column; gap: 1.5rem; }
+        .page.active { display: flex; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .topbar h1 { font-family: 'Outfit', sans-serif; font-size: 1.4rem; color: var(--primary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; }
+        .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .stat-val { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+        .table-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
+        .table-header h2 { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+        .search-input { padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.85rem; font-family: 'Plus Jakarta Sans', sans-serif; outline: none; width: 200px; transition: border-color 0.2s; }
+        .search-input:focus { border-color: var(--primary); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: var(--bg); padding: 10px 12px; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+        .prod-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); vertical-align: middle; margin-right: 8px; }
+        .prod-name { font-weight: 500; }
+        .prod-vendedor { font-size: 0.78rem; color: var(--muted); }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-ok { background: #ecfdf5; color: #065f46; }
+        .badge-low { background: #fef3c7; color: #92400e; }
+        .badge-out { background: #ffebee; color: #c62828; }
+        .badge-variant { background: #d1fae5; color: var(--primary); }
+        .actions { display: flex; gap: 6px; }
+        .act-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; cursor: pointer; color: var(--text); transition: all 0.2s; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .act-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .act-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+        .btn-primary { background: var(--primary); color: var(--white); border: none; border-radius: 8px; padding: 9px 18px; font-size: 0.88rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; font-family: 'Plus Jakarta Sans', sans-serif; transition: opacity 0.2s; }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-secondary { background: none; color: var(--text); border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 18px; font-size: 0.88rem; font-weight: 500; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: border-color 0.2s; }
+        .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1rem; }
+        .modal-overlay[hidden] { display: none; }
+        .modal-box { background: var(--white); border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15); }
+        .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--white); z-index: 1; }
+        .modal-head h2 { font-size: 1rem; font-weight: 700; color: var(--primary); }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--muted); line-height: 1; }
+        .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group textarea, .form-group select { padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: 'Plus Jakarta Sans', sans-serif; outline: none; transition: border-color 0.2s; background: var(--bg); color: var(--text); width: 100%; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary); background: var(--white); }
+        .section-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--primary); padding-bottom: 6px; border-bottom: 2px solid var(--bg); display: flex; justify-content: space-between; align-items: center; }
+
+        /* ========== VARIANTES ========== */
+        .variante-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); position: relative; }
+        .variante-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .variante-item input[type="text"], .variante-item input[type="number"] { padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 0.85rem; font-family: 'Plus Jakarta Sans', sans-serif; outline: none; background: var(--white); width: 100%; transition: border-color 0.2s; }
+        .variante-item input:focus { border-color: var(--primary); }
+        .variante-imagen-fila { display: flex; align-items: center; gap: 12px; background: var(--white); padding: 10px; border-radius: 8px; border: 1.5px dashed var(--border); transition: border-color 0.2s; }
+        .variante-imagen-fila:hover { border-color: var(--primary); }
+        .variante-preview { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #f0f0f0; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid var(--border); }
+        .variante-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .variante-preview i { color: #bbb; font-size: 1.4rem; }
+        .variante-preview .variante-preview-quitar { position: absolute; top: -6px; right: -6px; background: var(--danger); color: white; border: 2px solid white; border-radius: 50%; width: 22px; height: 22px; display: none; align-items: center; justify-content: center; font-size: 0.7rem; cursor: pointer; padding: 0; line-height: 1; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); }
+        .variante-preview.tiene-imagen .variante-preview-quitar { display: flex; }
+        .variante-upload { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .variante-upload-label { font-size: 0.78rem; font-weight: 600; color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .variante-upload-label:hover { text-decoration: underline; }
+        .variante-upload input[type="file"] { display: none; }
+        .variante-upload-hint { font-size: 0.7rem; color: var(--muted); }
+        .btn-rm-variante { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; padding: 2px 5px; line-height: 1; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: var(--white); }
+        .table-empty { text-align: center; padding: 3rem; color: var(--muted); }
+        .table-empty i { font-size: 2rem; display: block; margin-bottom: 0.8rem; opacity: 0.4; }
+
+        /* ========== LOGO DE TIENDA ========== */
+        .logo-upload-area { display: flex; align-items: center; gap: 16px; background: var(--bg); padding: 14px; border-radius: 12px; border: 1.5px dashed var(--border); transition: border-color 0.2s; }
+        .logo-upload-area:hover { border-color: var(--primary); }
+        .logo-preview { width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-size: 2rem; flex-shrink: 0; overflow: hidden; border: 3px solid var(--white); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .logo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .logo-upload-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .logo-upload-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--primary); color: white; padding: 9px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; align-self: flex-start; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .logo-upload-btn:hover { opacity: 0.9; }
+        .logo-upload-btn input[type="file"] { display: none; }
+        .logo-remove-btn { display: inline-flex; align-items: center; gap: 6px; background: none; color: var(--danger); border: 1.5px solid var(--danger); padding: 7px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; align-self: flex-start; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .logo-remove-btn:hover { background: var(--danger); color: white; }
+        .logo-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
 
         @media (max-width: 700px) {
-            .shell.visible {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                display: none;
-            }
-
-            .main {
-                padding: 1rem;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .variante-fila {
-                grid-template-columns: 1fr;
-            }
+            .shell.visible { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .main { padding: 1rem; }
+            .form-row { grid-template-columns: 1fr; }
+            .variante-fila { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -596,32 +138,17 @@
                 <span class="sidebar-badge">Panel Admin</span>
             </div>
             <nav>
-                <div class="nav-item active" data-page="productos">
-                    <i class="fas fa-box"></i> Productos
-                </div>
-                <div class="nav-item" data-page="pedidos">
-                    <i class="fas fa-truck"></i> Pedidos
-                </div>
-                <div class="nav-item" data-page="resenas">
-                    <i class="fas fa-star"></i> Reseñas
-                </div>
-                <div class="nav-item" data-page="solicitudes" id="nav-solicitudes">
-                    <i class="fas fa-user-plus"></i> Solicitudes
-                </div>
-                <div class="nav-item" data-page="configuracion">
-                    <i class="fas fa-credit-card"></i> Configuración pagos
-                </div>
-                <div class="nav-item" data-page="clientes">
-                    <i class="fas fa-users"></i> Clientes
-                </div>
+                <div class="nav-item active" data-page="productos"><i class="fas fa-box"></i> Productos</div>
+                <div class="nav-item" data-page="pedidos"><i class="fas fa-truck"></i> Pedidos</div>
+                <div class="nav-item" data-page="resenas"><i class="fas fa-star"></i> Reseñas</div>
+                <div class="nav-item" data-page="solicitudes" id="nav-solicitudes"><i class="fas fa-user-plus"></i> Solicitudes</div>
+                <div class="nav-item" data-page="mitienda"><i class="fas fa-store"></i> Mi tienda</div>
+                <div class="nav-item" data-page="configuracion"><i class="fas fa-credit-card"></i> Configuración pagos</div>
+                <div class="nav-item" data-page="clientes"><i class="fas fa-users"></i> Clientes</div>
             </nav>
             <div class="sidebar-footer">
-                <a href="index.html" class="btn-logout">
-                    <i class="fas fa-store"></i> Ver tienda
-                </a>
-                <button class="btn-logout" id="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-                </button>
+                <a href="index.html" class="btn-logout"><i class="fas fa-store"></i> Ver tienda</a>
+                <button class="btn-logout" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
             </div>
         </aside>
 
@@ -629,9 +156,7 @@
             <div class="page active" id="page-productos">
                 <div class="topbar">
                     <h1>Productos</h1>
-                    <button class="btn-primary" id="btn-nuevo">
-                        <i class="fas fa-plus"></i> Nuevo producto
-                    </button>
+                    <button class="btn-primary" id="btn-nuevo"><i class="fas fa-plus"></i> Nuevo producto</button>
                 </div>
                 <div class="stats-grid" id="stats-productos"></div>
                 <div class="table-card">
@@ -640,97 +165,124 @@
                         <input type="text" class="search-input" id="buscador" placeholder="Buscar producto...">
                     </div>
                     <div id="tabla-productos">
-                        <div class="table-empty">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Cargando productos...</p>
-                        </div>
+                        <div class="table-empty"><i class="fas fa-spinner fa-spin"></i><p>Cargando productos...</p></div>
                     </div>
                 </div>
             </div>
 
             <div class="page" id="page-pedidos">
-                <div class="topbar">
-                    <h1>Pedidos</h1>
-                </div>
+                <div class="topbar"><h1>Pedidos</h1></div>
                 <div class="table-card">
-                    <div id="tabla-pedidos">
-                        <div class="table-empty">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Cargando pedidos...</p>
-                        </div>
-                    </div>
+                    <div id="tabla-pedidos"><div class="table-empty"><i class="fas fa-spinner fa-spin"></i><p>Cargando pedidos...</p></div></div>
                 </div>
             </div>
 
             <div class="page" id="page-resenas">
-                <div class="topbar">
-                    <h1>Reseñas</h1>
-                </div>
+                <div class="topbar"><h1>Reseñas</h1></div>
                 <div class="table-card">
-                    <div id="tabla-resenas">
-                        <div class="table-empty">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Cargando reseñas...</p>
-                        </div>
-                    </div>
+                    <div id="tabla-resenas"><div class="table-empty"><i class="fas fa-spinner fa-spin"></i><p>Cargando reseñas...</p></div></div>
                 </div>
             </div>
 
             <div class="page" id="page-solicitudes">
-                <div class="topbar">
-                    <h1>Solicitudes de vendedores</h1>
-                </div>
+                <div class="topbar"><h1>Solicitudes de vendedores</h1></div>
                 <div class="table-card">
-                    <div id="tabla-solicitudes">
-                        <div class="table-empty">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Cargando solicitudes...</p>
+                    <div id="tabla-solicitudes"><div class="table-empty"><i class="fas fa-spinner fa-spin"></i><p>Cargando solicitudes...</p></div></div>
+                </div>
+            </div>
+
+            <!-- ========== MI TIENDA ========== -->
+            <div class="page" id="page-mitienda">
+                <div class="topbar"><h1>Mi tienda</h1></div>
+                <div class="table-card" style="padding: 1.5rem; max-width: 600px; margin: 0 auto;">
+                    <!-- LOGO -->
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label>Logo de la tienda</label>
+                        <div class="logo-upload-area" id="logo-upload-area">
+                            <div class="logo-preview" id="logo-preview">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <div class="logo-upload-info">
+                                <label class="logo-upload-btn">
+                                    <i class="fas fa-cloud-upload-alt"></i> Subir logo
+                                    <input type="file" id="mi-logo-input" accept="image/jpeg,image/png,image/webp">
+                                </label>
+                                <button type="button" id="quitar-logo-btn" class="logo-remove-btn" style="display: none;">
+                                    <i class="fas fa-trash"></i> Quitar
+                                </button>
+                                <small class="logo-hint">
+                                    Recomendado: imagen cuadrada (400×400px), máx 2MB.<br>
+                                    Si no subes nada, se usarán las iniciales de tu tienda.
+                                </small>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="form-group" style="margin-bottom: 1.2rem;">
+                        <label>Nombre de la tienda *</label>
+                        <input type="text" id="mi-nombre-tienda" placeholder="Ej: B-TECH LEADERS" maxlength="40">
+                        <small style="color: var(--muted); font-size: 0.78rem; margin-top: 4px;">Así verán los clientes tu tienda en el catálogo y en el detalle del producto.</small>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.2rem;">
+                        <label>Municipio *</label>
+                        <select id="mi-municipio">
+                            <option value="">-- Selecciona --</option>
+                            <option value="Bayamo">Bayamo</option>
+                            <option value="Bartolomé Masó">Bartolomé Masó</option>
+                            <option value="Buey Arriba">Buey Arriba</option>
+                            <option value="Campechuela">Campechuela</option>
+                            <option value="Cauto Cristo">Cauto Cristo</option>
+                            <option value="Guisa">Guisa</option>
+                            <option value="Jiguaní">Jiguaní</option>
+                            <option value="Manzanillo">Manzanillo</option>
+                            <option value="Media Luna">Media Luna</option>
+                            <option value="Niquero">Niquero</option>
+                            <option value="Pilón">Pilón</option>
+                            <option value="Río Cauto">Río Cauto</option>
+                            <option value="Yara">Yara</option>
+                        </select>
+                    </div>
+
+                    <!-- Preview -->
+                    <div id="mitienda-preview" style="margin-top: 1.5rem; background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); padding: 1.5rem; border-radius: 16px; text-align: center; color: white;">
+                        <small style="color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; font-size: 0.65rem;">Así se verá tu tienda</small>
+                        <div id="preview-avatar" style="width: 70px; height: 70px; border-radius: 50%; margin: 12px auto 8px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.5rem; overflow: hidden; border: 3px solid rgba(255,255,255,0.25);">
+                            <span id="preview-iniciales">RM</span>
+                        </div>
+                        <h3 id="preview-nombre" style="font-family: 'Outfit', sans-serif; color: white; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;">Sin nombre</h3>
+                        <p id="preview-municipio" style="color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 6px;">Sin municipio</p>
+                    </div>
+                    <button id="guardar-mi-tienda" class="btn-primary" style="margin-top: 1.5rem; width: 100%; justify-content: center;"><i class="fas fa-save"></i> Guardar cambios</button>
                 </div>
             </div>
 
             <div class="page" id="page-configuracion">
-                <div class="topbar">
-                    <h1>Configuración de pagos</h1>
-                </div>
+                <div class="topbar"><h1>Configuración de pagos</h1></div>
                 <div class="table-card" style="padding: 1.5rem;">
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" id="qvapay-enabled-checkbox">
                             Aceptar pagos con QvaPay (dólar digital)
                         </label>
-                        <small style="color: var(--muted);">Al activar esta opción, tus clientes podrán pagar online
-                            usando QvaPay.
-                            Los fondos se recibirán directamente en tu cuenta de QvaPay.</small>
+                        <small style="color: var(--muted);">Al activar esta opción, tus clientes podrán pagar online usando QvaPay.</small>
                     </div>
                     <div class="form-group" id="qvapay-merchant-group" style="display: none; margin-top: 1rem;">
                         <label>Merchant ID (UUID de QvaPay) *</label>
-                        <input type="text" id="qvapay-merchant-id"
-                            placeholder="Ej: 93c09dbb-d0d9-4c14-a70c-d6adfcfef0c7d">
-                        <small>Lo encuentras en tu cuenta de QvaPay → Perfil → UUID (en "Información de cuenta")</small>
+                        <input type="text" id="qvapay-merchant-id" placeholder="Ej: 93c09dbb-d0d9-4c14-a70c-d6adfcfef0c7d">
+                        <small>Lo encuentras en tu cuenta de QvaPay → Perfil → UUID</small>
                     </div>
                     <button id="guardar-config-pagos" class="btn-primary">Guardar configuración</button>
-                    <div id="qvapay-status" class="config-status"
-                        style="margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: #f5f5f7; display: none;">
+                    <div id="qvapay-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: #f5f5f7; display: none;">
                         <i class="fas fa-check-circle" style="color: #2e7d32;"></i>
                         <span id="qvapay-status-text"></span>
                     </div>
-                    <div id="config-pagos-mensaje" style="margin-top: 1rem;"></div>
                 </div>
             </div>
 
             <div class="page" id="page-clientes">
-                <div class="topbar">
-                    <h1>Clientes registrados</h1>
-                </div>
+                <div class="topbar"><h1>Clientes registrados</h1></div>
                 <div class="table-card">
-                    <div id="tabla-clientes">
-                        <div class="table-empty">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Cargando clientes...</p>
-                        </div>
-                    </div>
+                    <div id="tabla-clientes"><div class="table-empty"><i class="fas fa-spinner fa-spin"></i><p>Cargando clientes...</p></div></div>
                 </div>
             </div>
         </main>
@@ -807,21 +359,17 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="form-group" id="grupo-file-imagen">
                     <label>Imágenes del producto *</label>
                     <input type="file" id="f-imagen-file" accept="image/jpeg,image/png,image/webp" multiple>
                     <div id="vista-previa" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
-                    <small style="color: var(--muted);">Selecciona una o varias imágenes (JPG, PNG, WebP, máx. 10MB cada
-                        una). Se optimizarán automáticamente.</small>
+                    <small style="color: var(--muted);">Máximo 6 imágenes. Se optimizarán automáticamente.</small>
                 </div>
                 <div class="form-group" id="grupo-url-imagen" style="display: none;">
                     <label>URL de imagen (externo)</label>
                     <input type="url" id="f-imagen" placeholder="https://...">
                 </div>
-
-                <div class="section-title" style="margin-top:0.5rem"><span><i class="fas fa-fire"></i> Oferta
-                        (opcional)</span></div>
+                <div class="section-title" style="margin-top:0.5rem"><span><i class="fas fa-fire"></i> Oferta (opcional)</span></div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Precio de oferta (CUP)</label>
@@ -835,14 +383,11 @@
                         </label>
                     </div>
                 </div>
-
                 <div class="section-title" style="margin-top:0.5rem">
                     <span><i class="fas fa-layer-group"></i> Variantes (opcional)</span>
-                    <button class="btn-primary" id="btn-add-variante" style="padding:5px 12px;font-size:0.78rem"><i
-                            class="fas fa-plus"></i> Añadir variante</button>
+                    <button class="btn-primary" id="btn-add-variante" style="padding:5px 12px;font-size:0.78rem"><i class="fas fa-plus"></i> Añadir variante</button>
                 </div>
-                <p style="font-size:0.78rem;color:var(--muted);margin-top:-6px">Cada variante puede tener su propia
-                    foto, precio y stock.</p>
+                <p style="font-size:0.78rem;color:var(--muted);margin-top:-6px">Cada variante puede tener su propia foto, precio y stock.</p>
                 <div id="variantes-list"></div>
             </div>
             <div class="modal-footer">
@@ -859,25 +404,21 @@
                 <h2>Confirmar eliminación</h2><button class="modal-close" id="borrar-cerrar">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="font-size:0.92rem">¿Seguro que quieres eliminar <strong id="borrar-nombre"></strong>? Esta
-                    acción no se puede deshacer.</p>
+                <p style="font-size:0.92rem">¿Seguro que quieres eliminar <strong id="borrar-nombre"></strong>? Esta acción no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" id="borrar-cancelar">Cancelar</button>
-                <button class="btn-primary" id="borrar-confirmar" style="background:var(--danger)"><i
-                        class="fas fa-trash"></i> Eliminar</button>
+                <button class="btn-primary" id="borrar-confirmar" style="background:var(--danger)"><i class="fas fa-trash"></i> Eliminar</button>
             </div>
         </div>
     </div>
     <div id="toast-container"></div>
 
-    <button id="help-button"
-        style="position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 999;">
+    <button id="help-button" style="position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 999;">
         <i class="fas fa-question"></i>
     </button>
 
     <div id="toast-admin"></div>
-
     <script type="module" src="js/admin.js"></script>
 </body>
 
