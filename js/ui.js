@@ -1,10 +1,61 @@
-// ui.js - Granma Market con filtros, envío, nombre expandible, reseñas con usuario logueado y botón "Ver tienda"
+// ui.js - Granma Market con filtros, envío, tasa de cambio, nombre expandible y reseñas
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
 import { openAuthModal } from './auth.js';
+
+// ==================== TASA DE CAMBIO ====================
+let TASA_USD_CUP_GLOBAL = 250; // Valor por defecto
+
+async function cargarTasaCambio() {
+    // Intentar caché de 1 hora
+    const cached = localStorage.getItem('tasa_usd_cup');
+    const cachedTime = localStorage.getItem('tasa_usd_cup_time');
+    if (cached && cachedTime && (Date.now() - parseInt(cachedTime)) < 3600000) {
+        TASA_USD_CUP_GLOBAL = parseFloat(cached);
+        return;
+    }
+
+    try {
+        // Obtener la tasa más reciente entre vendedores activos
+        const { data } = await supabase
+            .from('profiles')
+            .select('tasa_cambio, tasa_actualizada')
+            .not('tasa_cambio', 'is', null)
+            .in('role', ['seller', 'admin'])
+            .order('tasa_actualizada', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (data?.tasa_cambio) {
+            TASA_USD_CUP_GLOBAL = parseFloat(data.tasa_cambio);
+            localStorage.setItem('tasa_usd_cup', TASA_USD_CUP_GLOBAL.toString());
+            localStorage.setItem('tasa_usd_cup_time', Date.now());
+        }
+    } catch (err) {
+        console.warn('No se pudo cargar la tasa, usando valor por defecto');
+    }
+}
+
+function mostrarBannerTasa() {
+    const banner = document.getElementById('tasa-anuncio');
+    const valorEl = document.getElementById('tasa-valor');
+    const fechaEl = document.getElementById('tasa-fecha');
+
+    if (!banner || !valorEl) return;
+
+    valorEl.textContent = TASA_USD_CUP_GLOBAL.toLocaleString('es');
+
+    if (fechaEl) {
+        const ahora = new Date();
+        const fecha = ahora.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+        fechaEl.textContent = `(${fecha})`;
+    }
+
+    banner.style.display = 'flex';
+}
 
 // ==================== OPTIMIZACIÓN DE IMÁGENES ====================
 function optimizarImagen(url, ancho = 400, alto = 400) {
@@ -58,13 +109,18 @@ export const UI = {
     municipioActual: 'todos',
     _datosPedidoPendiente: null,
 
-    init(productos) {
+    async init(productos) {
         this.productos = productos;
         this.grid = document.getElementById('grid');
         this.cartCount = document.getElementById('cart-count');
         this.cartModal = document.getElementById('cart-modal');
         this.cartItems = document.getElementById('cart-items');
         this.cartTotal = document.getElementById('cart-total');
+
+        // Cargar tasa primero y mostrar banner
+        await cargarTasaCambio();
+        mostrarBannerTasa();
+
         this.renderProductos();
         this.actualizarContador();
         this.bindEventos();
@@ -115,6 +171,13 @@ export const UI = {
             const textoMoneda = moneda === 'USD' ? ' USD' : ' CUP';
             const simbolo = '$';
 
+            // Conversión a CUP si es USD
+            let precioCUPTexto = '';
+            if (moneda === 'USD') {
+                const precioEnCUP = Math.round(precioReal * TASA_USD_CUP_GLOBAL / 100) * 100;
+                precioCUPTexto = `<div class="precio-cup-aprox">≈ $${precioEnCUP.toLocaleString('es')} CUP</div>`;
+            }
+
             const municipioBadge = p.municipio
                 ? `<span class="vendedor-municipio"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}</span>`
                 : '';
@@ -137,6 +200,7 @@ export const UI = {
                         <span class="price ${descuento ? 'price-oferta' : ''}">${simbolo}${Number(precioReal).toLocaleString('es')}${textoMoneda}</span>
                         ${descuento ? `<span class="descuento-badge">−${descuento}%</span>` : ''}
                     </div>
+                    ${precioCUPTexto}
                     <button class="card-btn-add" data-id="${escapeHtml(p.id)}" ${agotado ? 'disabled' : ''}>
                         ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir'}
                     </button>
@@ -414,11 +478,22 @@ export const UI = {
             const precioEl = document.getElementById('detalle-precio');
             if (precioEl) {
                 const descuentoBase = (p.enoferta && p.preciooferta && !variante) ? Math.round((1 - Number(p.preciooferta) / Number(p.precio)) * 100) : null;
+
+                // Base del precio
+                let precioHTML = '';
                 if (descuentoBase && !variante) {
-                    precioEl.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span> <span style="color:#e53935;font-weight:700"> ${simbolo}${Number(p.preciooferta).toLocaleString('es')}${textoMoneda}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
+                    precioHTML = `<span style="text-decoration:line-through;color:#aaa;font-size:0.9em">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span> <span style="color:#e53935;font-weight:700"> ${simbolo}${Number(p.preciooferta).toLocaleString('es')}${textoMoneda}</span> <span style="background:#ffebee;color:#c62828;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">−${descuentoBase}%</span>`;
                 } else {
-                    precioEl.textContent = `${simbolo}${precio.toLocaleString('es')}${textoMoneda}`;
+                    precioHTML = `${simbolo}${precio.toLocaleString('es')}${textoMoneda}`;
                 }
+
+                // Añadir conversión a CUP si es USD
+                if (monedaProducto === 'USD') {
+                    const precioEnCUP = Math.round(precio * TASA_USD_CUP_GLOBAL / 100) * 100;
+                    precioHTML += `<div style="font-size: 0.85rem; color:#64748b; font-weight:500; margin-top:6px;">≈ $${precioEnCUP.toLocaleString('es')} CUP</div>`;
+                }
+
+                precioEl.innerHTML = precioHTML;
             }
 
             const stockEl = document.getElementById('detalle-stock');

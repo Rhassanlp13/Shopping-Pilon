@@ -64,7 +64,6 @@ async function subirImagen(file, productoId = null) {
 async function subirLogo(file) {
     if (!file) return null;
     try {
-        // Los logos son cuadrados 400x400
         const blobOptimizado = await resizeAndOptimizeImage(file, 400, 400);
         const nombreArchivo = `logos/${currentUser.id}_${Date.now()}.webp`;
         const { error } = await supabase.storage
@@ -129,6 +128,18 @@ function actualizarPreviewTienda() {
     }
 }
 
+function actualizarPreviewTasa() {
+    const tasa = parseFloat(document.getElementById('mi-tasa-cambio')?.value) || 0;
+    const valorEl = document.getElementById('tasa-preview-valor');
+    const ejemploEl = document.getElementById('tasa-preview-ejemplo');
+
+    if (valorEl) valorEl.textContent = tasa.toLocaleString('es');
+    if (ejemploEl) {
+        const ejemplo = Math.round(100 * tasa / 100) * 100;
+        ejemploEl.textContent = `$${ejemplo.toLocaleString('es')} CUP`;
+    }
+}
+
 function renderLogoPreview() {
     const preview = document.getElementById('logo-preview');
     const quitarBtn = document.getElementById('quitar-logo-btn');
@@ -162,15 +173,18 @@ async function cargarMiTienda() {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('nombre_tienda, nombre_completo, municipio, logo_tienda')
+            .select('nombre_tienda, nombre_completo, municipio, logo_tienda, tasa_cambio')
             .eq('id', currentUser.id)
             .single();
         if (error && error.code !== 'PGRST116') throw error;
 
         const nombreInput = document.getElementById('mi-nombre-tienda');
         const municipioSelect = document.getElementById('mi-municipio');
+        const tasaInput = document.getElementById('mi-tasa-cambio');
+
         if (nombreInput) nombreInput.value = data?.nombre_tienda || data?.nombre_completo || '';
         if (municipioSelect) municipioSelect.value = data?.municipio || '';
+        if (tasaInput) tasaInput.value = data?.tasa_cambio || 250;
 
         logoPendiente = null;
         logoEliminar = false;
@@ -181,6 +195,7 @@ async function cargarMiTienda() {
 
         renderLogoPreview();
         actualizarPreviewTienda();
+        actualizarPreviewTasa();
     } catch (err) {
         console.error(err);
         mostrarToast('Error al cargar tu tienda', 'error');
@@ -191,9 +206,11 @@ async function guardarMiTienda() {
     const btn = document.getElementById('guardar-mi-tienda');
     const nombreTienda = document.getElementById('mi-nombre-tienda')?.value.trim();
     const municipio = document.getElementById('mi-municipio')?.value;
+    const tasaCambio = parseFloat(document.getElementById('mi-tasa-cambio')?.value) || 250;
 
     if (!nombreTienda) { mostrarToast('Escribe un nombre para tu tienda', 'error'); return; }
     if (!municipio) { mostrarToast('Selecciona tu municipio', 'error'); return; }
+    if (tasaCambio <= 0) { mostrarToast('Ingresa una tasa de cambio válida', 'error'); return; }
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -217,7 +234,9 @@ async function guardarMiTienda() {
             .update({
                 nombre_tienda: nombreTienda,
                 municipio: municipio,
-                logo_tienda: logoUrl
+                logo_tienda: logoUrl,
+                tasa_cambio: tasaCambio,
+                tasa_actualizada: new Date().toISOString()
             })
             .eq('id', currentUser.id);
         if (profileError) throw profileError;
@@ -230,6 +249,8 @@ async function guardarMiTienda() {
 
         localStorage.removeItem('productos_cache');
         localStorage.removeItem('productos_cache_time');
+        localStorage.removeItem('tasa_usd_cup');
+        localStorage.removeItem('tasa_usd_cup_time');
 
         logoPendiente = null;
         logoEliminar = false;
@@ -369,6 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     document.getElementById('mi-municipio')?.addEventListener('change', actualizarPreviewTienda);
+    document.getElementById('mi-tasa-cambio')?.addEventListener('input', actualizarPreviewTasa);
     document.getElementById('guardar-mi-tienda')?.addEventListener('click', guardarMiTienda);
 
     document.getElementById('mi-logo-input')?.addEventListener('change', (e) => {

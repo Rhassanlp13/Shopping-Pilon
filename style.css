@@ -3016,3 +3016,58 @@ body.admin-page .whatsapp-float {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.08); }
 }
+
+/* ============================================
+   BANNER DE TASA DE CAMBIO
+   ============================================ */
+.tasa-anuncio {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #78350f;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #fcd34d;
+    margin: 0 0 12px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 0 0 12px 12px;
+}
+
+.tasa-anuncio i {
+    color: #d97706;
+    font-size: 0.9rem;
+}
+
+.tasa-anuncio strong {
+    font-size: 1rem;
+    color: #92400e;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+}
+
+.tasa-fecha {
+    font-size: 0.72rem;
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+@media (max-width: 640px) {
+    .tasa-anuncio {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+        gap: 5px;
+    }
+    .tasa-anuncio strong {
+        font-size: 0.9rem;
+    }
+    .tasa-fecha {
+        display: none;
+    }
+}

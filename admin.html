@@ -223,6 +223,7 @@
                         <input type="text" id="mi-nombre-tienda" placeholder="Ej: B-TECH LEADERS" maxlength="40">
                         <small style="color: var(--muted); font-size: 0.78rem; margin-top: 4px;">Así verán los clientes tu tienda en el catálogo y en el detalle del producto.</small>
                     </div>
+
                     <div class="form-group" style="margin-bottom: 1.2rem;">
                         <label>Municipio *</label>
                         <select id="mi-municipio">
@@ -243,7 +244,22 @@
                         </select>
                     </div>
 
-                    <!-- Preview -->
+                    <!-- NUEVO: Tasa de cambio -->
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label>Tasa de cambio (1 USD = ? CUP) *</label>
+                        <input type="number" id="mi-tasa-cambio" placeholder="Ej: 250" min="1" step="1">
+                        <small style="color: var(--muted); font-size: 0.78rem; margin-top: 4px;">
+                            Este valor se usa para mostrar el precio aproximado en CUP a los clientes. Actualízalo cuando cambie la tasa.
+                        </small>
+                    </div>
+
+                    <!-- Preview de la tasa -->
+                    <div id="tasa-preview" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 12px; font-size: 0.85rem; color: #92400e; margin-bottom: 1.2rem; line-height: 1.5;">
+                        <i class="fas fa-info-circle"></i>
+                        Con la tasa <strong id="tasa-preview-valor">250</strong> CUP por USD, un producto de $100 USD se mostrará como <strong id="tasa-preview-ejemplo">$25,000 CUP</strong>.
+                    </div>
+
+                    <!-- Preview de la tienda -->
                     <div id="mitienda-preview" style="margin-top: 1.5rem; background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); padding: 1.5rem; border-radius: 16px; text-align: center; color: white;">
                         <small style="color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; font-size: 0.65rem;">Así se verá tu tienda</small>
                         <div id="preview-avatar" style="width: 70px; height: 70px; border-radius: 50%; margin: 12px auto 8px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.5rem; overflow: hidden; border: 3px solid rgba(255,255,255,0.25);">
@@ -252,6 +268,7 @@
                         <h3 id="preview-nombre" style="font-family: 'Outfit', sans-serif; color: white; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;">Sin nombre</h3>
                         <p id="preview-municipio" style="color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 6px;">Sin municipio</p>
                     </div>
+
                     <button id="guardar-mi-tienda" class="btn-primary" style="margin-top: 1.5rem; width: 100%; justify-content: center;"><i class="fas fa-save"></i> Guardar cambios</button>
                 </div>
             </div>

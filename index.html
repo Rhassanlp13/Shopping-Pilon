@@ -75,6 +75,13 @@
         </div>
     </header>
 
+    <!-- ========== BANNER DE TASA DE CAMBIO ========== -->
+    <div id="tasa-anuncio" class="tasa-anuncio" style="display: none;">
+        <i class="fas fa-exchange-alt"></i>
+        <span>Tasa del día: 1 USD = <strong id="tasa-valor">--</strong> CUP</span>
+        <span class="tasa-fecha" id="tasa-fecha"></span>
+    </div>
+
     <!-- ========== HERO ========== -->
     <section class="gm-hero">
         <div class="gm-hero-bg">
@@ -300,7 +307,7 @@
                         <option value="seller">Vendedor</option>
                     </select>
 
-                    <!-- NUEVO: Nombre de tienda (solo si es vendedor) -->
+                    <!-- Nombre de tienda (solo si es vendedor) -->
                     <div id="grupo-nombre-tienda" style="display: none;">
                         <input type="text" id="reg-nombre-tienda" placeholder="Nombre de tu tienda (ej: B-TECH LEADERS)" maxlength="40">
                         <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 4px; padding-left: 4px;">
@@ -308,7 +315,7 @@
                         </small>
                     </div>
 
-                    <!-- NUEVO: Municipio (solo si es vendedor) -->
+                    <!-- Municipio (solo si es vendedor) -->
                     <div id="grupo-municipio" style="display: none;">
                         <select id="reg-municipio">
                             <option value="">-- Selecciona tu municipio --</option>
@@ -377,8 +384,8 @@
                     <p>En el panel, ve a "Productos" → "Nuevo producto".</p>
                 </div>
                 <div class="tutorial-step">
-                    <h3>6. (Opcional) Activa QvaPay</h3>
-                    <p>En "Configuración pagos" activa QvaPay con tu UUID.</p>
+                    <h3>6. Configura tu tasa de cambio</h3>
+                    <p>En "Mi tienda" puedes poner la tasa de cambio USD → CUP que uses. Los productos en USD mostrarán el precio aproximado en CUP.</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -468,7 +475,7 @@
             <div class="footer-brand">
                 <div class="footer-logo">GRANMA <span>MARKET</span></div>
                 <p class="footer-desc">El mercado digital de Granma. Compra y vende desde casa, rápido y seguro.</p>
-                <a href="https://wa.me/5351271278" class="footer-wa" target="_blank">
+                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank">
                     <i class="fab fa-whatsapp"></i> Escríbenos
                 </a>
             </div>
@@ -476,13 +483,13 @@
                 <h4>Navegación</h4>
                 <a href="index.html"><i class="fas fa-home"></i> Inicio</a>
                 <a href="#" id="footer-registro"><i class="fas fa-store"></i> Vender aquí</a>
-                <a href="https://wa.me/5351271278" target="_blank"><i class="fas fa-headset"></i> Soporte</a>
+                <a href="https://wa.me/5356195243" target="_blank"><i class="fas fa-headset"></i> Soporte</a>
             </div>
             <div class="footer-info">
                 <h4>Información</h4>
                 <p><i class="fas fa-map-marker-alt"></i> Bayamo, Granma, Cuba</p>
                 <p><i class="fas fa-clock"></i> Lun–Sáb: 8am – 8pm</p>
-                
+                <p><i class="fab fa-whatsapp"></i> +53 561 95243</p>
             </div>
         </div>
         <div class="footer-bottom">
@@ -492,7 +499,7 @@
     </footer>
 
     <!-- WhatsApp flotante -->
-    <a href="https://wa.me/5351271278?text=Hola%20Granma%20Market,%20quiero%20información%20sobre%20un%20producto"
+    <a href="https://wa.me/5356195243?text=Hola%20Granma%20Market,%20quiero%20información%20sobre%20un%20producto"
        class="whatsapp-float" target="_blank" aria-label="Contactar por WhatsApp">
         <i class="fab fa-whatsapp"></i>
         <span class="whatsapp-float-text">¿Te ayudo?</span>
