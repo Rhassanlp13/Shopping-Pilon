@@ -1,4 +1,4 @@
-// ui.js - Granma Market con filtros, envío y nombre expandible
+// ui.js - Granma Market con filtros, envío, nombre expandible y reseñas con usuario logueado
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -455,13 +455,11 @@ export const UI = {
             nombreEl.classList.remove('expandido');
             nombreEl.classList.add('colapsado');
 
-            // Resetear el botón
             if (toggleEl) {
                 toggleEl.classList.remove('visible', 'expandido');
                 if (toggleTexto) toggleTexto.textContent = 'Ver más';
             }
 
-            // Detectar si el texto se desborda después del render
             setTimeout(() => {
                 if (!toggleEl || !nombreEl) return;
 
@@ -475,14 +473,12 @@ export const UI = {
                         const expandido = nombreEl.classList.contains('expandido');
 
                         if (expandido) {
-                            // Colapsar
                             nombreEl.classList.remove('expandido');
                             nombreEl.classList.add('colapsado');
                             toggleEl.classList.remove('expandido');
                             if (toggleTexto) toggleTexto.textContent = 'Ver más';
                             nombreEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         } else {
-                            // Expandir
                             nombreEl.classList.remove('colapsado');
                             nombreEl.classList.add('expandido');
                             toggleEl.classList.add('expandido');
@@ -490,7 +486,6 @@ export const UI = {
                         }
                     };
 
-                    // Clonar para limpiar listeners antiguos
                     const clon = toggleEl.cloneNode(true);
                     toggleEl.parentNode.replaceChild(clon, toggleEl);
                     clon.addEventListener('click', nuevoHandler);
@@ -564,12 +559,40 @@ export const UI = {
         modal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
 
-        document.getElementById('resena-nombre').value = '';
+        // ========== INFO DEL USUARIO EN RESEÑAS ==========
         document.getElementById('resena-texto').value = '';
         this.estrellaSeleccionada = 0;
         this.actualizarEstrellas(0);
-        await this.cargarResenas(id);
 
+        const { data: { session } } = await supabase.auth.getSession();
+        const userInfoEl = document.getElementById('resena-user-info');
+        const userNameEl = document.getElementById('resena-user-name');
+
+        if (userInfoEl && userNameEl) {
+            if (session) {
+                const user = session.user;
+                const nombre = user.user_metadata?.nombre
+                    || user.user_metadata?.full_name
+                    || user.email?.split('@')[0]
+                    || 'Usuario';
+                userNameEl.textContent = nombre;
+                userInfoEl.classList.remove('sin-sesion');
+                userInfoEl.style.cursor = 'default';
+                userInfoEl.onclick = null;
+            } else {
+                userNameEl.textContent = 'Inicia sesión';
+                userInfoEl.classList.add('sin-sesion');
+                userInfoEl.style.cursor = 'pointer';
+
+                userInfoEl.onclick = () => {
+                    this.cerrarDetalle();
+                    setTimeout(() => openAuthModal(), 300);
+                };
+            }
+        }
+        // =================================================
+
+        await this.cargarResenas(id);
         actualizarVista(this.varianteActualIndex);
     },
 
@@ -610,16 +633,33 @@ export const UI = {
     },
 
     async enviarResena() {
-        const nombre = document.getElementById('resena-nombre').value.trim();
         const texto = document.getElementById('resena-texto').value.trim();
         const estrellas = this.estrellaSeleccionada;
-        if (!nombre || !texto || estrellas === 0) {
-            mostrarToast('⚠️ Completa nombre, estrellas y opinión', 'warning');
+
+        if (!texto || estrellas === 0) {
+            mostrarToast('⚠️ Completa estrellas y opinión', 'warning');
             return;
         }
+
+        // Verificar que el usuario esté logueado
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            mostrarToast('🔒 Debes iniciar sesión para dejar una reseña', 'warning');
+            setTimeout(() => openAuthModal(), 500);
+            return;
+        }
+
+        // Obtener nombre del usuario logueado
+        const user = session.user;
+        const nombre = user.user_metadata?.nombre
+            || user.user_metadata?.full_name
+            || user.email?.split('@')[0]
+            || 'Usuario';
+
         const btn = document.getElementById('btn-enviar-resena');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+
         try {
             const { error } = await supabase.from('reseñas').insert([{
                 productoid: this.productoActualId,
@@ -629,8 +669,8 @@ export const UI = {
                 fecha: new Date().toISOString()
             }]);
             if (error) throw error;
+
             mostrarToast('✅ Reseña publicada', 'ok');
-            document.getElementById('resena-nombre').value = '';
             document.getElementById('resena-texto').value = '';
             this.estrellaSeleccionada = 0;
             this.actualizarEstrellas(0);
@@ -638,6 +678,7 @@ export const UI = {
             localStorage.removeItem(`resenas_${this.productoActualId}_time`);
             await this.cargarResenas(this.productoActualId);
         } catch (err) {
+            console.error(err);
             mostrarToast('❌ Error al publicar reseña', 'error');
         } finally {
             btn.disabled = false;
