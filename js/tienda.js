@@ -1,4 +1,4 @@
-// tienda.js - Página de perfil del vendedor (con logo_tienda)
+// tienda.js - Página de perfil del vendedor (con logo_tienda e icono verificado)
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { mostrarToast } from './modules/toast.js';
@@ -161,7 +161,14 @@ function renderPerfil(nombre, municipio, totalProductos, logoUrl = null) {
         avatarEl.style.background = `linear-gradient(135deg, ${color} 0%, ${ajustarBrillo(color, 20)} 100%)`;
     }
 
-    document.getElementById('tienda-nombre').textContent = nombre;
+    // Nombre con icono de tienda + check de verificación
+    document.getElementById('tienda-nombre').innerHTML = `
+        <span class="tienda-icon-grande"><i class="fas fa-store"></i></span>
+        ${escapeHtml(nombre)}
+        <span class="tienda-nombre-verificado" title="Vendedor verificado">
+            <i class="fas fa-circle-check"></i>
+        </span>
+    `;
 
     const municipioEl = document.getElementById('tienda-municipio');
     municipioEl.innerHTML = municipio

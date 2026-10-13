@@ -125,7 +125,11 @@ export const UI = {
                 ${stockBajo && !descuento ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
                 <img src="${escapeHtml(imgOptimizada)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.src='https://placehold.co/400x400?text=Sin+imagen'">
                 <div class="product-info">
-                    <span class="vendedor"><i class="fas fa-user-circle"></i> ${escapeHtml(p.vendedor)}</span>
+                    <span class="vendedor">
+                        <span class="vendedor-tienda-icon"><i class="fas fa-store"></i></span>
+                        ${escapeHtml(p.vendedor)}
+                        <i class="fas fa-circle-check vendedor-verificado" title="Vendedor verificado"></i>
+                    </span>
                     ${municipioBadge}
                     <h3>${escapeHtml(p.nombre)}</h3>
                     <div class="price-wrap">
@@ -443,7 +447,10 @@ export const UI = {
         const vendedorEl = document.getElementById('detalle-vendedor');
         if (vendedorEl) {
             vendedorEl.innerHTML = `
-                ${escapeHtml(p.vendedor)}${p.municipio ? ` · <i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}` : ''}
+                <span class="vendedor-tienda-icon"><i class="fas fa-store"></i></span>
+                ${escapeHtml(p.vendedor)}
+                <i class="fas fa-circle-check vendedor-verificado" title="Vendedor verificado"></i>
+                ${p.municipio ? ` · <i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}` : ''}
                 ${p.seller_id ? `<a href="tienda.html?vendedor=${encodeURIComponent(p.seller_id)}" class="detalle-vendedor-link"><i class="fas fa-store"></i> Ver tienda</a>` : ''}
             `;
         }
