@@ -1,20 +1,13 @@
-// tienda.js - Página de perfil del vendedor
+// tienda.js - Página de perfil del vendedor (robusta y con nombre_tienda)
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
 
 // ==================== AVATAR AUTOMÁTICO ====================
-// Colores predefinidos para avatares (paleta armónica)
 const AVATAR_COLORS = [
-    '#064e3b', // verde oscuro
-    '#0891b2', // cyan
-    '#7c3aed', // violeta
-    '#db2777', // rosa
-    '#ea580c', // naranja
-    '#059669', // verde claro
-    '#4f46e5', // índigo
-    '#b45309', // marrón
+    '#064e3b', '#0891b2', '#7c3aed', '#db2777',
+    '#ea580c', '#059669', '#4f46e5', '#b45309',
 ];
 
 function generarIniciales(nombre) {
@@ -34,6 +27,20 @@ function generarColorAvatar(nombre) {
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
+function ajustarBrillo(hex, porcentaje) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, Math.max(0, (num >> 16) + porcentaje));
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + porcentaje));
+    const b = Math.min(255, Math.max(0, (num & 0x0000FF) + porcentaje));
+    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+// ==================== VALIDACIÓN UUID ====================
+function esUUIDValido(str) {
+    if (!str) return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
 // ==================== OPTIMIZAR IMÁGENES ====================
 function optimizarImagen(url, ancho = 400, alto = 400) {
     if (!url) return '';
@@ -48,79 +55,122 @@ function optimizarImagen(url, ancho = 400, alto = 400) {
 async function cargarTienda() {
     const params = new URLSearchParams(window.location.search);
     const sellerId = params.get('vendedor');
+    const sellerNombre = params.get('nombre');
 
-    // Validación: sin ID no podemos hacer nada
-    if (!sellerId) {
+    if (!sellerId && !sellerNombre) {
         mostrarError('No se especificó un vendedor.');
         return;
     }
 
-    try {
-        // 1. Cargar perfil del vendedor
-        const { data: seller, error: sellerError } = await supabase
-            .from('profiles')
-            .select('id, nombre_completo, email, municipio, telefono, role')
-            .eq('id', sellerId)
-            .single();
+    let productos = [];
+    let seller = null;
 
-        if (sellerError || !seller) {
-            mostrarError('Esta tienda no existe o fue eliminada.');
-            return;
-        }
-
-        // 2. Cargar productos del vendedor
-        const { data: productos, error: prodError } = await supabase
+    // 1. Cargar productos por seller_id (solo si es UUID válido)
+    if (sellerId && esUUIDValido(sellerId)) {
+        const { data, error } = await supabase
             .from('productos')
             .select('*')
             .eq('seller_id', sellerId)
             .order('created_at', { ascending: false });
-
-        if (prodError) throw prodError;
-
-        // 3. Actualizar UI con los datos del vendedor
-        const nombreVendedor = seller.nombre_completo
-            || seller.email?.split('@')[0]
-            || 'Vendedor';
-
-        renderPerfil(nombreVendedor, seller.municipio, productos.length);
-        renderProductos(productos);
-
-        // Actualizar título de la pestaña
-        document.title = `${nombreVendedor} | Granma Market`;
-
-    } catch (err) {
-        console.error('Error cargando tienda:', err);
-        mostrarError('Error al cargar la tienda. Intenta de nuevo.');
+        if (!error && data && data.length > 0) productos = data;
     }
+
+    // 2. Fallback: buscar por nombre de vendedor
+    if (productos.length === 0 && sellerNombre) {
+        const { data, error } = await supabase
+            .from('productos')
+            .select('*')
+            .eq('vendedor', sellerNombre)
+            .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) productos = data;
+    }
+
+    // 3. Fallback extra: intentar por seller_id aunque no sea UUID válido
+    if (productos.length === 0 && sellerId) {
+        const { data, error } = await supabase
+            .from('productos')
+            .select('*')
+            .eq('seller_id', sellerId)
+            .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) productos = data;
+    }
+
+    // 4. Cargar perfil del vendedor con nombre_tienda
+    if (sellerId && esUUIDValido(sellerId)) {
+        const { data } = await supabase
+            .from('profiles')
+            .select('id, nombre_completo, nombre_tienda, email, municipio, telefono, role')
+            .eq('id', sellerId)
+            .maybeSingle();
+        if (data) seller = data;
+    }
+
+    // 5. Si no hay perfil pero sí productos, extraer del primer producto
+    if (!seller && productos.length > 0) {
+        seller = {
+            id: productos[0].seller_id,
+            nombre_completo: productos[0].vendedor,
+            nombre_tienda: productos[0].vendedor,
+            municipio: productos[0].municipio,
+            email: null,
+            telefono: productos[0].telefonovendedor,
+        };
+    }
+
+    // 6. Si tampoco hay productos pero tenemos nombre, seller mínimo
+    if (!seller && sellerNombre) {
+        seller = {
+            id: sellerId,
+            nombre_completo: sellerNombre,
+            nombre_tienda: sellerNombre,
+            municipio: null,
+        };
+    }
+
+    // 7. Si no hay nada, error
+    if (!seller) {
+        mostrarError('Esta tienda no existe o fue eliminada.');
+        return;
+    }
+
+    // 8. Nombre a mostrar (prioridad: nombre_tienda > nombre_completo > email > nombre URL)
+    const nombreVendedor = seller.nombre_tienda
+        || seller.nombre_completo
+        || seller.email?.split('@')[0]
+        || sellerNombre
+        || 'Vendedor';
+
+    renderPerfil(nombreVendedor, seller.municipio, productos.length);
+    renderProductos(productos);
+
+    window._productosActuales = productos;
+    document.title = `${nombreVendedor} | Granma Market`;
 }
 
 // ==================== RENDER PERFIL ====================
 function renderPerfil(nombre, municipio, totalProductos) {
-    // Iniciales
-    document.getElementById('tienda-iniciales').textContent = generarIniciales(nombre);
+    const iniciales = generarIniciales(nombre);
+    const color = generarColorAvatar(nombre);
 
-    // Color del avatar
+    document.getElementById('tienda-iniciales').textContent = iniciales;
+
     const avatarEl = document.getElementById('tienda-avatar');
-    avatarEl.style.background = `linear-gradient(135deg, ${generarColorAvatar(nombre)} 0%, ${ajustarBrillo(generarColorAvatar(nombre), 20)} 100%)`;
+    avatarEl.style.background = `linear-gradient(135deg, ${color} 0%, ${ajustarBrillo(color, 20)} 100%)`;
 
-    // Nombre
     document.getElementById('tienda-nombre').textContent = nombre;
 
-    // Municipio
     const municipioEl = document.getElementById('tienda-municipio');
-    if (municipio) {
-        municipioEl.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${escapeHtml(municipio)}`;
-    } else {
-        municipioEl.innerHTML = `<i class="fas fa-map-marker-alt"></i> Granma`;
-    }
+    municipioEl.innerHTML = municipio
+        ? `<i class="fas fa-map-marker-alt"></i> ${escapeHtml(municipio)}`
+        : `<i class="fas fa-map-marker-alt"></i> Granma`;
 
-    // Cantidad de productos
     document.getElementById('tienda-productos-count').textContent =
         `${totalProductos} ${totalProductos === 1 ? 'producto' : 'productos'}`;
 
-    // Subtítulo
     document.getElementById('tienda-subtitle').textContent =
         totalProductos > 0 ? `Toca un producto para ver detalles` : '';
+
+    document.title = `${nombre} | Granma Market`;
 }
 
 // ==================== RENDER PRODUCTOS ====================
@@ -131,6 +181,13 @@ function renderProductos(productos) {
     if (!productos || productos.length === 0) {
         grid.style.display = 'none';
         estadoVacio.style.display = 'block';
+        estadoVacio.innerHTML = `
+            <i class="fas fa-store-slash"></i>
+            <p>Esta tienda aún no tiene productos disponibles.</p>
+            <a href="index.html" style="margin-top: 1rem; display: inline-block; padding: 10px 22px; background: var(--primary); color: white; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-arrow-left"></i> Volver al catálogo
+            </a>
+        `;
         return;
     }
 
@@ -164,16 +221,13 @@ function renderProductos(productos) {
         </article>`;
     }).join('');
 
-    // Eventos de click en las tarjetas
     grid.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', (e) => {
-            // Si hizo clic en el botón "Añadir", no abrir detalle
             if (e.target.closest('.card-btn-add')) return;
             abrirDetalleProducto(card.dataset.id, productos);
         });
     });
 
-    // Eventos de "Añadir al carrito" directo
     grid.querySelectorAll('.card-btn-add').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -200,7 +254,7 @@ function renderProductos(productos) {
     });
 }
 
-// ==================== DETALLE DEL PRODUCTO (simplificado) ====================
+// ==================== DETALLE SIMPLIFICADO ====================
 function abrirDetalleProducto(id, productos) {
     const p = productos.find(x => x.id === id);
     if (!p) return;
@@ -209,23 +263,18 @@ function abrirDetalleProducto(id, productos) {
     const moneda = p.moneda || 'CUP';
     const textoMoneda = moneda === 'USD' ? ' USD' : ' CUP';
 
-    // Imagen
     document.getElementById('detalle-img').src = optimizarImagen(p.imagen, 600, 600);
     document.getElementById('detalle-img').alt = p.nombre;
 
-    // Vendedor
     document.getElementById('detalle-vendedor').innerHTML =
         `${escapeHtml(p.vendedor || 'Vendedor')}${p.municipio ? ` · <i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}` : ''}`;
 
-    // Nombre
     document.getElementById('detalle-nombre').textContent = p.nombre;
 
-    // Precio
     const precioReal = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
     document.getElementById('detalle-precio').innerHTML =
         `$${Number(precioReal).toLocaleString('es')}${textoMoneda}`;
 
-    // Stock
     const stockEl = document.getElementById('detalle-stock');
     if (p.stock <= 0) {
         stockEl.textContent = 'Agotado';
@@ -238,10 +287,8 @@ function abrirDetalleProducto(id, productos) {
         stockEl.className = 'detalle-stock ok';
     }
 
-    // Limpiar variantes (no las manejamos en esta vista rápida)
     document.getElementById('detalle-variantes').innerHTML = '';
 
-    // Botón añadir
     const btnAdd = document.getElementById('detalle-btn-add');
     btnAdd.disabled = p.stock <= 0;
     btnAdd.innerHTML = p.stock <= 0
@@ -266,7 +313,7 @@ function abrirDetalleProducto(id, productos) {
     document.body.style.overflow = 'hidden';
 }
 
-// ==================== CARRITO (básico) ====================
+// ==================== CARRITO ====================
 function actualizarContadorCarrito() {
     const el = document.getElementById('cart-count');
     if (el) el.textContent = carrito.cantidad;
@@ -322,7 +369,7 @@ function bindCarrito() {
     });
 }
 
-// ==================== UTILIDADES ====================
+// ==================== ERROR ====================
 function mostrarError(mensaje) {
     document.getElementById('grid').style.display = 'none';
     const estadoVacio = document.getElementById('estado-vacio');
@@ -334,14 +381,6 @@ function mostrarError(mensaje) {
             <i class="fas fa-arrow-left"></i> Ir al catálogo
         </a>
     `;
-}
-
-function ajustarBrillo(hex, porcentaje) {
-    const num = parseInt(hex.replace('#', ''), 16);
-    const r = Math.min(255, Math.max(0, (num >> 16) + porcentaje));
-    const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + porcentaje));
-    const b = Math.min(255, Math.max(0, (num & 0x0000FF) + porcentaje));
-    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
 }
 
 // ==================== INIT ====================

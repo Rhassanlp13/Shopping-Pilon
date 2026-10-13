@@ -1,4 +1,4 @@
-// auth.js - Con registro de vendedores pendientes de aprobación
+// auth.js - Con registro de vendedores pendientes de aprobación y nombre de tienda
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
 import { escapeHtml } from './utils/escape.js';
@@ -9,7 +9,6 @@ let currentRole = null;
 let _bodyListenersBound = false;
 let _dropdownCloseHandler = null;
 
-// Referencias a elementos del DOM
 let userBtn = null;
 let userMenu = null;
 
@@ -24,14 +23,12 @@ function initUserButtonAndMenu() {
     if (!container) return;
     container.style.position = 'relative';
 
-    // Crear menú desplegable si no existe
     if (!userMenu) {
         userMenu = document.createElement('div');
         userMenu.className = 'user-dropdown';
         container.appendChild(userMenu);
     }
 
-    // Limpiar event listeners antiguos (clonando y reemplazando)
     const newBtn = userBtn.cloneNode(true);
     userBtn.parentNode.replaceChild(newBtn, userBtn);
     userBtn = newBtn;
@@ -140,11 +137,7 @@ async function ensureProfile() {
                 nombre_completo: currentUser.user_metadata?.nombre || currentUser.user_metadata?.full_name || '',
                 telefono: currentUser.user_metadata?.telefono || null
             });
-        if (insertError) {
-            console.error('Error al crear perfil:', insertError);
-        } else {
-            console.log('Perfil creado automáticamente para', currentUser.email);
-        }
+        if (insertError) console.error('Error al crear perfil:', insertError);
     }
 }
 
@@ -200,9 +193,8 @@ function updateUIForLoggedIn() {
     if (!userBtn) initUserButtonAndMenu();
     if (!userBtn) return;
 
-    // Cambiar icono y comportamiento
     userBtn.innerHTML = '<i class="fas fa-user-check"></i>';
-    userBtn.removeEventListener('click', userBtn._listener); // Limpiar listener anterior
+    userBtn.removeEventListener('click', userBtn._listener);
     const clickHandler = (e) => {
         e.stopPropagation();
         toggleUserMenu();
@@ -210,21 +202,14 @@ function updateUIForLoggedIn() {
     userBtn.addEventListener('click', clickHandler);
     userBtn._listener = clickHandler;
 
-    // Construir menú
     updateUserMenuContent();
 
-    // Cerrar menú al hacer clic fuera
-    if (_dropdownCloseHandler) {
-        document.removeEventListener('click', _dropdownCloseHandler);
-    }
+    if (_dropdownCloseHandler) document.removeEventListener('click', _dropdownCloseHandler);
     _dropdownCloseHandler = (e) => {
-        if (userMenu && !userMenu.contains(e.target) && e.target !== userBtn) {
-            closeUserMenu();
-        }
+        if (userMenu && !userMenu.contains(e.target) && e.target !== userBtn) closeUserMenu();
     };
     document.addEventListener('click', _dropdownCloseHandler);
 
-    // Mostrar bienvenida y ocultar botones de registro/ayuda
     const heroWelcome = document.getElementById('hero-welcome');
     const registerBtn = document.getElementById('btn-registro-vendedor');
     if (heroWelcome && registerBtn) {
@@ -246,7 +231,6 @@ function updateUIForLoggedOut() {
     if (!userBtn) initUserButtonAndMenu();
     if (!userBtn) return;
 
-    // Cambiar icono y comportamiento: abre modal de login
     userBtn.innerHTML = '<i class="fas fa-user"></i>';
     userBtn.removeEventListener('click', userBtn._listener);
     const clickHandler = (e) => {
@@ -256,12 +240,10 @@ function updateUIForLoggedOut() {
     userBtn.addEventListener('click', clickHandler);
     userBtn._listener = clickHandler;
 
-    // Vaciar menú y ocultarlo
     if (userMenu) {
         userMenu.innerHTML = '';
         userMenu.classList.remove('show');
     }
-
     if (_dropdownCloseHandler) {
         document.removeEventListener('click', _dropdownCloseHandler);
         _dropdownCloseHandler = null;
@@ -292,7 +274,6 @@ export async function solicitarSerVendedor() {
         .update({ role: 'pending_seller' })
         .eq('id', currentUser.id);
     if (error) {
-        console.error(error);
         mostrarToast('Error al enviar solicitud. Intenta de nuevo.', 'error');
     } else {
         mostrarToast('✅ Solicitud enviada. El administrador revisará tu petición.', 'info');
@@ -314,11 +295,25 @@ export function openAuthModal(preselectedRole = null) {
     document.getElementById('reg-confirm').value = '';
     const roleSelect = document.getElementById('reg-role');
     if (roleSelect) roleSelect.value = 'customer';
+
+    // Resetear los campos nuevos
+    const nombreTiendaInput = document.getElementById('reg-nombre-tienda');
+    const municipioSelect = document.getElementById('reg-municipio');
+    if (nombreTiendaInput) nombreTiendaInput.value = '';
+    if (municipioSelect) municipioSelect.value = '';
+    const grupoNombreTienda = document.getElementById('grupo-nombre-tienda');
+    const grupoMunicipio = document.getElementById('grupo-municipio');
+    if (grupoNombreTienda) grupoNombreTienda.style.display = 'none';
+    if (grupoMunicipio) grupoMunicipio.style.display = 'none';
+
     document.getElementById('login-error').style.display = 'none';
     document.getElementById('register-error').style.display = 'none';
+
     if (preselectedRole === 'seller') {
         switchTab('register');
         if (roleSelect) roleSelect.value = 'seller';
+        if (grupoNombreTienda) grupoNombreTienda.style.display = 'block';
+        if (grupoMunicipio) grupoMunicipio.style.display = 'block';
     } else {
         switchTab('login');
     }
@@ -384,6 +379,9 @@ async function handleRegister() {
     const password = document.getElementById('reg-password').value;
     const confirm = document.getElementById('reg-confirm').value;
     const role = document.getElementById('reg-role').value;
+    const nombreTienda = document.getElementById('reg-nombre-tienda')?.value.trim() || null;
+    const municipio = document.getElementById('reg-municipio')?.value || null;
+
     const errorDiv = document.getElementById('register-error');
     const infoDiv = document.getElementById('register-info');
 
@@ -411,6 +409,18 @@ async function handleRegister() {
         if (infoDiv) infoDiv.style.display = 'none';
         return;
     }
+    if (role === 'seller' && !nombreTienda) {
+        errorDiv.textContent = 'Escribe un nombre para tu tienda';
+        errorDiv.style.display = 'block';
+        if (infoDiv) infoDiv.style.display = 'none';
+        return;
+    }
+    if (role === 'seller' && !municipio) {
+        errorDiv.textContent = 'Selecciona tu municipio';
+        errorDiv.style.display = 'block';
+        if (infoDiv) infoDiv.style.display = 'none';
+        return;
+    }
 
     const finalRole = (role === 'seller') ? 'pending_seller' : role;
 
@@ -426,7 +436,13 @@ async function handleRegister() {
             password,
             options: {
                 emailRedirectTo: 'https://shopping-pilon.pages.dev/confirm-email.html',
-                data: { role: finalRole, nombre, telefono }
+                data: {
+                    role: finalRole,
+                    nombre,
+                    telefono,
+                    nombre_tienda: nombreTienda,
+                    municipio: municipio
+                }
             }
         });
         if (error) throw error;
@@ -440,7 +456,9 @@ async function handleRegister() {
                 email,
                 role: finalRole,
                 nombre_completo: nombre,
-                telefono: telefono || null
+                telefono: telefono || null,
+                nombre_tienda: nombreTienda || null,
+                municipio: municipio || null
             }, { onConflict: 'id' });
 
         if (profileError) {
@@ -583,6 +601,19 @@ export function bindAuthEvents() {
         });
     }
 
+    // ========== MOSTRAR/OCULTAR CAMPOS DE VENDEDOR ==========
+    const regRoleSelect = document.getElementById('reg-role');
+    const grupoNombreTienda = document.getElementById('grupo-nombre-tienda');
+    const grupoMunicipio = document.getElementById('grupo-municipio');
+    if (regRoleSelect && grupoNombreTienda) {
+        regRoleSelect.addEventListener('change', (e) => {
+            const esVendedor = e.target.value === 'seller';
+            grupoNombreTienda.style.display = esVendedor ? 'block' : 'none';
+            if (grupoMunicipio) grupoMunicipio.style.display = esVendedor ? 'block' : 'none';
+        });
+    }
+    // ========================================================
+
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(tab => {
         tab.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab));
@@ -595,7 +626,7 @@ export function bindAuthEvents() {
     });
 }
 
-// Inicializar el botón al cargar el DOM (por si se llama desde app.js)
+// Inicializar el botón al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
     initUserButtonAndMenu();
 });

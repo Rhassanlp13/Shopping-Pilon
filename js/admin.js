@@ -45,10 +45,7 @@ async function subirImagen(file, productoId = null) {
         const nombreArchivo = productoId ? `${productoId}_${Date.now()}.webp` : `temp_${Date.now()}.webp`;
         const { data, error } = await supabase.storage
             .from('products')
-            .upload(nombreArchivo, blobOptimizado, {
-                contentType: 'image/webp',
-                cacheControl: '3600'
-            });
+            .upload(nombreArchivo, blobOptimizado, { contentType: 'image/webp', cacheControl: '3600' });
         if (error) throw error;
         const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(nombreArchivo);
         return publicUrlData.publicUrl;
@@ -79,6 +76,81 @@ function setupImagePreview() {
     });
 }
 
+// ==================== MI TIENDA (NUEVO) ====================
+function actualizarPreviewTienda() {
+    const nombre = document.getElementById('mi-nombre-tienda')?.value.trim();
+    const municipio = document.getElementById('mi-municipio')?.value;
+    const previewNombre = document.getElementById('preview-nombre');
+    const previewMunicipio = document.getElementById('preview-municipio');
+    if (previewNombre) previewNombre.textContent = nombre || 'Sin nombre';
+    if (previewMunicipio) previewMunicipio.textContent = municipio ? `📍 ${municipio}` : 'Sin municipio';
+}
+
+async function cargarMiTienda() {
+    if (!currentUser) return;
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('nombre_tienda, nombre_completo, municipio')
+            .eq('id', currentUser.id)
+            .single();
+        if (error && error.code !== 'PGRST116') throw error;
+
+        const nombreInput = document.getElementById('mi-nombre-tienda');
+        const municipioSelect = document.getElementById('mi-municipio');
+
+        if (nombreInput) nombreInput.value = data?.nombre_tienda || data?.nombre_completo || '';
+        if (municipioSelect) municipioSelect.value = data?.municipio || '';
+
+        actualizarPreviewTienda();
+    } catch (err) {
+        console.error(err);
+        mostrarToast('Error al cargar tu tienda', 'error');
+    }
+}
+
+async function guardarMiTienda() {
+    const btn = document.getElementById('guardar-mi-tienda');
+    const nombreTienda = document.getElementById('mi-nombre-tienda')?.value.trim();
+    const municipio = document.getElementById('mi-municipio')?.value;
+
+    if (!nombreTienda) { mostrarToast('Escribe un nombre para tu tienda', 'error'); return; }
+    if (!municipio) { mostrarToast('Selecciona tu municipio', 'error'); return; }
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+    try {
+        // 1. Actualizar perfil
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ nombre_tienda: nombreTienda, municipio: municipio })
+            .eq('id', currentUser.id);
+        if (profileError) throw profileError;
+
+        // 2. Actualizar TODOS los productos del vendedor
+        const { error: prodError } = await supabase
+            .from('productos')
+            .update({ vendedor: nombreTienda, municipio: municipio })
+            .eq('seller_id', currentUser.id);
+        if (prodError) console.warn('Error actualizando productos:', prodError);
+
+        // 3. Limpiar caché
+        localStorage.removeItem('productos_cache');
+        localStorage.removeItem('productos_cache_time');
+
+        mostrarToast('✅ Tienda actualizada correctamente', 'ok');
+        cargarProductos();
+    } catch (err) {
+        console.error(err);
+        mostrarToast('Error al guardar: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 // ==================== ESTADO VISUAL QVAPAY ====================
 function actualizarEstadoVisualConfig(enabled, merchantId) {
     const statusDiv = document.getElementById('qvapay-status');
@@ -86,8 +158,8 @@ function actualizarEstadoVisualConfig(enabled, merchantId) {
     if (!statusDiv || !statusText) return;
     if (enabled && merchantId) {
         statusDiv.style.display = 'block';
-        statusDiv.style.background = '#e8f5e9';
-        statusDiv.style.border = '1px solid #c8e6c9';
+        statusDiv.style.background = '#ecfdf5';
+        statusDiv.style.border = '1px solid #a7f3d0';
         statusText.innerHTML = `<i class="fas fa-check-circle"></i> <strong>QvaPay activado correctamente</strong><br>Merchant ID: <code>${escapeHtml(merchantId)}</code>`;
     } else {
         statusDiv.style.display = 'block';
@@ -97,7 +169,6 @@ function actualizarEstadoVisualConfig(enabled, merchantId) {
     }
 }
 
-// ==================== CONFIGURACIÓN QVAPAY ====================
 async function cargarConfiguracionPagos() {
     const guardarBtn = document.getElementById('guardar-config-pagos');
     const originalText = guardarBtn?.innerHTML;
@@ -113,18 +184,20 @@ async function cargarConfiguracionPagos() {
             .eq('id', currentUser.id)
             .single();
         if (error && error.code !== 'PGRST116') throw error;
+
         const enabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
         const merchantInput = document.getElementById('qvapay-merchant-id');
         const merchantGroup = document.getElementById('qvapay-merchant-group');
+
         if (enabledCheckbox) {
             enabledCheckbox.checked = data?.qvapay_enabled || false;
             merchantGroup.style.display = data?.qvapay_enabled ? 'block' : 'none';
         }
         if (merchantInput) merchantInput.value = data?.qvapay_merchant_id || '';
+
         actualizarEstadoVisualConfig(data?.qvapay_enabled, data?.qvapay_merchant_id);
-        mostrarToast('Configuración cargada', 'ok');
     } catch (err) {
-        console.error('Error cargando configuración:', err);
+        console.error(err);
         mostrarToast('Error al cargar configuración de pagos', 'error');
     } finally {
         if (guardarBtn) {
@@ -141,8 +214,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser = user;
 
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+
     if (profile?.role === 'pending_seller') {
-        mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
+        mostrarToast('Tu cuenta está pendiente de aprobación.', 'warning');
         setTimeout(() => { window.location.href = '/'; }, 2500);
         return;
     }
@@ -166,25 +240,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (shell) shell.classList.add('visible');
     iniciar();
 
-    document.getElementById('btn-logout')?.addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = '/';
-    });
-
+    // ========== NAV ITEMS ==========
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         item.addEventListener('click', () => {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             item.classList.add('active');
             document.getElementById(`page-${item.dataset.page}`).classList.add('active');
+
             if (item.dataset.page === 'resenas') cargarResenas();
             if (item.dataset.page === 'pedidos') cargarPedidos();
             if (item.dataset.page === 'solicitudes') cargarSolicitudesYRender();
             if (item.dataset.page === 'configuracion') cargarConfiguracionPagos();
+            if (item.dataset.page === 'mitienda') cargarMiTienda();
             if (item.dataset.page === 'clientes') cargarClientes().then(renderClientes);
         });
     });
 
+    // ========== BOTONES PRINCIPALES ==========
     document.getElementById('btn-nuevo')?.addEventListener('click', () => abrirNuevo());
     document.getElementById('modal-cerrar')?.addEventListener('click', () => cerrarModal());
     document.getElementById('btn-cancelar')?.addEventListener('click', () => cerrarModal());
@@ -194,6 +267,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('borrar-cancelar')?.addEventListener('click', () => cerrarBorrar());
     document.getElementById('borrar-confirmar')?.addEventListener('click', () => eliminarProducto());
 
+    // ========== MI TIENDA ==========
+    document.getElementById('mi-nombre-tienda')?.addEventListener('input', actualizarPreviewTienda);
+    document.getElementById('mi-municipio')?.addEventListener('change', actualizarPreviewTienda);
+    document.getElementById('guardar-mi-tienda')?.addEventListener('click', guardarMiTienda);
+
+    // ========== LOGOUT ==========
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/';
+    });
+
+    // ========== QVAPAY ==========
     const qvapayEnabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
     const qvapayMerchantGroup = document.getElementById('qvapay-merchant-group');
     if (qvapayEnabledCheckbox) {
@@ -206,16 +291,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         guardarConfigBtn.addEventListener('click', async () => {
             const enabled = qvapayEnabledCheckbox?.checked || false;
             const merchantId = document.getElementById('qvapay-merchant-id')?.value.trim() || null;
-            if (enabled && !merchantId) {
-                mostrarToast('Debes ingresar tu Merchant ID (UUID) de QvaPay', 'error');
-                return;
-            }
+            if (enabled && !merchantId) { mostrarToast('Debes ingresar tu Merchant ID (UUID) de QvaPay', 'error'); return; }
+
             const originalText = guardarConfigBtn.innerHTML;
             guardarConfigBtn.disabled = true;
             guardarConfigBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             try {
-                const { error } = await supabase
-                    .from('profiles')
+                const { error } = await supabase.from('profiles')
                     .update({ qvapay_enabled: enabled, qvapay_merchant_id: merchantId })
                     .eq('id', currentUser.id);
                 if (error) throw error;
@@ -223,8 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 actualizarEstadoVisualConfig(enabled, merchantId);
                 await cargarConfiguracionPagos();
             } catch (err) {
-                console.error(err);
-                mostrarToast('❌ Error al guardar configuración: ' + err.message, 'error');
+                mostrarToast('❌ Error al guardar: ' + err.message, 'error');
             } finally {
                 guardarConfigBtn.disabled = false;
                 guardarConfigBtn.innerHTML = originalText;
@@ -277,12 +358,8 @@ function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
     if (!url) return '';
     const primeraUrl = url.split(',')[0].trim();
     if (!primeraUrl) return '';
-    if (primeraUrl.includes('unsplash.com')) {
-        return `${primeraUrl.split('?')[0]}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
-    }
-    if (primeraUrl.includes('cloudinary.com')) {
-        return primeraUrl.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
-    }
+    if (primeraUrl.includes('unsplash.com')) return `${primeraUrl.split('?')[0]}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
+    if (primeraUrl.includes('cloudinary.com')) return primeraUrl.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
     return primeraUrl;
 }
 
@@ -301,13 +378,12 @@ function renderTabla(filtro = '') {
             <tr>
                 <td>
                     <img src="${escapeHtml(optimizarImagenAdmin(p.imagen, 36, 36))}" class="prod-thumb" onerror="this.src='https://placehold.co/36x36?text=?'">
-                    ${p.imagen && p.imagen.includes(',') ? `<span class="badge badge-variant" style="font-size:0.6rem; margin-left:4px;">+${p.imagen.split(',').length - 1}</span>` : ''}
                     <span>
                     <div class="prod-name">${escapeHtml(p.nombre)}</div>
                     <div class="prod-vendedor">${escapeHtml(p.vendedor)}</div>
                     </span>
                 </td>
-                <td>${p.municipio ? `<span class="badge" style="background:#e8eaf6; color:#1a237e;"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}</span>` : '—'}</td>
+                <td>${p.municipio ? `<span class="badge" style="background:#d1fae5; color:#064e3b;"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}</span>` : '—'}</td>
                 <td>${Number(p.precio).toLocaleString('es')} ${p.moneda === 'USD' ? 'USD' : 'CUP'}</td>
                 <td>${p.stock <= 0 ? '<span class="badge badge-out">Agotado</span>' : p.stock <= 3 ? `<span class="badge badge-low">${p.stock} uds</span>` : `<span class="badge badge-ok">${p.stock} uds</span>`}</td>
                 <td>${p.enoferta && p.preciooferta ? `<span class="badge" style="background:#ffebee;color:#c62828">$${Number(p.preciooferta).toLocaleString('es')}</span>` : '—'}</td>
@@ -331,10 +407,7 @@ async function cargarPedidos() {
         if (error) throw error;
         pedidos = data;
         renderPedidos();
-    } catch (err) {
-        console.error(err);
-        mostrarToast('Error al cargar pedidos', 'error');
-    }
+    } catch (err) { mostrarToast('Error al cargar pedidos', 'error'); }
 }
 
 function renderPedidos() {
@@ -345,59 +418,33 @@ function renderPedidos() {
         return;
     }
     tablaDiv.innerHTML = `<table class="admin-table">
-        <thead>
-            <tr><th>Cliente</th><th>Entrega</th><th>Productos</th><th>Subtotal</th><th>Envío</th><th>Estado</th><th>Acciones</th></tr>
-        </thead>
+        <thead><tr><th>Cliente</th><th>Entrega</th><th>Productos</th><th>Subtotal</th><th>Envío</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
             ${pedidos.map(p => {
                 const subtotal = Number(p.total).toLocaleString('es');
-                const envioTxt = p.costo_envio != null
-                    ? `$${Number(p.costo_envio).toLocaleString('es')}`
-                    : '<span class="badge badge-low">Por confirmar</span>';
-                const totalConEnvio = p.costo_envio != null
-                    ? `$${(Number(p.total) + Number(p.costo_envio)).toLocaleString('es')}`
-                    : null;
-
+                const envioTxt = p.costo_envio != null ? `$${Number(p.costo_envio).toLocaleString('es')}` : '<span class="badge badge-low">Por confirmar</span>';
+                const totalConEnvio = p.costo_envio != null ? `$${(Number(p.total) + Number(p.costo_envio)).toLocaleString('es')}` : null;
                 return `
                 <tr>
-                    <td>
-                        <strong>${escapeHtml(p.cliente_nombre)}</strong><br>
-                        <small style="color:#888;">📞 ${escapeHtml(p.cliente_telefono || 'N/D')}</small>
-                    </td>
-                    <td>
-                        <small>
-                            📍 <strong>${escapeHtml(p.municipio_entrega || 'No especificado')}</strong><br>
-                            ${escapeHtml(p.direccion_entrega || '')}
-                            ${p.referencia_entrega ? `<br><em>Ref: ${escapeHtml(p.referencia_entrega)}</em>` : ''}
-                        </small>
-                    </td>
+                    <td><strong>${escapeHtml(p.cliente_nombre)}</strong><br><small style="color:#888;">📞 ${escapeHtml(p.cliente_telefono || 'N/D')}</small></td>
+                    <td><small>📍 <strong>${escapeHtml(p.municipio_entrega || 'No especificado')}</strong><br>${escapeHtml(p.direccion_entrega || '')}${p.referencia_entrega ? `<br><em>Ref: ${escapeHtml(p.referencia_entrega)}</em>` : ''}</small></td>
                     <td><ul style="margin:0; padding-left:1rem; font-size:0.8rem;">${p.productos.map(prod => `<li>${escapeHtml(prod.nombre)} x${prod.cantidad}</li>`).join('')}</ul></td>
                     <td>$${subtotal}</td>
-                    <td>${envioTxt}${totalConEnvio ? `<br><small style="color:#2e7d32;"><strong>Total: ${totalConEnvio}</strong></small>` : ''}</td>
+                    <td>${envioTxt}${totalConEnvio ? `<br><small style="color:#065f46;"><strong>Total: ${totalConEnvio}</strong></small>` : ''}</td>
+                    <td><span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">${p.status === 'pendiente' ? 'Pendiente' : (p.status === 'paid' ? 'Pagado' : 'Confirmado')}</span></td>
                     <td>
-                        <span class="badge ${p.status === 'pendiente' ? 'badge-low' : 'badge-ok'}">
-                            ${p.status === 'pendiente' ? 'Pendiente' : (p.status === 'paid' ? 'Pagado' : 'Confirmado')}
-                        </span>
-                    </td>
-                    <td>
-                        ${p.costo_envio == null && p.status === 'pendiente'
-                            ? `<button class="asignar-envio bg-primary text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 hover:opacity-90 transition" data-id="${escapeHtml(p.id)}"><i class="fas fa-dollar-sign"></i> Asignar envío</button>`
-                            : ''}
-                        ${p.status === 'pendiente' && p.costo_envio != null
-                            ? `<button class="confirmar-pedido bg-whatsapp text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer hover:opacity-90 transition" data-id="${escapeHtml(p.id)}"><i class="fas fa-check"></i> Confirmar</button>`
-                            : ''}
-                        ${p.status === 'paid' ? `<button class="confirmar-pedido bg-whatsapp text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer hover:opacity-90 transition" data-id="${escapeHtml(p.id)}"><i class="fas fa-check"></i> Confirmar</button>` : ''}
+                        ${p.costo_envio == null && p.status === 'pendiente' ? `<button class="asignar-envio bg-primary text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer" data-id="${escapeHtml(p.id)}"><i class="fas fa-dollar-sign"></i> Asignar envío</button>` : ''}
+                        ${p.status === 'pendiente' && p.costo_envio != null ? `<button class="confirmar-pedido bg-whatsapp text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer" data-id="${escapeHtml(p.id)}"><i class="fas fa-check"></i> Confirmar</button>` : ''}
+                        ${p.status === 'paid' ? `<button class="confirmar-pedido bg-whatsapp text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer" data-id="${escapeHtml(p.id)}"><i class="fas fa-check"></i> Confirmar</button>` : ''}
                     </td>
                 </tr>`;
             }).join('')}
         </tbody>
     </table>`;
-
     document.querySelectorAll('.confirmar-pedido').forEach(btn => btn.addEventListener('click', () => confirmarPedido(btn.dataset.id)));
     document.querySelectorAll('.asignar-envio').forEach(btn => btn.addEventListener('click', () => abrirModalEnvio(btn.dataset.id)));
 }
 
-// Modal para asignar costo de envío (con Tailwind)
 function abrirModalEnvio(pedidoId) {
     const p = pedidos.find(x => x.id === pedidoId);
     if (!p) return;
@@ -408,44 +455,33 @@ function abrirModalEnvio(pedidoId) {
     overlay.innerHTML = `
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             <div class="bg-primary text-white px-5 py-4 flex items-center justify-between">
-                <h2 class="font-serif text-lg font-bold flex items-center gap-2 m-0">
+                <h2 class="text-lg font-bold flex items-center gap-2 m-0" style="font-family: 'Outfit', sans-serif;">
                     <i class="fas fa-truck"></i> Asignar costo de envío
                 </h2>
-                <button id="cerrar-envio-admin" class="bg-transparent border-0 text-white text-2xl cursor-pointer opacity-80 hover:opacity-100 leading-none">&times;</button>
+                <button id="cerrar-envio-admin" class="bg-transparent border-0 text-white text-2xl cursor-pointer opacity-80">&times;</button>
             </div>
-
             <div class="p-5 flex flex-col gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg text-sm leading-relaxed border border-gray-100">
-                    <p class="m-0 mb-1"><strong class="text-gray-700">👤 Cliente:</strong> ${escapeHtml(p.cliente_nombre)}</p>
-                    <p class="m-0 mb-1"><strong class="text-gray-700">📞 Teléfono:</strong> ${escapeHtml(p.cliente_telefono || 'N/D')}</p>
-                    <p class="m-0 mb-1"><strong class="text-gray-700">📍 Municipio:</strong> ${escapeHtml(p.municipio_entrega || 'N/D')}</p>
-                    <p class="m-0 mb-1"><strong class="text-gray-700">🏠 Dirección:</strong> ${escapeHtml(p.direccion_entrega || 'N/D')}</p>
-                    ${p.referencia_entrega ? `<p class="m-0 mb-1"><strong class="text-gray-700">🧭 Referencia:</strong> ${escapeHtml(p.referencia_entrega)}</p>` : ''}
-                    <p class="m-0 mt-3 pt-3 border-t border-dashed border-gray-300"><strong class="text-gray-700">💰 Subtotal productos:</strong> $${Number(p.total).toLocaleString('es')}</p>
+                    <p class="m-0 mb-1"><strong>👤 Cliente:</strong> ${escapeHtml(p.cliente_nombre)}</p>
+                    <p class="m-0 mb-1"><strong>📞 Teléfono:</strong> ${escapeHtml(p.cliente_telefono || 'N/D')}</p>
+                    <p class="m-0 mb-1"><strong>📍 Municipio:</strong> ${escapeHtml(p.municipio_entrega || 'N/D')}</p>
+                    <p class="m-0 mb-1"><strong>🏠 Dirección:</strong> ${escapeHtml(p.direccion_entrega || 'N/D')}</p>
+                    <p class="m-0 mt-3 pt-3 border-t border-dashed border-gray-300"><strong>💰 Subtotal:</strong> $${Number(p.total).toLocaleString('es')}</p>
                 </div>
-
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Costo de envío (CUP) *</label>
                     <input type="number" id="costo-envio-input" placeholder="Ej: 500" min="0" step="50"
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 outline-none">
                 </div>
-
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Nota para el cliente (opcional)</label>
                     <textarea id="nota-envio-input" rows="2" placeholder="Ej: Entrega en 2-3 días hábiles"
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition resize-y"></textarea>
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 outline-none"></textarea>
                 </div>
             </div>
-
             <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
-                <button id="cancelar-envio-admin"
-                    class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary transition">
-                    Cancelar
-                </button>
-                <button id="confirmar-envio-admin"
-                    class="bg-primary text-white border-0 rounded-lg px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition shadow-md">
-                    <i class="fas fa-check"></i> Confirmar costo
-                </button>
+                <button id="cancelar-envio-admin" class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold">Cancelar</button>
+                <button id="confirmar-envio-admin" class="bg-primary text-white border-0 rounded-lg px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2"><i class="fas fa-check"></i> Confirmar costo</button>
             </div>
         </div>
     `;
@@ -465,10 +501,7 @@ function abrirModalEnvio(pedidoId) {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
         try {
-            const { error } = await supabase
-                .from('pedidos')
-                .update({ costo_envio: costo, envio_confirmado: true })
-                .eq('id', pedidoId);
+            const { error } = await supabase.from('pedidos').update({ costo_envio: costo, envio_confirmado: true }).eq('id', pedidoId);
             if (error) throw error;
 
             const totalFinal = Number(p.total) + costo;
@@ -484,9 +517,7 @@ function abrirModalEnvio(pedidoId) {
             textoCliente += `\nCuando estés de acuerdo, responde este mensaje para coordinar el pago y la entrega. ¡Gracias!`;
 
             const telCliente = (p.cliente_telefono || '').replace(/\s+/g, '').replace(/^53/, '');
-            const linkWa = telCliente
-                ? `https://wa.me/53${telCliente}?text=${encodeURIComponent(textoCliente)}`
-                : null;
+            const linkWa = telCliente ? `https://wa.me/53${telCliente}?text=${encodeURIComponent(textoCliente)}` : null;
 
             overlay.remove();
             cargarPedidos();
@@ -498,10 +529,9 @@ function abrirModalEnvio(pedidoId) {
                     }
                 }, 300);
             } else {
-                mostrarToast('✅ Costo de envío asignado (sin teléfono para notificar)', 'ok');
+                mostrarToast('✅ Costo de envío asignado', 'ok');
             }
         } catch (err) {
-            console.error(err);
             mostrarToast('Error al asignar costo: ' + err.message, 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-check"></i> Confirmar costo';
@@ -531,8 +561,7 @@ async function cargarResenas() {
     try {
         if (!currentUser) return;
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single();
-        const isAdmin = profile?.role === 'admin';
-        if (!isAdmin) {
+        if (profile?.role !== 'admin') {
             document.getElementById('tabla-resenas').innerHTML = `<div class="table-empty"><i class="fas fa-lock"></i><p>Solo administradores pueden ver todas las reseñas.</p></div>`;
             return;
         }
@@ -541,7 +570,6 @@ async function cargarResenas() {
         resenas = data;
         renderResenas();
     } catch (err) {
-        console.error(err);
         document.getElementById('tabla-resenas').innerHTML = `<div class="table-empty"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar reseñas</p></div>`;
     }
 }
@@ -568,7 +596,6 @@ function renderResenas() {
     </table>`;
 }
 
-// ==================== SOLICITUDES ====================
 async function cargarSolicitudes() {
     const { data, error } = await supabase
         .from('profiles')
@@ -630,7 +657,6 @@ async function cargarSolicitudesYRender() {
     renderSolicitudes(await cargarSolicitudes());
 }
 
-// ==================== CLIENTES ====================
 async function cargarClientes() {
     const { data, error } = await supabase
         .from('profiles')
@@ -700,7 +726,6 @@ function abrirEditar(id) {
 
     const municipioSelect = document.getElementById('f-municipio');
     if (municipioSelect) municipioSelect.value = prod.municipio || '';
-
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = prod.categoria || 'Otros';
     const monedaSelect = document.getElementById('f-moneda');
@@ -717,11 +742,9 @@ function abrirEditar(id) {
             previewDiv.appendChild(img);
         });
     }
-
     const variantesDiv = document.getElementById('variantes-list');
     variantesDiv.innerHTML = '';
     if (prod.variantes && prod.variantes.length) prod.variantes.forEach((v, i) => agregarVariante(v, i));
-
     document.getElementById('modal-producto').removeAttribute('hidden');
 }
 
@@ -734,10 +757,8 @@ function limpiarFormulario() {
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-precio-oferta').value = '';
     document.getElementById('f-en-oferta').checked = false;
-
     const municipioSelect = document.getElementById('f-municipio');
     if (municipioSelect) municipioSelect.value = '';
-
     const categoriaSelect = document.getElementById('f-categoria');
     if (categoriaSelect) categoriaSelect.value = 'Otros';
     document.getElementById('variantes-list').innerHTML = '';
@@ -788,7 +809,7 @@ async function guardarProducto() {
 
         if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) { mostrarToast('Completa los campos obligatorios', 'error'); return; }
         if (!municipio) { mostrarToast('Selecciona el municipio del producto', 'error'); return; }
-        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) { mostrarToast('El teléfono debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error'); return; }
+        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) { mostrarToast('El teléfono debe tener formato cubano: 5XXXXXXX', 'error'); return; }
         if (!telefonovendedor) telefonovendedor = null;
 
         let imagenPrincipal = '';
