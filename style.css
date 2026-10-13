@@ -2675,3 +2675,46 @@ body {
         overflow: hidden;
     }
 }
+
+/* ============================================
+   INFO DEL USUARIO EN RESEÑAS
+   ============================================ */
+.resena-user-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--white);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+}
+
+.resena-user-info i {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.resena-user-info strong {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* Estado cuando NO hay sesión */
+.resena-user-info.sin-sesion {
+    background: #fff8e1;
+    border-color: #fde68a;
+    color: #92400e;
+    cursor: pointer;
+}
+
+.resena-user-info.sin-sesion i {
+    color: var(--accent);
+}
+
+.resena-user-info.sin-sesion strong {
+    color: #92400e;
+    text-decoration: underline;
+}
