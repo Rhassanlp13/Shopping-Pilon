@@ -1,4 +1,4 @@
-// ui.js - Versión Granma Market con filtros por categoría, municipio y flujo de envío
+// ui.js - Granma Market con filtros, envío y nombre expandible
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -116,7 +116,7 @@ export const UI = {
             const simbolo = '$';
 
             const municipioBadge = p.municipio
-                ? `<span class="vendedor-municipio" style="font-size:0.7rem; color:#888; display:block; margin-top:2px;"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}</span>`
+                ? `<span class="vendedor-municipio"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}</span>`
                 : '';
 
             return `
@@ -234,7 +234,7 @@ export const UI = {
         btn = document.createElement('button');
         btn.id = 'btn-qvapay';
         btn.className = 'btn-primary';
-        btn.style.background = '#1a237e';
+        btn.style.background = 'var(--primary)';
         btn.style.marginBottom = '8px';
         btn.innerHTML = '<i class="fas fa-dollar-sign"></i> Pagar con QvaPay (dólar digital)';
         btn.addEventListener('click', () => this.iniciarPagoQvaPay());
@@ -368,11 +368,11 @@ export const UI = {
                     thumb.src = optimizarImagen(url, 80, 80);
                     thumb.alt = `${p.nombre} - imagen ${index + 1}`;
                     thumb.style.cssText = 'width:60px;height:60px;object-fit:cover;cursor:pointer;border-radius:6px;transition:border-color 0.2s;';
-                    thumb.style.border = index === 0 ? '2px solid #1a237e' : '2px solid transparent';
+                    thumb.style.border = index === 0 ? '2px solid #064e3b' : '2px solid transparent';
                     thumb.addEventListener('click', () => {
                         document.getElementById('detalle-img').src = optimizarImagen(url, 600, 600);
                         document.querySelectorAll('.detalle-miniaturas img').forEach(img => img.style.borderColor = 'transparent');
-                        thumb.style.borderColor = '#1a237e';
+                        thumb.style.borderColor = '#064e3b';
                     });
                     miniaturasContainer.appendChild(thumb);
                 });
@@ -439,11 +439,65 @@ export const UI = {
             }
         };
 
+        // Vendedor + municipio
         const vendedorEl = document.getElementById('detalle-vendedor');
         if (vendedorEl) {
             vendedorEl.innerHTML = `${escapeHtml(p.vendedor)}${p.municipio ? ` · <i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}` : ''}`;
         }
-        document.getElementById('detalle-nombre').textContent = p.nombre;
+
+        // ========== NOMBRE CON "VER MÁS" ==========
+        const nombreEl = document.getElementById('detalle-nombre');
+        const toggleEl = document.getElementById('detalle-nombre-toggle');
+        const toggleTexto = toggleEl?.querySelector('.detalle-nombre-toggle-texto');
+
+        if (nombreEl) {
+            nombreEl.textContent = p.nombre;
+            nombreEl.classList.remove('expandido');
+            nombreEl.classList.add('colapsado');
+
+            // Resetear el botón
+            if (toggleEl) {
+                toggleEl.classList.remove('visible', 'expandido');
+                if (toggleTexto) toggleTexto.textContent = 'Ver más';
+            }
+
+            // Detectar si el texto se desborda después del render
+            setTimeout(() => {
+                if (!toggleEl || !nombreEl) return;
+
+                const alturaCompleta = nombreEl.scrollHeight;
+                const alturaLimitada = nombreEl.clientHeight;
+
+                if (alturaCompleta > alturaLimitada + 2) {
+                    toggleEl.classList.add('visible');
+
+                    const nuevoHandler = () => {
+                        const expandido = nombreEl.classList.contains('expandido');
+
+                        if (expandido) {
+                            // Colapsar
+                            nombreEl.classList.remove('expandido');
+                            nombreEl.classList.add('colapsado');
+                            toggleEl.classList.remove('expandido');
+                            if (toggleTexto) toggleTexto.textContent = 'Ver más';
+                            nombreEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        } else {
+                            // Expandir
+                            nombreEl.classList.remove('colapsado');
+                            nombreEl.classList.add('expandido');
+                            toggleEl.classList.add('expandido');
+                            if (toggleTexto) toggleTexto.textContent = 'Ver menos';
+                        }
+                    };
+
+                    // Clonar para limpiar listeners antiguos
+                    const clon = toggleEl.cloneNode(true);
+                    toggleEl.parentNode.replaceChild(clon, toggleEl);
+                    clon.addEventListener('click', nuevoHandler);
+                }
+            }, 50);
+        }
+        // ===========================================
 
         const detalleImg = document.getElementById('detalle-img');
         detalleImg.style.cursor = 'pointer';
@@ -457,7 +511,7 @@ export const UI = {
         baseCard.className = 'variante-card';
         if (this.varianteActualIndex === null) baseCard.classList.add('selected');
         baseCard.dataset.index = '-1';
-        baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(p.nombre)}</div><div class="variante-precio">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</div><div class="variante-stock">${p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}</div></div>`;
+        baseCard.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(p.imagen, 80, 80)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div>`;
         baseCard.addEventListener('click', () => {
             if (baseCard.classList.contains('selected')) return;
             document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
@@ -474,7 +528,7 @@ export const UI = {
                 card.className = 'variante-card';
                 if (this.varianteActualIndex === i) card.classList.add('selected');
                 card.dataset.index = i;
-                card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">${simbolo}${Number(v.precio).toLocaleString('es')}${textoMoneda}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
+                card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div>`;
                 card.addEventListener('click', () => {
                     if (card.classList.contains('selected')) return;
                     document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
@@ -742,7 +796,6 @@ export const UI = {
         this.cerrarModal();
         const modalEnvio = document.getElementById('modal-envio');
         modalEnvio.removeAttribute('hidden');
-        // Tailwind necesita estas clases para mostrarse como flex
         modalEnvio.classList.remove('hidden');
         modalEnvio.classList.add('flex');
         document.body.style.overflow = 'hidden';
