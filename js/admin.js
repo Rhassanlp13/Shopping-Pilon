@@ -1,6 +1,4 @@
 // admin.js - Panel de administración/vendedor para Granma Market
-// Incluye gestión de productos, pedidos con envío, reseñas, vendedores, QvaPay y clientes
-
 import { escapeHtml } from './utils/escape.js';
 import { supabase } from './supabase.js';
 import { mostrarToast } from './modules/toast.js';
@@ -26,14 +24,8 @@ async function resizeAndOptimizeImage(file, maxWidth = 800, maxHeight = 800) {
                 const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
-                if (width > maxWidth) {
-                    height = (height * maxWidth) / width;
-                    width = maxWidth;
-                }
-                if (height > maxHeight) {
-                    width = (width * maxHeight) / height;
-                    height = maxHeight;
-                }
+                if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+                if (height > maxHeight) { width = (width * maxHeight) / height; height = maxHeight; }
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
@@ -71,7 +63,6 @@ function setupImagePreview() {
     const fileInput = document.getElementById('f-imagen-file');
     const previewDiv = document.getElementById('vista-previa');
     if (!fileInput) return;
-
     fileInput.addEventListener('change', (e) => {
         previewDiv.innerHTML = '';
         const files = Array.from(e.target.files);
@@ -80,12 +71,7 @@ function setupImagePreview() {
             reader.onload = (event) => {
                 const img = document.createElement('img');
                 img.src = event.target.result;
-                img.style.width = '80px';
-                img.style.height = '80px';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '6px';
-                img.style.border = '1px solid #ddd';
-                img.style.padding = '2px';
+                img.style.cssText = 'width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #ddd;padding:2px;';
                 previewDiv.appendChild(img);
             };
             reader.readAsDataURL(file);
@@ -98,7 +84,6 @@ function actualizarEstadoVisualConfig(enabled, merchantId) {
     const statusDiv = document.getElementById('qvapay-status');
     const statusText = document.getElementById('qvapay-status-text');
     if (!statusDiv || !statusText) return;
-
     if (enabled && merchantId) {
         statusDiv.style.display = 'block';
         statusDiv.style.background = '#e8f5e9';
@@ -112,7 +97,7 @@ function actualizarEstadoVisualConfig(enabled, merchantId) {
     }
 }
 
-// ==================== CONFIGURACIÓN DE PAGOS QVAPAY ====================
+// ==================== CONFIGURACIÓN QVAPAY ====================
 async function cargarConfiguracionPagos() {
     const guardarBtn = document.getElementById('guardar-config-pagos');
     const originalText = guardarBtn?.innerHTML;
@@ -120,28 +105,22 @@ async function cargarConfiguracionPagos() {
         guardarBtn.disabled = true;
         guardarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
     }
-
     try {
         if (!currentUser) throw new Error('Usuario no autenticado');
-
         const { data, error } = await supabase
             .from('profiles')
             .select('qvapay_enabled, qvapay_merchant_id')
             .eq('id', currentUser.id)
             .single();
-
         if (error && error.code !== 'PGRST116') throw error;
-
         const enabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
         const merchantInput = document.getElementById('qvapay-merchant-id');
         const merchantGroup = document.getElementById('qvapay-merchant-group');
-
         if (enabledCheckbox) {
             enabledCheckbox.checked = data?.qvapay_enabled || false;
             merchantGroup.style.display = data?.qvapay_enabled ? 'block' : 'none';
         }
         if (merchantInput) merchantInput.value = data?.qvapay_merchant_id || '';
-
         actualizarEstadoVisualConfig(data?.qvapay_enabled, data?.qvapay_merchant_id);
         mostrarToast('Configuración cargada', 'ok');
     } catch (err) {
@@ -155,23 +134,18 @@ async function cargarConfiguracionPagos() {
     }
 }
 
-// ==================== FUNCIONES PRINCIPALES ====================
+// ==================== INICIO ====================
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = '/';
-        return;
-    }
+    if (!user) { window.location.href = '/'; return; }
     currentUser = user;
 
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-
     if (profile?.role === 'pending_seller') {
         mostrarToast('Tu cuenta está pendiente de aprobación. Espera a que un administrador la active.', 'warning');
         setTimeout(() => { window.location.href = '/'; }, 2500);
         return;
     }
-
     if (!profile || (profile.role !== 'admin' && profile.role !== 'seller')) {
         window.location.href = '/';
         return;
@@ -179,19 +153,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUserRole = profile.role;
 
     if (currentUserRole !== 'admin') {
-        const navSolicitudes = document.getElementById('nav-solicitudes');
-        if (navSolicitudes) navSolicitudes.style.display = 'none';
-        const solicitudesPage = document.getElementById('page-solicitudes');
-        if (solicitudesPage) solicitudesPage.style.display = 'none';
-        const navClientes = document.querySelector('.nav-item[data-page="clientes"]');
-        if (navClientes) navClientes.style.display = 'none';
+        document.getElementById('nav-solicitudes')?.style.setProperty('display', 'none');
+        document.getElementById('page-solicitudes')?.style.setProperty('display', 'none');
+        document.querySelector('.nav-item[data-page="clientes"]')?.style.setProperty('display', 'none');
     }
 
-    const grupoUrl = document.getElementById('grupo-url-imagen');
-    const grupoFile = document.getElementById('grupo-file-imagen');
-
-    grupoUrl.style.display = 'none';
-    grupoFile.style.display = 'block';
+    document.getElementById('grupo-url-imagen').style.display = 'none';
+    document.getElementById('grupo-file-imagen').style.display = 'block';
     setupImagePreview();
 
     const shell = document.getElementById('shell');
@@ -213,9 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (item.dataset.page === 'pedidos') cargarPedidos();
             if (item.dataset.page === 'solicitudes') cargarSolicitudesYRender();
             if (item.dataset.page === 'configuracion') cargarConfiguracionPagos();
-            if (item.dataset.page === 'clientes') {
-                cargarClientes().then(clientes => renderClientes(clientes));
-            }
+            if (item.dataset.page === 'clientes') cargarClientes().then(renderClientes);
         });
     });
 
@@ -228,7 +194,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('borrar-cancelar')?.addEventListener('click', () => cerrarBorrar());
     document.getElementById('borrar-confirmar')?.addEventListener('click', () => eliminarProducto());
 
-    // Configuración QvaPay
     const qvapayEnabledCheckbox = document.getElementById('qvapay-enabled-checkbox');
     const qvapayMerchantGroup = document.getElementById('qvapay-merchant-group');
     if (qvapayEnabledCheckbox) {
@@ -241,24 +206,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         guardarConfigBtn.addEventListener('click', async () => {
             const enabled = qvapayEnabledCheckbox?.checked || false;
             const merchantId = document.getElementById('qvapay-merchant-id')?.value.trim() || null;
-
             if (enabled && !merchantId) {
                 mostrarToast('Debes ingresar tu Merchant ID (UUID) de QvaPay', 'error');
                 return;
             }
-
             const originalText = guardarConfigBtn.innerHTML;
             guardarConfigBtn.disabled = true;
             guardarConfigBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
             try {
                 const { error } = await supabase
                     .from('profiles')
                     .update({ qvapay_enabled: enabled, qvapay_merchant_id: merchantId })
                     .eq('id', currentUser.id);
-
                 if (error) throw error;
-
                 mostrarToast('✅ Configuración guardada correctamente', 'ok');
                 actualizarEstadoVisualConfig(enabled, merchantId);
                 await cargarConfiguracionPagos();
@@ -271,11 +231,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
-    document.getElementById('help-button')?.addEventListener('click', () => {
-        const tutorialModal = document.getElementById('tutorial-modal');
-        if (tutorialModal) tutorialModal.removeAttribute('hidden');
-    });
 });
 
 async function iniciar() {
@@ -323,8 +278,7 @@ function optimizarImagenAdmin(url, ancho = 36, alto = 36) {
     const primeraUrl = url.split(',')[0].trim();
     if (!primeraUrl) return '';
     if (primeraUrl.includes('unsplash.com')) {
-        const baseUrl = primeraUrl.split('?')[0];
-        return `${baseUrl}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
+        return `${primeraUrl.split('?')[0]}?w=${ancho}&h=${alto}&fit=crop&auto=format&q=80`;
     }
     if (primeraUrl.includes('cloudinary.com')) {
         return primeraUrl.replace('/upload/', `/upload/w_${ancho},h_${alto},c_fill,q_80/`);
@@ -341,9 +295,7 @@ function renderTabla(filtro = '') {
         return;
     }
     tablaDiv.innerHTML = `<table class="admin-table">
-        <thead>
-            <tr><th>Producto</th><th>Municipio</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr>
-        </thead>
+        <thead><tr><th>Producto</th><th>Municipio</th><th>Precio</th><th>Stock</th><th>Oferta</th><th>Variantes</th><th>Acciones</th></tr></thead>
         <tbody>
             ${lista.map(p => `
             <tr>
@@ -394,15 +346,7 @@ function renderPedidos() {
     }
     tablaDiv.innerHTML = `<table class="admin-table">
         <thead>
-            <tr>
-                <th>Cliente</th>
-                <th>Entrega</th>
-                <th>Productos</th>
-                <th>Subtotal</th>
-                <th>Envío</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
+            <tr><th>Cliente</th><th>Entrega</th><th>Productos</th><th>Subtotal</th><th>Envío</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody>
             ${pedidos.map(p => {
@@ -437,12 +381,12 @@ function renderPedidos() {
                     </td>
                     <td>
                         ${p.costo_envio == null && p.status === 'pendiente'
-                            ? `<button class="act-btn asignar-envio" data-id="${escapeHtml(p.id)}" style="background:#1a237e; color:white; border:none;"><i class="fas fa-dollar-sign"></i> Asignar envío</button>`
+                            ? `<button class="asignar-envio bg-primary text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 hover:opacity-90 transition" data-id="${escapeHtml(p.id)}"><i class="fas fa-dollar-sign"></i> Asignar envío</button>`
                             : ''}
                         ${p.status === 'pendiente' && p.costo_envio != null
-                            ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>`
+                            ? `<button class="confirmar-pedido bg-whatsapp text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer hover:opacity-90 transition" data-id="${escapeHtml(p.id)}"><i class="fas fa-check"></i> Confirmar</button>`
                             : ''}
-                        ${p.status === 'paid' ? `<button class="act-btn confirmar-pedido" data-id="${escapeHtml(p.id)}">Confirmar</button>` : ''}
+                        ${p.status === 'paid' ? `<button class="confirmar-pedido bg-whatsapp text-white border-0 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer hover:opacity-90 transition" data-id="${escapeHtml(p.id)}"><i class="fas fa-check"></i> Confirmar</button>` : ''}
                     </td>
                 </tr>`;
             }).join('')}
@@ -453,42 +397,55 @@ function renderPedidos() {
     document.querySelectorAll('.asignar-envio').forEach(btn => btn.addEventListener('click', () => abrirModalEnvio(btn.dataset.id)));
 }
 
-// Abrir modal para asignar costo de envío
+// Modal para asignar costo de envío (con Tailwind)
 function abrirModalEnvio(pedidoId) {
     const p = pedidos.find(x => x.id === pedidoId);
     if (!p) return;
 
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
+    overlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[999] p-4';
     overlay.id = 'modal-envio-admin';
-    overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1rem;';
     overlay.innerHTML = `
-        <div style="background: white; border-radius: 16px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.15);">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 1.5rem; border-bottom: 1px solid #e0e0e0;">
-                <h2 style="font-size: 1rem; font-weight: 700; color: #1a237e; margin: 0;"><i class="fas fa-truck"></i> Asignar costo de envío</h2>
-                <button id="cerrar-envio-admin" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #888;">&times;</button>
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-primary text-white px-5 py-4 flex items-center justify-between">
+                <h2 class="font-serif text-lg font-bold flex items-center gap-2 m-0">
+                    <i class="fas fa-truck"></i> Asignar costo de envío
+                </h2>
+                <button id="cerrar-envio-admin" class="bg-transparent border-0 text-white text-2xl cursor-pointer opacity-80 hover:opacity-100 leading-none">&times;</button>
             </div>
-            <div style="padding: 1.5rem;">
-                <div style="background:#f8f9fa; padding:12px; border-radius:10px; margin-bottom:1rem; font-size:0.85rem; line-height:1.6;">
-                    <p style="margin:0 0 4px;"><strong>👤 Cliente:</strong> ${escapeHtml(p.cliente_nombre)}</p>
-                    <p style="margin:0 0 4px;"><strong>📞 Teléfono:</strong> ${escapeHtml(p.cliente_telefono || 'N/D')}</p>
-                    <p style="margin:0 0 4px;"><strong>📍 Municipio:</strong> ${escapeHtml(p.municipio_entrega || 'N/D')}</p>
-                    <p style="margin:0 0 4px;"><strong>🏠 Dirección:</strong> ${escapeHtml(p.direccion_entrega || 'N/D')}</p>
-                    ${p.referencia_entrega ? `<p style="margin:0 0 4px;"><strong>🧭 Referencia:</strong> ${escapeHtml(p.referencia_entrega)}</p>` : ''}
-                    <p style="margin:8px 0 0; padding-top:8px; border-top:1px dashed #ddd;"><strong>💰 Subtotal productos:</strong> $${Number(p.total).toLocaleString('es')}</p>
+
+            <div class="p-5 flex flex-col gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg text-sm leading-relaxed border border-gray-100">
+                    <p class="m-0 mb-1"><strong class="text-gray-700">👤 Cliente:</strong> ${escapeHtml(p.cliente_nombre)}</p>
+                    <p class="m-0 mb-1"><strong class="text-gray-700">📞 Teléfono:</strong> ${escapeHtml(p.cliente_telefono || 'N/D')}</p>
+                    <p class="m-0 mb-1"><strong class="text-gray-700">📍 Municipio:</strong> ${escapeHtml(p.municipio_entrega || 'N/D')}</p>
+                    <p class="m-0 mb-1"><strong class="text-gray-700">🏠 Dirección:</strong> ${escapeHtml(p.direccion_entrega || 'N/D')}</p>
+                    ${p.referencia_entrega ? `<p class="m-0 mb-1"><strong class="text-gray-700">🧭 Referencia:</strong> ${escapeHtml(p.referencia_entrega)}</p>` : ''}
+                    <p class="m-0 mt-3 pt-3 border-t border-dashed border-gray-300"><strong class="text-gray-700">💰 Subtotal productos:</strong> $${Number(p.total).toLocaleString('es')}</p>
                 </div>
-                <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-size:0.75rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Costo de envío (CUP) *</label>
-                    <input type="number" id="costo-envio-input" placeholder="Ej: 500" min="0" step="50" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:0.95rem; font-family:'DM Sans',sans-serif; outline:none; box-sizing:border-box;">
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Costo de envío (CUP) *</label>
+                    <input type="number" id="costo-envio-input" placeholder="Ej: 500" min="0" step="50"
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition">
                 </div>
-                <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-size:0.75rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Nota para el cliente (opcional)</label>
-                    <textarea id="nota-envio-input" rows="2" placeholder="Ej: Entrega en 2-3 días hábiles" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:0.9rem; font-family:'DM Sans',sans-serif; outline:none; box-sizing:border-box; resize:vertical;"></textarea>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Nota para el cliente (opcional)</label>
+                    <textarea id="nota-envio-input" rows="2" placeholder="Ej: Entrega en 2-3 días hábiles"
+                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition resize-y"></textarea>
                 </div>
             </div>
-            <div style="padding: 1rem 1.5rem; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px;">
-                <button id="cancelar-envio-admin" style="background:none; border:1.5px solid #e0e0e0; border-radius:8px; padding:9px 18px; font-size:0.88rem; cursor:pointer; font-family:'DM Sans',sans-serif;">Cancelar</button>
-                <button id="confirmar-envio-admin" style="background:#1a237e; color:white; border:none; border-radius:8px; padding:9px 18px; font-size:0.88rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; display:inline-flex; align-items:center; gap:6px;"><i class="fas fa-check"></i> Confirmar costo</button>
+
+            <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
+                <button id="cancelar-envio-admin"
+                    class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary transition">
+                    Cancelar
+                </button>
+                <button id="confirmar-envio-admin"
+                    class="bg-primary text-white border-0 rounded-lg px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition shadow-md">
+                    <i class="fas fa-check"></i> Confirmar costo
+                </button>
             </div>
         </div>
     `;
@@ -501,11 +458,7 @@ function abrirModalEnvio(pedidoId) {
     document.getElementById('confirmar-envio-admin').onclick = async () => {
         const costo = parseFloat(document.getElementById('costo-envio-input').value);
         const nota = document.getElementById('nota-envio-input').value.trim();
-
-        if (isNaN(costo) || costo < 0) {
-            mostrarToast('Ingresa un costo válido', 'error');
-            return;
-        }
+        if (isNaN(costo) || costo < 0) { mostrarToast('Ingresa un costo válido', 'error'); return; }
 
         const btn = document.getElementById('confirmar-envio-admin');
         btn.disabled = true;
@@ -514,15 +467,10 @@ function abrirModalEnvio(pedidoId) {
         try {
             const { error } = await supabase
                 .from('pedidos')
-                .update({
-                    costo_envio: costo,
-                    envio_confirmado: true
-                })
+                .update({ costo_envio: costo, envio_confirmado: true })
                 .eq('id', pedidoId);
-
             if (error) throw error;
 
-            // Generar link de WhatsApp para notificar al cliente
             const totalFinal = Number(p.total) + costo;
             const moneda = p.productos?.[0]?.moneda || 'CUP';
             const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
@@ -606,9 +554,7 @@ function renderResenas() {
         return;
     }
     tablaDiv.innerHTML = `<table class="admin-table">
-        <thead>
-            <tr><th>Producto ID</th><th>Nombre</th><th>Estrellas</th><th>Comentario</th><th>Fecha</th></tr>
-        </thead>
+        <thead><tr><th>Producto ID</th><th>Nombre</th><th>Estrellas</th><th>Comentario</th><th>Fecha</th></tr></thead>
         <tbody>
             ${resenas.map(r => `
             <tr>
@@ -622,18 +568,14 @@ function renderResenas() {
     </table>`;
 }
 
-// ==================== SOLICITUDES DE VENDEDORES ====================
+// ==================== SOLICITUDES ====================
 async function cargarSolicitudes() {
     const { data, error } = await supabase
         .from('profiles')
         .select('id, email, nombre_completo, telefono, created_at, role, qvapay_enabled, qvapay_merchant_id')
         .eq('role', 'pending_seller')
         .order('created_at', { ascending: false });
-    if (error) {
-        console.error(error);
-        mostrarToast('Error al cargar solicitudes', 'error');
-        return [];
-    }
+    if (error) { mostrarToast('Error al cargar solicitudes', 'error'); return []; }
     return data;
 }
 
@@ -645,9 +587,7 @@ function renderSolicitudes(solicitudes) {
         return;
     }
     tablaDiv.innerHTML = `<table class="admin-table">
-        <thead>
-            <tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha</th><th>QvaPay</th><th>Acciones</th></tr>
-        </thead>
+        <thead><tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha</th><th>QvaPay</th><th>Acciones</th></tr></thead>
         <tbody>
             ${solicitudes.map(s => `
             <tr>
@@ -655,15 +595,11 @@ function renderSolicitudes(solicitudes) {
                 <td>${escapeHtml(s.nombre_completo || '—')}</td>
                 <td>${escapeHtml(s.telefono || '—')}</td>
                 <td>${new Date(s.created_at).toLocaleDateString()}</td>
-                <td>
-                    ${s.qvapay_enabled && s.qvapay_merchant_id
-            ? `<span class="badge badge-ok" title="Merchant ID: ${escapeHtml(s.qvapay_merchant_id)}"><i class="fas fa-check-circle"></i> Activado</span>`
-            : `<span class="badge badge-out"><i class="fas fa-times-circle"></i> Inactivo</span>`}
-                 </td>
+                <td>${s.qvapay_enabled && s.qvapay_merchant_id ? `<span class="badge badge-ok"><i class="fas fa-check-circle"></i> Activado</span>` : `<span class="badge badge-out"><i class="fas fa-times-circle"></i> Inactivo</span>`}</td>
                 <td>
                     <button class="act-btn aprobar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Aprobar</button>
                     <button class="act-btn del rechazar-solicitud" data-id="${s.id}" data-email="${escapeHtml(s.email)}">Rechazar</button>
-                 </td>
+                </td>
             </tr>`).join('')}
         </tbody>
     </table>`;
@@ -672,54 +608,36 @@ function renderSolicitudes(solicitudes) {
 }
 
 async function aprobarVendedor(userId, email) {
-    const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'seller' })
-        .eq('id', userId);
-    if (error) {
-        mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
-    } else {
+    const { error } = await supabase.from('profiles').update({ role: 'seller' }).eq('id', userId);
+    if (error) mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
+    else {
         mostrarToast(`✅ Vendedor ${escapeHtml(email)} aprobado`, 'ok');
-        const solicitudes = await cargarSolicitudes();
-        renderSolicitudes(solicitudes);
+        renderSolicitudes(await cargarSolicitudes());
     }
 }
 
 async function rechazarVendedor(userId, email) {
-    const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'customer' })
-        .eq('id', userId);
-    if (error) {
-        mostrarToast(`Error al rechazar a ${escapeHtml(email)}`, 'error');
-    } else {
+    const { error } = await supabase.from('profiles').update({ role: 'customer' }).eq('id', userId);
+    if (error) mostrarToast(`Error al rechazar a ${escapeHtml(email)}`, 'error');
+    else {
         mostrarToast(`❌ Vendedor ${escapeHtml(email)} rechazado`, 'info');
-        const solicitudes = await cargarSolicitudes();
-        renderSolicitudes(solicitudes);
+        renderSolicitudes(await cargarSolicitudes());
     }
 }
 
 async function cargarSolicitudesYRender() {
-    if (currentUserRole !== 'admin') {
-        mostrarToast('Acceso denegado. Solo administradores.', 'error');
-        return;
-    }
-    const solicitudes = await cargarSolicitudes();
-    renderSolicitudes(solicitudes);
+    if (currentUserRole !== 'admin') { mostrarToast('Acceso denegado. Solo administradores.', 'error'); return; }
+    renderSolicitudes(await cargarSolicitudes());
 }
 
-// ==================== CLIENTES (para administrador) ====================
+// ==================== CLIENTES ====================
 async function cargarClientes() {
     const { data, error } = await supabase
         .from('profiles')
         .select('id, email, nombre_completo, telefono, created_at, role')
         .eq('role', 'customer')
         .order('created_at', { ascending: false });
-    if (error) {
-        console.error(error);
-        mostrarToast('Error al cargar clientes', 'error');
-        return [];
-    }
+    if (error) { mostrarToast('Error al cargar clientes', 'error'); return []; }
     return data;
 }
 
@@ -731,9 +649,7 @@ function renderClientes(clientes) {
         return;
     }
     tablaDiv.innerHTML = `<table class="admin-table">
-        <thead>
-            <tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha registro</th><th>Acciones</th></tr>
-        </thead>
+        <thead><tr><th>Email</th><th>Nombre</th><th>Teléfono</th><th>Fecha registro</th><th>Acciones</th></tr></thead>
         <tbody>
             ${clientes.map(c => `
             <tr>
@@ -741,11 +657,7 @@ function renderClientes(clientes) {
                 <td>${escapeHtml(c.nombre_completo || '—')}</td>
                 <td>${escapeHtml(c.telefono || '—')}</td>
                 <td>${new Date(c.created_at).toLocaleDateString()}</td>
-                <td>
-                    <button class="act-btn convertir-seller" data-id="${c.id}" data-email="${escapeHtml(c.email)}">
-                        <i class="fas fa-user-check"></i> Aprobar como vendedor
-                    </button>
-                 </td>
+                <td><button class="act-btn convertir-seller" data-id="${c.id}" data-email="${escapeHtml(c.email)}"><i class="fas fa-user-check"></i> Aprobar como vendedor</button></td>
             </tr>`).join('')}
         </tbody>
     </table>`;
@@ -755,18 +667,12 @@ function renderClientes(clientes) {
 }
 
 async function convertirEnVendedor(userId, email) {
-    const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'seller' })
-        .eq('id', userId);
-    if (error) {
-        mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
-    } else {
+    const { error } = await supabase.from('profiles').update({ role: 'seller' }).eq('id', userId);
+    if (error) mostrarToast(`Error al aprobar a ${escapeHtml(email)}`, 'error');
+    else {
         mostrarToast(`✅ ${escapeHtml(email)} ahora es vendedor`, 'ok');
-        const clientes = await cargarClientes();
-        renderClientes(clientes);
-        const solicitudes = await cargarSolicitudes();
-        renderSolicitudes(solicitudes);
+        renderClientes(await cargarClientes());
+        renderSolicitudes(await cargarSolicitudes());
     }
 }
 
@@ -792,7 +698,6 @@ function abrirEditar(id) {
     document.getElementById('f-precio-oferta').value = prod.preciooferta ?? '';
     document.getElementById('f-en-oferta').checked = prod.enoferta || false;
 
-    // Municipio
     const municipioSelect = document.getElementById('f-municipio');
     if (municipioSelect) municipioSelect.value = prod.municipio || '';
 
@@ -808,12 +713,7 @@ function abrirEditar(id) {
         imagenes.forEach(url => {
             const img = document.createElement('img');
             img.src = url;
-            img.style.width = '80px';
-            img.style.height = '80px';
-            img.style.objectFit = 'cover';
-            img.style.borderRadius = '6px';
-            img.style.border = '1px solid #ddd';
-            img.style.padding = '2px';
+            img.style.cssText = 'width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #ddd;padding:2px;';
             previewDiv.appendChild(img);
         });
     }
@@ -865,8 +765,7 @@ function agregarVariante(v = null, index = null) {
 }
 
 function validarTelefonoCubano(tel) {
-    const cleaned = tel.replace(/\s+/g, '');
-    return /^5[0-9]{7}$/.test(cleaned);
+    return /^5[0-9]{7}$/.test(tel.replace(/\s+/g, ''));
 }
 
 async function guardarProducto() {
@@ -887,18 +786,9 @@ async function guardarProducto() {
         const moneda = document.getElementById('f-moneda')?.value || 'CUP';
         const municipio = document.getElementById('f-municipio')?.value.trim() || null;
 
-        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) {
-            mostrarToast('Completa los campos obligatorios', 'error');
-            return;
-        }
-        if (!municipio) {
-            mostrarToast('Selecciona el municipio del producto', 'error');
-            return;
-        }
-        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) {
-            mostrarToast('El teléfono debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error');
-            return;
-        }
+        if (!nombre || isNaN(precio) || isNaN(stock) || !vendedor) { mostrarToast('Completa los campos obligatorios', 'error'); return; }
+        if (!municipio) { mostrarToast('Selecciona el municipio del producto', 'error'); return; }
+        if (telefonovendedor && !validarTelefonoCubano(telefonovendedor)) { mostrarToast('El teléfono debe tener formato cubano: 5XXXXXXX (8 dígitos)', 'error'); return; }
         if (!telefonovendedor) telefonovendedor = null;
 
         let imagenPrincipal = '';
@@ -908,22 +798,13 @@ async function guardarProducto() {
 
         if (fileInput.files.length > 0) {
             const files = Array.from(fileInput.files);
-            if (files.length > 6) {
-                mostrarToast('Máximo 6 imágenes por producto', 'error');
-                return;
-            }
+            if (files.length > 6) { mostrarToast('Máximo 6 imágenes por producto', 'error'); return; }
             for (const file of files) {
-                if (file.size > 10 * 1024 * 1024) {
-                    mostrarToast(`La imagen "${file.name}" supera los 10MB`, 'error');
-                    return;
-                }
+                if (file.size > 10 * 1024 * 1024) { mostrarToast(`La imagen "${file.name}" supera los 10MB`, 'error'); return; }
                 const uploadedUrl = await subirImagen(file, editandoId);
                 if (!uploadedUrl) throw new Error('No se pudo subir una de las imágenes');
-                if (!imagenPrincipal) {
-                    imagenPrincipal = uploadedUrl;
-                } else {
-                    galeriaUrls.push(uploadedUrl);
-                }
+                if (!imagenPrincipal) imagenPrincipal = uploadedUrl;
+                else galeriaUrls.push(uploadedUrl);
             }
         } else if (urlInput) {
             imagenPrincipal = urlInput;
@@ -950,29 +831,23 @@ async function guardarProducto() {
         });
 
         const productoData = {
-            nombre,
-            precio,
-            stock,
+            nombre, precio, stock,
             imagen: imagenPrincipal,
-            vendedor,
-            telefonovendedor,
-            enoferta: enOferta,
-            preciooferta: precioOferta,
+            vendedor, telefonovendedor,
+            enoferta: enOferta, preciooferta: precioOferta,
             categoria,
             variantes: variantes.length ? variantes : [],
             seller_id: currentUser.id,
-            moneda: moneda,
+            moneda,
             galeria: galeriaUrls,
-            municipio: municipio
+            municipio
         };
 
         let error;
         if (editandoId) {
-            const { error: updateError } = await supabase.from('productos').update(productoData).eq('id', editandoId);
-            error = updateError;
+            ({ error } = await supabase.from('productos').update(productoData).eq('id', editandoId));
         } else {
-            const { error: insertError } = await supabase.from('productos').insert([productoData]);
-            error = insertError;
+            ({ error } = await supabase.from('productos').insert([productoData]));
         }
         if (error) throw error;
 
@@ -1001,8 +876,7 @@ function abrirBorrar(id, nombre) {
 }
 
 function cerrarBorrar() {
-    const modal = document.getElementById('modal-borrar');
-    if (modal) modal.setAttribute('hidden', '');
+    document.getElementById('modal-borrar')?.setAttribute('hidden', '');
     borrandoId = null;
 }
 
@@ -1016,12 +890,8 @@ async function eliminarProducto() {
     try {
         if (currentUserRole !== 'admin') {
             const { data: pedidos, error } = await supabase
-                .from('pedidos')
-                .select('id, productos')
-                .eq('vendedor_id', currentUser.id);
-
+                .from('pedidos').select('id, productos').eq('vendedor_id', currentUser.id);
             if (error) throw error;
-
             const tienePedidos = pedidos.some(pedido => {
                 if (!pedido.productos || !Array.isArray(pedido.productos)) return false;
                 return pedido.productos.some(item => item.id === borrandoId);

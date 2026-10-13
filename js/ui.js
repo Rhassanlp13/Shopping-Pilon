@@ -1,4 +1,4 @@
-// ui.js - Versión Granma Market con filtros por categoría, municipio y flujo de envío con confirmación de costo
+// ui.js - Versión Granma Market con filtros por categoría, municipio y flujo de envío
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -79,7 +79,6 @@ export const UI = {
         return true;
     },
 
-    // Filtrar productos según categoría Y municipio seleccionados
     filtrarProductos() {
         let productosFiltrados = this.productos;
 
@@ -94,7 +93,6 @@ export const UI = {
         this.renderProductos(productosFiltrados);
     },
 
-    // Renderiza productos, acepta array opcional para filtrado
     renderProductos(productosAMostrar = null) {
         const productos = productosAMostrar || this.productos;
         if (!this.grid) return;
@@ -209,20 +207,11 @@ export const UI = {
     // ==================== QvaPay ====================
     actualizarBotonQvaPay() {
         const items = carrito.itemsConDatos(this.productos);
-        if (items.length === 0) {
-            this.removerBotonQvaPay();
-            return;
-        }
+        if (items.length === 0) { this.removerBotonQvaPay(); return; }
         const todasUSD = items.every(item => (item.moneda || 'CUP') === 'USD');
-        if (!todasUSD) {
-            this.removerBotonQvaPay();
-            return;
-        }
+        if (!todasUSD) { this.removerBotonQvaPay(); return; }
         const vendedoresUnicos = [...new Set(items.map(i => i.seller_id))];
-        if (vendedoresUnicos.length !== 1) {
-            this.removerBotonQvaPay();
-            return;
-        }
+        if (vendedoresUnicos.length !== 1) { this.removerBotonQvaPay(); return; }
         const vendedorId = vendedoresUnicos[0];
         supabase
             .from('profiles')
@@ -231,11 +220,8 @@ export const UI = {
             .single()
             .then(({ data, error }) => {
                 const habilitado = !error && data?.qvapay_enabled && data?.qvapay_merchant_id;
-                if (habilitado) {
-                    this.agregarBotonQvaPay();
-                } else {
-                    this.removerBotonQvaPay();
-                }
+                if (habilitado) this.agregarBotonQvaPay();
+                else this.removerBotonQvaPay();
             })
             .catch(() => this.removerBotonQvaPay());
     },
@@ -264,21 +250,12 @@ export const UI = {
 
     async iniciarPagoQvaPay() {
         const items = carrito.itemsConDatos(this.productos);
-        if (items.length === 0) {
-            mostrarToast('Carrito vacío', 'warning');
-            return;
-        }
+        if (items.length === 0) { mostrarToast('Carrito vacío', 'warning'); return; }
         if (!this.validarMonedaCarrito(items)) return;
         const todasUSD = items.every(item => (item.moneda || 'CUP') === 'USD');
-        if (!todasUSD) {
-            mostrarToast('El pago con QvaPay solo está disponible para productos en USD.', 'error');
-            return;
-        }
+        if (!todasUSD) { mostrarToast('El pago con QvaPay solo está disponible para productos en USD.', 'error'); return; }
         const vendedoresUnicos = [...new Set(items.map(i => i.seller_id))];
-        if (vendedoresUnicos.length !== 1) {
-            mostrarToast('Pago con QvaPay solo disponible para pedidos de un solo vendedor', 'warning');
-            return;
-        }
+        if (vendedoresUnicos.length !== 1) { mostrarToast('Pago con QvaPay solo disponible para pedidos de un solo vendedor', 'warning'); return; }
         const vendedorId = vendedoresUnicos[0];
 
         const { data: profile, error } = await supabase
@@ -293,27 +270,17 @@ export const UI = {
         }
 
         const clienteNombre = document.getElementById('cliente-nombre')?.value.trim();
-        if (!clienteNombre) {
-            mostrarToast('Por favor ingresa tu nombre', 'error');
-            return;
-        }
+        if (!clienteNombre) { mostrarToast('Por favor ingresa tu nombre', 'error'); return; }
 
         const total = carrito.total(this.productos);
         const productosParaEnvio = items.map(item => ({
-            id: item.id,
-            variantId: item.variantId,
-            nombre: item.nombre,
-            cantidad: item.cantidad,
-            precio: item.precio,
-            moneda: item.moneda || 'CUP',
-            vendedor_id: item.seller_id
+            id: item.id, variantId: item.variantId, nombre: item.nombre,
+            cantidad: item.cantidad, precio: item.precio,
+            moneda: item.moneda || 'CUP', vendedor_id: item.seller_id
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            mostrarToast('Debes iniciar sesión para pagar', 'error');
-            return;
-        }
+        if (!session) { mostrarToast('Debes iniciar sesión para pagar', 'error'); return; }
 
         mostrarToast('Creando orden de pago...', 'info');
 
@@ -345,7 +312,6 @@ export const UI = {
             mostrarToast(err.message || 'Error al procesar pago', 'error');
         }
     },
-    // ==================== Fin QvaPay ====================
 
     abrirLightbox() {
         const imgSrc = document.getElementById('detalle-img').src;
@@ -401,23 +367,12 @@ export const UI = {
                     const thumb = document.createElement('img');
                     thumb.src = optimizarImagen(url, 80, 80);
                     thumb.alt = `${p.nombre} - imagen ${index + 1}`;
-                    thumb.style.width = '60px';
-                    thumb.style.height = '60px';
-                    thumb.style.objectFit = 'cover';
-                    thumb.style.cursor = 'pointer';
-                    thumb.style.borderRadius = '6px';
+                    thumb.style.cssText = 'width:60px;height:60px;object-fit:cover;cursor:pointer;border-radius:6px;transition:border-color 0.2s;';
                     thumb.style.border = index === 0 ? '2px solid #1a237e' : '2px solid transparent';
-                    thumb.style.transition = 'border-color 0.2s';
                     thumb.addEventListener('click', () => {
                         document.getElementById('detalle-img').src = optimizarImagen(url, 600, 600);
                         document.querySelectorAll('.detalle-miniaturas img').forEach(img => img.style.borderColor = 'transparent');
                         thumb.style.borderColor = '#1a237e';
-                    });
-                    thumb.addEventListener('mouseenter', () => {
-                        if (thumb.style.borderColor !== '#1a237e') thumb.style.borderColor = '#ff9800';
-                    });
-                    thumb.addEventListener('mouseleave', () => {
-                        if (thumb.style.borderColor !== '#1a237e') thumb.style.borderColor = 'transparent';
                     });
                     miniaturasContainer.appendChild(thumb);
                 });
@@ -519,7 +474,6 @@ export const UI = {
                 card.className = 'variante-card';
                 if (this.varianteActualIndex === i) card.classList.add('selected');
                 card.dataset.index = i;
-                const precioVar = v.precio !== undefined && v.precio !== null ? v.precio : p.precio;
                 card.innerHTML = `<div class="variante-imagen"><img src="${optimizarImagen(imagenVar, 80, 80)}" alt="${escapeHtml(v.nombre)}" onerror="this.src='https://placehold.co/80x80?text=?'"></div><div class="variante-info"><div class="variante-nombre">${escapeHtml(v.nombre)}</div>${v.precio ? `<div class="variante-precio">${simbolo}${Number(v.precio).toLocaleString('es')}${textoMoneda}</div>` : ''}<div class="variante-stock">${v.stock > 0 ? `${v.stock} disponibles` : 'Agotado'}</div></div>`;
                 card.addEventListener('click', () => {
                     if (card.classList.contains('selected')) return;
@@ -544,44 +498,14 @@ export const UI = {
                 actualizarVista(this.varianteActualIndex);
                 const originalText = btnAdd.innerHTML;
                 btnAdd.innerHTML = '<i class="fas fa-check"></i> Añadido';
-                setTimeout(() => {
-                    if (!btnAdd.disabled) btnAdd.innerHTML = originalText;
-                }, 1500);
-
-                const targetCard = document.querySelector(`.product-card[data-id="${id}"]`);
-                if (targetCard) {
-                    const btnGrid = targetCard.querySelector('.card-btn-add');
-                    if (p) {
-                        const cantidadEnCarrito = carrito.cantidadDe(id, null);
-                        const agotado = p.stock <= 0 || cantidadEnCarrito >= p.stock;
-                        if (btnGrid) {
-                            btnGrid.disabled = agotado;
-                            btnGrid.innerHTML = agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir';
-                        }
-                        const existingBadge = targetCard.querySelector('.card-stock-badge');
-                        if (p.stock > 0 && p.stock <= 3 && !agotado) {
-                            if (!existingBadge) {
-                                const badge = document.createElement('span');
-                                badge.className = 'card-stock-badge';
-                                badge.textContent = `¡Solo ${p.stock}!`;
-                                targetCard.querySelector('.product-info')?.prepend(badge);
-                            } else {
-                                existingBadge.textContent = `¡Solo ${p.stock}!`;
-                            }
-                        } else if (existingBadge) {
-                            existingBadge.remove();
-                        }
-                    }
-                }
+                setTimeout(() => { if (!btnAdd.disabled) btnAdd.innerHTML = originalText; }, 1500);
             } else {
                 mostrarToast(`❌ ${res.msg}`, 'error');
             }
         };
 
         const btnShare = document.getElementById('detalle-btn-share');
-        if (btnShare) {
-            btnShare.onclick = () => this.compartirProducto();
-        }
+        if (btnShare) btnShare.onclick = () => this.compartirProducto();
 
         modal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
@@ -678,13 +602,9 @@ export const UI = {
         if (!seller_id) return null;
 
         const productosData = items.map(it => ({
-            id: it.id,
-            variantId: it.variantId,
-            nombre: it.nombre,
-            cantidad: it.cantidad,
-            precio: it.precio,
-            moneda: it.moneda || 'CUP',
-            vendedor_id: seller_id
+            id: it.id, variantId: it.variantId, nombre: it.nombre,
+            cantidad: it.cantidad, precio: it.precio,
+            moneda: it.moneda || 'CUP', vendedor_id: seller_id
         }));
 
         const { data, error } = await supabase
@@ -787,7 +707,6 @@ export const UI = {
         document.body.style.overflow = 'hidden';
     },
 
-    // Abre el modal de envío (reemplaza a la antigua función directa)
     async enviarWhatsApp() {
         if (this.enviandoPedido) {
             mostrarToast('⏳ Procesando pedido, espera...', 'warning');
@@ -811,10 +730,8 @@ export const UI = {
             return;
         }
 
-        // Guardar datos pendientes para el siguiente paso
         this._datosPedidoPendiente = { items, clienteNombre };
 
-        // Pre-rellenar el formulario de envío
         document.getElementById('envio-nombre').value = clienteNombre;
         document.getElementById('envio-telefono').value = '';
         document.getElementById('envio-municipio').value = '';
@@ -822,13 +739,15 @@ export const UI = {
         document.getElementById('envio-referencia').value = '';
         document.getElementById('envio-notas').value = '';
 
-        // Cerrar carrito y abrir modal de envío
         this.cerrarModal();
-        document.getElementById('modal-envio').removeAttribute('hidden');
+        const modalEnvio = document.getElementById('modal-envio');
+        modalEnvio.removeAttribute('hidden');
+        // Tailwind necesita estas clases para mostrarse como flex
+        modalEnvio.classList.remove('hidden');
+        modalEnvio.classList.add('flex');
         document.body.style.overflow = 'hidden';
     },
 
-    // Procesa el envío del pedido con los datos de envío del cliente
     async confirmarYEnviarPedido() {
         const nombre = document.getElementById('envio-nombre').value.trim();
         const telefono = document.getElementById('envio-telefono').value.trim();
@@ -881,7 +800,10 @@ export const UI = {
                 else throw new Error('Error al guardar pedido');
             }
 
-            document.getElementById('modal-envio').setAttribute('hidden', '');
+            const modalEnvio = document.getElementById('modal-envio');
+            modalEnvio.setAttribute('hidden', '');
+            modalEnvio.classList.add('hidden');
+            modalEnvio.classList.remove('flex');
             document.body.style.overflow = '';
 
             this.mostrarModalWhatsApp(vendedores, pedidosIds, datosEnvio);
@@ -995,7 +917,6 @@ export const UI = {
 
         document.getElementById('btn-enviar-resena')?.addEventListener('click', () => this.enviarResena());
 
-        // ========== FILTROS POR CATEGORÍA ==========
         document.querySelectorAll('.filtro-btn[data-categoria]').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filtro-btn[data-categoria]').forEach(b => b.classList.remove('active'));
@@ -1005,7 +926,6 @@ export const UI = {
             });
         });
 
-        // ========== FILTROS POR MUNICIPIO ==========
         document.querySelectorAll('.filtro-btn[data-municipio]').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filtro-btn[data-municipio]').forEach(b => b.classList.remove('active'));
@@ -1016,22 +936,18 @@ export const UI = {
         });
 
         // ========== MODAL DE ENVÍO ==========
-        document.getElementById('envio-cerrar')?.addEventListener('click', () => {
-            document.getElementById('modal-envio').setAttribute('hidden', '');
+        const cerrarModalEnvio = () => {
+            const modalEnvio = document.getElementById('modal-envio');
+            modalEnvio.setAttribute('hidden', '');
+            modalEnvio.classList.add('hidden');
+            modalEnvio.classList.remove('flex');
             document.body.style.overflow = '';
             this._datosPedidoPendiente = null;
-        });
-        document.getElementById('envio-cancelar')?.addEventListener('click', () => {
-            document.getElementById('modal-envio').setAttribute('hidden', '');
-            document.body.style.overflow = '';
-            this._datosPedidoPendiente = null;
-        });
+        };
+        document.getElementById('envio-cerrar')?.addEventListener('click', cerrarModalEnvio);
+        document.getElementById('envio-cancelar')?.addEventListener('click', cerrarModalEnvio);
         document.getElementById('modal-envio')?.addEventListener('click', (e) => {
-            if (e.target === document.getElementById('modal-envio')) {
-                document.getElementById('modal-envio').setAttribute('hidden', '');
-                document.body.style.overflow = '';
-                this._datosPedidoPendiente = null;
-            }
+            if (e.target === document.getElementById('modal-envio')) cerrarModalEnvio();
         });
         document.getElementById('envio-confirmar')?.addEventListener('click', () => this.confirmarYEnviarPedido());
     }
