@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda | Granma Market</title>
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+    <meta name="theme-color" content="#064e3b">
+
+    <!-- Tailwind (por si acaso) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            corePlugins: { preflight: false },
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#064e3b',
+                        accent: '#f59e0b',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header class="gm-navbar">
+        <div class="gm-navbar-inner">
+            <a href="index.html" class="gm-logo">
+                <span class="gm-logo-icon"><i class="fas fa-store"></i></span>
+                <span class="gm-logo-text">GRANMA<span>MARKET</span></span>
+            </a>
+            <div class="nav-buttons">
+                <a href="index.html" class="cart-btn" aria-label="Volver">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <button class="cart-btn" id="cart-btn" aria-label="Ver carrito">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- PERFIL DEL VENDEDOR -->
+    <section class="tienda-hero" id="tienda-hero">
+        <div class="tienda-avatar" id="tienda-avatar">
+            <span id="tienda-iniciales">--</span>
+        </div>
+        <h1 class="tienda-nombre" id="tienda-nombre">Cargando...</h1>
+        <div class="tienda-meta">
+            <span id="tienda-municipio"><i class="fas fa-map-marker-alt"></i> Cargando...</span>
+            <span class="tienda-divider">·</span>
+            <span id="tienda-productos-count">0 productos</span>
+        </div>
+        <div class="tienda-badge">
+            <i class="fas fa-check-circle"></i> Vendedor verificado
+        </div>
+    </section>
+
+    <!-- GRID DE PRODUCTOS -->
+    <section class="section-title" style="padding-top: 1rem;">
+        <h2>Productos de esta tienda</h2>
+        <p id="tienda-subtitle">Cargando catálogo...</p>
+    </section>
+
+    <main class="product-grid" id="grid" aria-label="Productos del vendedor"></main>
+
+    <!-- ESTADO VACÍO / CARGA -->
+    <div id="estado-vacio" class="grid-empty" style="display: none;">
+        <i class="fas fa-store-slash"></i>
+        <p>Esta tienda aún no tiene productos disponibles.</p>
+        <a href="index.html" style="margin-top: 1rem; display: inline-block; padding: 10px 22px; background: var(--primary); color: white; border-radius: 50px; text-decoration: none; font-weight: 600;">
+            <i class="fas fa-arrow-left"></i> Volver al catálogo
+        </a>
+    </div>
+
+    <!-- Modal detalle producto (reutilizado) -->
+    <div id="modal-detalle" class="modal-overlay" hidden>
+        <div class="detalle-box">
+            <button class="detalle-btn-cerrar" id="detalle-btn-cerrar"><i class="fas fa-arrow-left"></i></button>
+            <div class="detalle-img-wrap">
+                <img id="detalle-img" src="" alt="">
+            </div>
+            <div class="detalle-scroll">
+                <div class="detalle-info">
+                    <div class="detalle-vendedor">
+                        <i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
+                    </div>
+                    <div class="detalle-nombre colapsado" id="detalle-nombre"></div>
+                    <button class="detalle-nombre-toggle" id="detalle-nombre-toggle" type="button">
+                        <span class="detalle-nombre-toggle-texto">Ver más</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="detalle-precio"><span id="detalle-precio"></span></div>
+                    <span class="detalle-stock" id="detalle-stock"></span>
+                    <div id="detalle-variantes"></div>
+                </div>
+                <div class="detalle-actions">
+                    <button class="detalle-btn-add" id="detalle-btn-add">
+                        <i class="fas fa-cart-plus"></i> Añadir al carrito
+                    </button>
+                    <button class="detalle-btn-share" id="detalle-btn-share">
+                        <i class="fab fa-whatsapp"></i> Compartir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal carrito (reutilizado) -->
+    <div id="cart-modal" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i class="fas fa-shopping-bag"></i> Tu Pedido</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cart-items"></div>
+                <div class="cliente-info">
+                    <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="total-row">
+                    <span>Total:</span>
+                    <strong><span id="cart-total">0</span></strong>
+                </div>
+                <button class="btn-whatsapp" id="btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> Confirmar pedido
+                </button>
+                <button class="btn-clear" id="btn-clear">
+                    <i class="fas fa-trash"></i> Vaciar carrito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- WhatsApp flotante -->
+    <a href="https://wa.me/5356195243?text=Hola%20Granma%20Market,%20quiero%20información%20sobre%20un%20producto"
+       class="whatsapp-float" target="_blank" aria-label="Contactar por WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+        <span class="whatsapp-float-text">¿Te ayudo?</span>
+    </a>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="footer-logo">GRANMA <span>MARKET</span></div>
+                <p class="footer-desc">El mercado digital de Granma. Compra y vende desde casa, rápido y seguro.</p>
+                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank">
+                    <i class="fab fa-whatsapp"></i> Escríbenos
+                </a>
+            </div>
+            <div class="footer-links">
+                <h4>Navegación</h4>
+                <a href="index.html"><i class="fas fa-home"></i> Inicio</a>
+                <a href="index.html"><i class="fas fa-store"></i> Ver catálogo</a>
+                <a href="https://wa.me/5356195243" target="_blank"><i class="fas fa-headset"></i> Soporte</a>
+            </div>
+            <div class="footer-info">
+                <h4>Información</h4>
+                <p><i class="fas fa-map-marker-alt"></i> Bayamo, Granma, Cuba</p>
+                <p><i class="fas fa-clock"></i> Lun–Sáb: 8am – 8pm</p>
+                <p><i class="fab fa-whatsapp"></i> +53 561 95243</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 Granma Market — Todos los derechos reservados</p>
+        </div>
+    </footer>
+
+    <script type="module" src="js/tienda.js"></script>
+</body>
+
+</html>

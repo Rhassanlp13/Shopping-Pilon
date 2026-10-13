@@ -1,4 +1,4 @@
-// ui.js - Granma Market con filtros, envío, nombre expandible y reseñas con usuario logueado
+// ui.js - Granma Market con filtros, envío, nombre expandible, reseñas con usuario logueado y botón "Ver tienda"
 import { supabase } from './supabase.js';
 import { carrito } from './carrito.js';
 import { CONFIG } from './config.js';
@@ -439,10 +439,13 @@ export const UI = {
             }
         };
 
-        // Vendedor + municipio
+        // ========== Vendedor + municipio + BOTÓN "VER TIENDA" ==========
         const vendedorEl = document.getElementById('detalle-vendedor');
         if (vendedorEl) {
-            vendedorEl.innerHTML = `${escapeHtml(p.vendedor)}${p.municipio ? ` · <i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}` : ''}`;
+            vendedorEl.innerHTML = `
+                ${escapeHtml(p.vendedor)}${p.municipio ? ` · <i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.municipio)}` : ''}
+                ${p.seller_id ? `<a href="tienda.html?vendedor=${encodeURIComponent(p.seller_id)}" class="detalle-vendedor-link"><i class="fas fa-store"></i> Ver tienda</a>` : ''}
+            `;
         }
 
         // ========== NOMBRE CON "VER MÁS" ==========
@@ -641,7 +644,6 @@ export const UI = {
             return;
         }
 
-        // Verificar que el usuario esté logueado
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             mostrarToast('🔒 Debes iniciar sesión para dejar una reseña', 'warning');
@@ -649,7 +651,6 @@ export const UI = {
             return;
         }
 
-        // Obtener nombre del usuario logueado
         const user = session.user;
         const nombre = user.user_metadata?.nombre
             || user.user_metadata?.full_name
