@@ -3,33 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmar Pedido - Shopping Pilón</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Confirmar Pedido - Granma Market</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <style>
-        body { font-family: 'DM Sans', sans-serif; background: #f5f5f7; margin: 0; padding: 2rem; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { max-width: 600px; width: 100%; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #1a237e; color: white; padding: 1.5rem; text-align: center; }
-        .header h1 { font-family: 'Playfair Display', serif; margin: 0; font-size: 1.5rem; }
-        .header p { margin: 0.5rem 0 0; opacity: 0.8; }
-        .content { padding: 1.5rem; }
-        .pedido-info { background: #f8f9fa; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
-        .productos { border-top: 1px solid #e0e0e0; margin-top: 1rem; padding-top: 1rem; }
-        .producto-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
-        .total { font-weight: bold; font-size: 1.2rem; text-align: right; margin-top: 1rem; }
-        .btn-confirmar { background: #25d366; color: white; border: none; padding: 12px 24px; border-radius: 40px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 1rem; transition: background 0.2s; }
-        .btn-confirmar:hover { background: #128c7e; }
-        .btn-confirmar:disabled { background: #ccc; cursor: not-allowed; }
-        .mensaje { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; text-align: center; display: none; }
-        .mensaje.success { background: #d4edda; color: #155724; display: block; }
-        .mensaje.error { background: #f8d7da; color: #721c24; display: block; }
-        .loading { text-align: center; padding: 1rem; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(6, 78, 59, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .header p {
+            margin: 0.5rem 0 0;
+            opacity: 0.85;
+            font-size: 0.9rem;
+        }
+
+        .content {
+            padding: 1.5rem;
+        }
+
+        .pedido-info {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .productos {
+            border-top: 1px solid #e2e8f0;
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+
+        .producto-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .total {
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-align: right;
+            margin-top: 1rem;
+            color: #064e3b;
+        }
+
+        .btn-confirmar {
+            background: #25d366;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1rem;
+            transition: all 0.2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-confirmar:hover {
+            background: #128c7e;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirmar:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .mensaje {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .mensaje.success {
+            background: #ecfdf5;
+            color: #065f46;
+            display: block;
+        }
+
+        .mensaje.error {
+            background: #fef2f2;
+            color: #991b1b;
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 1rem;
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1><i class="fas fa-check-circle"></i> Confirmar Pedido</h1><p>Revisa los detalles y confirma para actualizar el stock</p></div>
+        <div class="header">
+            <h1><i class="fas fa-check-circle"></i> Confirmar Pedido</h1>
+            <p>Revisa los detalles y confirma para actualizar el stock</p>
+        </div>
         <div class="content">
             <div id="loading" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando información del pedido...</div>
             <div id="pedido-info" style="display: none;"></div>

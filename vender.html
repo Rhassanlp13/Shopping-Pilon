@@ -4,87 +4,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vender en Shopping Pilón</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
-        rel="stylesheet">
+    <title>Vender en Granma Market</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
     <style>
         :root {
-            --primary: #1a237e;
-            --accent: #ff9800;
+            --primary: #064e3b;
+            --primary-light: #059669;
+            --accent: #f59e0b;
             --whatsapp: #25d366;
-            --danger: #e53935;
-            --bg: #f5f5f7;
+            --bg: #f8fafc;
             --white: #ffffff;
-            --text: #1c1c2e;
-            --text-muted: #777;
-            --border: #e0e0e0;
-            --transition: 0.25s ease;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
         }
 
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
         .navbar {
-            background: var(--primary);
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 20px rgba(6, 78, 59, 0.25);
         }
 
         .logo {
             color: var(--white);
-            font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
-            font-weight: 900;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 800;
             text-decoration: none;
+            letter-spacing: -0.3px;
         }
 
-        .logo span {
-            color: var(--accent);
-        }
+        .logo span { color: var(--accent); margin-left: 4px; }
 
         .btn-back {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.85);
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.88rem;
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: color var(--transition);
+            font-weight: 500;
+            transition: color 0.2s;
         }
 
-        .btn-back:hover {
-            color: var(--white);
-        }
+        .btn-back:hover { color: var(--white); }
 
         .page-hero {
-            background: linear-gradient(135deg, var(--primary) 0%, #283593 100%);
-            padding: 3rem 2rem;
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%);
+            padding: 4rem 2rem 3rem;
             text-align: center;
             color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-hero::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 300px;
+            height: 300px;
+            background: #10b981;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
         }
 
         .page-hero h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: clamp(1.8rem, 4vw, 2.8rem);
-            margin-bottom: 0.5rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(1.8rem, 5vw, 2.8rem);
+            font-weight: 800;
+            margin-bottom: 0.8rem;
+            letter-spacing: -0.8px;
+            position: relative;
+            z-index: 1;
         }
 
         .page-hero h1 em {
@@ -93,317 +101,207 @@
         }
 
         .page-hero p {
-            opacity: 0.8;
-            font-size: 1rem;
+            opacity: 0.85;
+            font-size: 1.05rem;
+            max-width: 500px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
         .gratis-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--white);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.82rem;
             font-weight: 600;
-            margin-top: 0.8rem;
+            margin-top: 1rem;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
         }
 
-        .steps {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 600px;
-            margin: 0 auto;
-            flex-wrap: wrap;
+        .gratis-badge i { color: var(--accent); }
+
+        .container {
+            max-width: 900px;
+            margin: -2rem auto 3rem;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 2;
         }
 
-        .step {
+        .benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .benefit-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .benefit-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            border-radius: 14px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            color: var(--white);
+            font-size: 1.4rem;
+            margin: 0 auto 1rem;
+            box-shadow: 0 6px 16px rgba(6, 78, 59, 0.25);
+        }
+
+        .benefit-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .benefit-card p {
             font-size: 0.85rem;
             color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .cta-card {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--white);
+            box-shadow: 0 15px 40px rgba(6, 78, 59, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-card::before {
+            content: '';
+            position: absolute;
+            top: -80px;
+            left: -80px;
+            width: 250px;
+            height: 250px;
+            background: #f59e0b;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+        }
+
+        .cta-card h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(1.4rem, 4vw, 2rem);
+            font-weight: 800;
+            margin-bottom: 0.8rem;
+            letter-spacing: -0.5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-card p {
+            opacity: 0.85;
+            font-size: 0.95rem;
+            margin-bottom: 1.8rem;
+            max-width: 450px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: var(--white);
+            padding: 14px 28px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5);
+        }
+
+        .steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            text-align: left;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .step-num {
             width: 28px;
             height: 28px;
-            border-radius: 50%;
-            background: var(--primary);
+            background: var(--accent);
             color: var(--white);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 700;
             flex-shrink: 0;
         }
 
-        .form-container {
-            max-width: 480px;
-            margin: 0 auto 3rem;
-            padding: 0 1.5rem;
+        .step-text {
+            font-size: 0.88rem;
+            line-height: 1.4;
+            padding-top: 3px;
         }
 
-        .form-card {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
-            border: 1px solid #ebebf0;
-        }
-
-        .info-box {
-            background: #e8eaf6;
-            border-left: 3px solid var(--primary);
-            border-radius: 0 10px 10px 0;
-            padding: 12px 16px;
-            font-size: 0.85rem;
-            color: var(--primary);
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .info-box i {
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-
-        .form-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-section-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 1rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--bg);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .form-section-title i {
-            color: var(--accent);
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 6px;
-        }
-
-        .form-group label .req {
-            color: var(--danger);
-            margin-left: 2px;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            background: var(--bg);
-            border: 1.5px solid var(--border);
-            color: var(--text);
-            padding: 11px 14px;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            transition: border-color var(--transition), box-shadow var(--transition);
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08);
-            background: var(--white);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        @media (max-width: 480px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Upload de foto */
-        .upload-area {
-            border: 2px dashed var(--border);
-            border-radius: 14px;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color var(--transition), background var(--transition);
-            background: var(--bg);
-            position: relative;
-        }
-
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: #f0f2ff;
-        }
-
-        .upload-area.has-file {
-            border-color: var(--whatsapp);
-            border-style: solid;
-            background: #f0fff4;
-        }
-
-        .upload-area input[type="file"] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-        }
-
-        .upload-icon {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-
-        .upload-text {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        .upload-text strong {
-            color: var(--primary);
-        }
-
-        .upload-hint {
-            font-size: 0.75rem;
-            color: #bbb;
-            margin-top: 4px;
-        }
-
-        .img-preview {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-top: 1rem;
-            display: none;
-            border: 2px solid var(--whatsapp);
-        }
-
-        .img-preview.visible {
-            display: block;
-        }
-
-        /* Nota importante */
-        .nota-box {
-            background: #fff8e1;
-            border-left: 3px solid var(--accent);
-            border-radius: 0 10px 10px 0;
-            padding: 12px 16px;
-            font-size: 0.82rem;
-            color: #795548;
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .btn-enviar {
-            width: 100%;
-            background: var(--whatsapp);
-            color: var(--white);
-            border: none;
-            padding: 16px;
-            border-radius: 12px;
-            font-size: 1.05rem;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: transform var(--transition), box-shadow var(--transition);
-            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
-        }
-
-        .btn-enviar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 28px rgba(37, 211, 102, 0.4);
-        }
-
-        .form-note {
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 1rem;
-        }
-
-        .field-error {
-            font-size: 0.78rem;
-            color: var(--danger);
-            margin-top: 4px;
-            display: none;
-        }
-
-        .form-group.error input,
-        .form-group.error textarea {
-            border-color: var(--danger);
-        }
-
-        .form-group.error .field-error {
-            display: block;
-        }
-
-        .upload-area.error {
-            border-color: var(--danger);
-        }
-
-        .btn-enviar:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+        @media (max-width: 600px) {
+            .navbar { padding: 0.9rem 1rem; }
+            .logo { font-size: 1.1rem; }
+            .page-hero { padding: 2.5rem 1.5rem 2rem; }
+            .container { padding: 0 1rem; margin-top: -1.5rem; }
+            .cta-card { padding: 2rem 1.5rem; border-radius: 18px; }
         }
     </style>
 </head>
@@ -411,179 +309,81 @@
 <body>
 
     <nav class="navbar">
-        <a href="index.html" class="logo">SHOPPING <span>PILÓN</span></a>
+        <a href="index.html" class="logo">GRANMA <span>MARKET</span></a>
         <a href="index.html" class="btn-back">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
     </nav>
 
     <div class="page-hero">
-        <h1>Vende en <em>Pilón</em></h1>
-        <p>Llega a más clientes sin moverte de casa</p>
+        <h1>Vende en toda <em>Granma</em></h1>
+        <p>Llega a clientes de los 13 municipios sin moverte de casa</p>
         <div class="gratis-badge">
-            <i class="fas fa-gift"></i> 100% gratis por tiempo limitado
+            <i class="fas fa-gift"></i> 100% gratis · Sin comisiones por publicar
         </div>
     </div>
 
-    <div class="steps">
-        <div class="step">
-            <div class="step-num">1</div>
-            <span>Rellena el formulario</span>
-        </div>
-        <div class="step">
-            <div class="step-num">2</div>
-            <span>Selecciona la foto</span>
-        </div>
-        <div class="step">
-            <div class="step-num">3</div>
-            <span>Envía el mensaje con la foto por WhatsApp</span>
-        </div>
-    </div>
+    <div class="container">
 
-    <div class="form-container">
-        <div class="form-card">
+        <!-- Beneficios -->
+        <div class="benefits">
+            <div class="benefit-card">
+                <div class="benefit-icon"><i class="fas fa-bolt"></i></div>
+                <h3>Publica en minutos</h3>
+                <p>Sube tus productos con fotos, precios y stock desde tu teléfono.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon"><i class="fas fa-chart-line"></i></div>
+                <h3>Más clientes</h3>
+                <p>Tu tienda visible en toda la provincia de Granma, 24/7.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>Sin riesgo</h3>
+                <p>Cobras por Transfermóvil o QvaPay. Los pedidos se confirman antes de enviar.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon"><i class="fas fa-store"></i></div>
+                <h3>Tu propia tienda</h3>
+                <p>Logo personalizado, página propia y link para compartir en tus redes.</p>
+            </div>
+        </div>
 
-            <div class="info-box">
-                <i class="fas fa-info-circle"></i>
-                <span>Completa tus datos y selecciona la foto. Al hacer clic en "Enviar", se abrirá WhatsApp con el
-                    mensaje listo. Solo tienes que adjuntar la foto manualmente y enviar.</span>
+        <!-- CTA -->
+        <div class="cta-card">
+            <h2>Empieza a vender hoy</h2>
+            <p>Registrarte toma menos de 2 minutos. Después de la aprobación del administrador, podrás publicar tu primer producto.</p>
+
+            <div class="steps-list">
+                <div class="step-item">
+                    <div class="step-num">1</div>
+                    <div class="step-text">Regístrate como vendedor con tu correo y teléfono</div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Elige el nombre de tu tienda y tu municipio</div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Confirma tu correo y espera aprobación (menos de 24h)</div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">4</div>
+                    <div class="step-text">¡Listo! Publica tu primer producto y empieza a vender</div>
+                </div>
             </div>
 
-            <!-- Datos del vendedor -->
-            <div class="form-section">
-                <div class="form-section-title">
-                    <i class="fas fa-user"></i> Tus datos
-                </div>
-                <div class="form-row">
-                    <div class="form-group" id="g-nombre">
-                        <label>Tu nombre <span class="req">*</span></label>
-                        <input type="text" id="nombre" placeholder="Ej: María López">
-                        <div class="field-error">Escribe tu nombre</div>
-                    </div>
-                    <div class="form-group" id="g-telefono">
-                        <label>Tu teléfono <span class="req">*</span></label>
-                        <input type="tel" id="telefono" placeholder="Ej: 53561234">
-                        <div class="field-error">Escribe tu teléfono</div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Nota adicional (opcional)</label>
-                    <textarea id="nota"
-                        placeholder="Ej: colores disponibles, tallas, detalles del producto..."></textarea>
-                </div>
-            </div>
-
-            <!-- Foto del producto -->
-            <div class="form-section">
-                <div class="form-section-title">
-                    <i class="fas fa-camera"></i> Foto del producto
-                </div>
-
-                <div class="nota-box">
-                    <i class="fas fa-lightbulb"></i>
-                    <span>Selecciona una foto clara. Luego tendrás que adjuntarla manualmente en WhatsApp.</span>
-                </div>
-
-                <div class="upload-area" id="upload-area">
-                    <input type="file" id="foto-input" accept="image/*">
-                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                    <div class="upload-text"><strong>Toca aquí</strong> para seleccionar la foto</div>
-                    <div class="upload-hint">JPG, PNG o WEBP — máx. 10MB</div>
-                </div>
-
-                <img id="img-preview" class="img-preview" alt="Vista previa">
-            </div>
-
-            <button class="btn-enviar" id="btn-enviar">
-                <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
-            </button>
-
-            <p class="form-note">
-                <i class="fas fa-lock" style="color:var(--accent)"></i>
-                Tus datos solo se usan para publicar tu producto.
-            </p>
-
+            <br>
+            <a href="index.html?vender=1" class="btn-cta">
+                <i class="fas fa-user-plus"></i> Registrarme como vendedor
+            </a>
         </div>
+
     </div>
 
     <script>
-        const nombreInput = document.getElementById('nombre');
-        const telefonoInput = document.getElementById('telefono');
-        const notaTextarea = document.getElementById('nota');
-        const fotoInput = document.getElementById('foto-input');
-        const uploadArea = document.getElementById('upload-area');
-        const imgPreview = document.getElementById('img-preview');
-        const btnEnviar = document.getElementById('btn-enviar');
-
-        let fotoSeleccionada = false;
-
-        // Previsualización de la imagen
-        fotoInput.addEventListener('change', function () {
-            const file = this.files[0];
-            if (!file) return;
-
-            fotoSeleccionada = true;
-            const reader = new FileReader();
-            reader.onload = e => {
-                imgPreview.src = e.target.result;
-                imgPreview.classList.add('visible');
-                uploadArea.classList.add('has-file');
-                uploadArea.querySelector('.upload-text').innerHTML = `<strong>${file.name}</strong>`;
-                uploadArea.querySelector('.upload-hint').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
-                uploadArea.classList.remove('error');
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // Envío del formulario
-        btnEnviar.addEventListener('click', () => {
-            const nombre = nombreInput.value.trim();
-            const telefono = telefonoInput.value.trim();
-            const nota = notaTextarea.value.trim();
-
-            let valido = true;
-            if (!nombre) {
-                document.getElementById('g-nombre').classList.add('error');
-                valido = false;
-            } else {
-                document.getElementById('g-nombre').classList.remove('error');
-            }
-            if (!telefono) {
-                document.getElementById('g-telefono').classList.add('error');
-                valido = false;
-            } else {
-                document.getElementById('g-telefono').classList.remove('error');
-            }
-            if (!fotoSeleccionada) {
-                uploadArea.classList.add('error');
-                valido = false;
-            } else {
-                uploadArea.classList.remove('error');
-            }
-
-            if (!valido) return;
-
-            // Construir mensaje de WhatsApp
-            let texto = `🛍️ *Nueva solicitud de vendedor — Shopping Pilón*\n\n`;
-            texto += `👤 *Nombre:* ${nombre}\n`;
-            texto += `📞 *Teléfono:* ${telefono}\n`;
-            if (nota) texto += `📝 *Nota:* ${nota}\n`;
-            texto += `\n📸 *Foto:* (adjunta la foto manualmente al enviar este mensaje)\n`;
-            texto += `_Enviado desde Shopping Pilón_`;
-
-            // Abrir WhatsApp
-            window.open(`https://wa.me/5356195243?text=${encodeURIComponent(texto)}`, '_blank');
-
-            // Mostrar mensaje de éxito
-            alert('✅ WhatsApp abierto. Por favor, adjunta la foto que seleccionaste y envía el mensaje.');
-        });
-
-        // Quitar error al escribir
-        document.querySelectorAll('input, textarea').forEach(el => {
-            el.addEventListener('input', () => {
-                el.closest('.form-group')?.classList.remove('error');
-            });
-        });
+        // Si alguien llega con el botón "Ser vendedor" desde vender.html,
+        // al ir a index.html se abrirá el modal de auth con rol vendedor preseleccionado.
     </script>
 
 </body>

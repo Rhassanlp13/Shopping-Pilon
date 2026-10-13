@@ -435,7 +435,7 @@ async function handleRegister() {
             email,
             password,
             options: {
-                emailRedirectTo: 'https://shopping-pilon.pages.dev/confirm-email.html',
+                emailRedirectTo: `${window.location.origin}/confirm-email.html`,
                 data: {
                     role: finalRole,
                     nombre,

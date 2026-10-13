@@ -236,9 +236,6 @@ body {
 }
 
 /* ============================================
-   HERO
-   ============================================ */
-/* ============================================
    HERO (compacto)
    ============================================ */
 .gm-hero {
@@ -541,9 +538,7 @@ body {
     color: white;
 }
 
-/* ========== RESPONSIVE ========== */
-
-/* Tablets */
+/* ========== RESPONSIVE HERO ========== */
 @media (max-width: 768px) {
     .gm-hero {
         padding: 32px 20px 36px;
@@ -564,7 +559,6 @@ body {
     }
 }
 
-/* Móviles */
 @media (max-width: 640px) {
     .gm-hero {
         margin: 8px 10px 0;
@@ -632,13 +626,11 @@ body {
         font-size: 0.82rem;
     }
 
-    /* Ocultar stats en móvil para ahorrar espacio */
     .gm-hero-stats {
         display: none;
     }
 }
 
-/* Móviles muy pequeños */
 @media (max-width: 400px) {
     .gm-hero {
         padding: 18px 14px 20px;
@@ -657,29 +649,6 @@ body {
         height: 34px;
     }
 }
-
-    .gm-hero-cta {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .gm-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .gm-hero-stats {
-        gap: 16px;
-    }
-
-    .gm-stat strong {
-        font-size: 1.25rem;
-    }
-
-    .gm-stat span {
-        font-size: 0.68rem;
-    }
-
 
 /* ============================================
    BOTONES GLOBALES (reutilizables)
@@ -2555,8 +2524,6 @@ body {
 /* ============================================
    NOMBRE DE PRODUCTO CON "VER MÁS"
    ============================================ */
-
-/* Contenedor del nombre con estado colapsado/expandido */
 .detalle-nombre {
     font-family: 'Outfit', sans-serif;
     font-size: 1.3rem;
@@ -2568,7 +2535,6 @@ body {
     transition: max-height 0.3s ease;
 }
 
-/* Estado colapsado: 3 líneas + ellipsis */
 .detalle-nombre.colapsado {
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -2579,14 +2545,12 @@ body {
     max-height: calc(1.35em * 3);
 }
 
-/* Estado expandido: altura completa */
 .detalle-nombre.expandido {
     display: block;
     max-height: none;
     overflow: visible;
 }
 
-/* Botón "Ver más / Ver menos" */
 .detalle-nombre-toggle {
     background: none;
     border: none;
@@ -2596,7 +2560,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     padding: 4px 0 10px;
-    display: none; /* Se muestra solo si hay overflow */
+    display: none;
     align-items: center;
     gap: 5px;
     transition: opacity 0.2s;
@@ -2621,14 +2585,12 @@ body {
     transform: rotate(180deg);
 }
 
-/* Ajuste para el nombre en móvil */
 @media (max-width: 640px) {
     .detalle-nombre {
         font-size: 1.15rem;
     }
 }
 
-/* Ajuste para PC (2 columnas) */
 @media (min-width: 768px) {
     .detalle-nombre {
         font-size: 1.5rem;
@@ -2645,8 +2607,6 @@ body {
 /* ============================================
    SCROLL MEJORADO EN EL DETALLE
    ============================================ */
-
-/* Scroll suave y visible */
 .detalle-scroll {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
@@ -2669,7 +2629,6 @@ body {
     background: #94a3b8;
 }
 
-/* En PC, la imagen también debe estar dentro del scroll del contenedor padre */
 @media (min-width: 768px) {
     .detalle-box {
         overflow: hidden;
@@ -2702,7 +2661,6 @@ body {
     font-weight: 600;
 }
 
-/* Estado cuando NO hay sesión */
 .resena-user-info.sin-sesion {
     background: #fff8e1;
     border-color: #fde68a;
@@ -2747,7 +2705,6 @@ body {
     box-shadow: 0 8px 24px rgba(37, 211, 102, 0.6);
 }
 
-/* Efecto de "onda" pulsante */
 @keyframes whatsappPulse {
     0% {
         box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45), 0 0 0 0 rgba(37, 211, 102, 0.6);
@@ -2760,7 +2717,6 @@ body {
     }
 }
 
-/* Etiqueta que aparece a la izquierda (solo desktop) */
 .whatsapp-float-text {
     position: absolute;
     right: 70px;
@@ -2796,7 +2752,6 @@ body {
     transform: translateX(0);
 }
 
-/* En móvil: más pequeño y sin etiqueta */
 @media (max-width: 640px) {
     .whatsapp-float {
         width: 52px;
@@ -2811,7 +2766,6 @@ body {
     }
 }
 
-/* Evitar que se solape con el botón de ayuda del admin */
 body.admin-page .whatsapp-float {
     display: none;
 }
@@ -2934,7 +2888,6 @@ body.admin-page .whatsapp-float {
     }
 }
 
-/* Botón "Ver tienda" en el detalle del producto */
 .detalle-vendedor-link {
     display: inline-flex;
     align-items: center;
