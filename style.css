@@ -3071,3 +3071,65 @@ body.admin-page .whatsapp-float {
         display: none;
     }
 }
+
+/* Reemplaza o añade al final de style.css */
+.precio-cup-aprox {
+    display: inline-block;
+    font-size: 0.68rem;
+    color: #78350f;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    line-height: 1.3;
+    letter-spacing: 0.2px;
+    border: 1px solid #fcd34d;
+    white-space: nowrap;
+}
+
+/* ============================================
+   ALINEACIÓN DE TARJETAS (tipo Shein)
+   ============================================ */
+
+/* 1. Hacer la tarjeta un flex vertical */
+.product-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* 2. El info ocupa todo el espacio disponible */
+.product-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 8px 10px 10px;
+}
+
+/* 3. Truncar el nombre a 2 líneas máximo */
+.product-info h3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    min-height: 2.3em; /* 2 líneas siempre reservadas */
+    max-height: 2.3em;
+    line-height: 1.15;
+    margin-bottom: 6px;
+}
+
+/* 4. Reservar espacio para el precio + conversión */
+.price-wrap {
+    min-height: 1.4em;
+    margin-bottom: 4px;
+}
+
+/* 5. El botón siempre al fondo */
+.card-btn-add {
+    margin-top: auto;
+}

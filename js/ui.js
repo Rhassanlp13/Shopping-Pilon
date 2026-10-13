@@ -173,9 +173,9 @@ export const UI = {
 
             // Conversión a CUP si es USD
             let precioCUPTexto = '';
-            if (moneda === 'USD') {
-                const precioEnCUP = Math.round(precioReal * TASA_USD_CUP_GLOBAL / 100) * 100;
-                precioCUPTexto = `<div class="precio-cup-aprox">≈ $${precioEnCUP.toLocaleString('es')} CUP</div>`;
+                if (moneda === 'USD') {
+            const precioEnCUP = Math.round(precioReal * TASA_USD_CUP_GLOBAL / 100) * 100;
+                precioCUPTexto = `<div><span class="precio-cup-aprox">≈ $${precioEnCUP.toLocaleString('es')} CUP</span></div>`;
             }
 
             const municipioBadge = p.municipio
