@@ -78,7 +78,7 @@
         </div>
     </header>
 
-    <!-- ========== HERO NUEVO ========== -->
+    <!-- ========== HERO ========== -->
     <section class="gm-hero">
         <div class="gm-hero-bg">
             <div class="gm-blob gm-blob-1"></div>
@@ -216,7 +216,11 @@
                     <div class="detalle-vendedor">
                         <i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
                     </div>
-                    <div class="detalle-nombre" id="detalle-nombre"></div>
+                    <div class="detalle-nombre colapsado" id="detalle-nombre"></div>
+                    <button class="detalle-nombre-toggle" id="detalle-nombre-toggle" type="button">
+                        <span class="detalle-nombre-toggle-texto">Ver más</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="detalle-precio"><span id="detalle-precio"></span></div>
                     <span class="detalle-stock" id="detalle-stock"></span>
                     <div id="detalle-variantes"></div>
@@ -500,7 +504,7 @@
             }, 1500);
         }
 
-        // ========== Buscador del hero (filtra en tiempo real) ==========
+        // ========== Buscador del hero ==========
         document.getElementById('gm-buscador-hero')?.addEventListener('input', (e) => {
             const term = e.target.value.trim().toLowerCase();
             const cards = document.querySelectorAll('.product-card');
@@ -521,7 +525,7 @@
             document.getElementById('tutorial-seller-modal')?.removeAttribute('hidden');
         });
 
-        // ========== Scroll suave al hacer clic en "Explorar" ==========
+        // ========== Scroll suave a productos ==========
         document.querySelector('a[href="#productos"]')?.addEventListener('click', (e) => {
             e.preventDefault();
             document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
