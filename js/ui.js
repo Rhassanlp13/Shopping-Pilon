@@ -10,32 +10,27 @@ import { openAuthModal } from './auth.js';
 let TASA_USD_CUP_GLOBAL = 250; // Valor por defecto
 
 async function cargarTasaCambio() {
-    // Intentar caché de 1 hora
-    const cached = localStorage.getItem('tasa_usd_cup');
-    const cachedTime = localStorage.getItem('tasa_usd_cup_time');
-    if (cached && cachedTime && (Date.now() - parseInt(cachedTime)) < 3600000) {
-        TASA_USD_CUP_GLOBAL = parseFloat(cached);
-        return;
-    }
-
     try {
-        // Obtener la tasa más reciente entre vendedores activos
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('profiles')
             .select('tasa_cambio, tasa_actualizada')
             .not('tasa_cambio', 'is', null)
-            .in('role', ['seller', 'admin'])
-            .order('tasa_actualizada', { ascending: false })
+            .gt('tasa_cambio', 0)
+            .order('tasa_actualizada', { ascending: false, nullsFirst: false })
             .limit(1)
             .maybeSingle();
 
-        if (data?.tasa_cambio) {
+        if (error) {
+            console.warn('Error cargando tasa:', error);
+            return;
+        }
+
+        if (data?.tasa_cambio && data.tasa_cambio > 0) {
             TASA_USD_CUP_GLOBAL = parseFloat(data.tasa_cambio);
-            localStorage.setItem('tasa_usd_cup', TASA_USD_CUP_GLOBAL.toString());
-            localStorage.setItem('tasa_usd_cup_time', Date.now());
+            console.log('✅ Tasa cargada:', TASA_USD_CUP_GLOBAL);
         }
     } catch (err) {
-        console.warn('No se pudo cargar la tasa, usando valor por defecto');
+        console.warn('No se pudo cargar la tasa:', err);
     }
 }
 
@@ -682,16 +677,41 @@ export const UI = {
     },
 
     compartirProducto() {
-        const producto = this.productos.find(p => p.id === this.productoActualId);
-        if (!producto) return;
-        const precioFinal = (producto.enoferta && producto.preciooferta) ? producto.preciooferta : producto.precio;
-        const url = `${window.location.origin}/producto/${this.productoActualId}`;
-        const moneda = producto.moneda || 'CUP';
-        const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
-        const municipioTxt = producto.municipio ? `\n📍 ${producto.municipio}` : '';
-        const texto = `🛍️ *${producto.nombre}* - $${precioFinal.toLocaleString('es')} ${textoMoneda}${municipioTxt}\n\nMira este producto en Granma Market:\n${url}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-    },
+    const producto = this.productos.find(p => p.id === this.productoActualId);
+    if (!producto) return;
+
+    const precioFinal = (producto.enoferta && producto.preciooferta) ? producto.preciooferta : producto.precio;
+    const moneda = producto.moneda || 'CUP';
+    const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
+    
+    // URL que usa la función de Cloudflare para generar la vista previa
+    const url = `${window.location.origin}/producto/${this.productoActualId}`;
+    
+    const texto = `🛍️ *${producto.nombre}*\n💰 $${precioFinal.toLocaleString('es')} ${textoMoneda}\n📍 ${producto.municipio || 'Granma'}\n\nMira este producto en Granma Market:`;
+
+    // Usar la API nativa de compartir (móviles)
+    if (navigator.share) {
+        navigator.share({
+            title: producto.nombre,
+            text: texto,
+            url: url
+        }).catch((error) => {
+            console.log('Error al compartir:', error);
+            // Fallback si el usuario cancela o falla
+            this._compartirFallback(texto, url);
+        });
+    } else {
+        // Fallback para PC o navegadores que no soportan navigator.share
+        this._compartirFallback(texto, url);
+    }
+},
+
+// Nueva función auxiliar para PC
+_compartirFallback(texto, url) {
+    const textoCompleto = `${texto}\n${url}`;
+    // Si no es móvil, abrimos WhatsApp Web por defecto
+    window.open(`https://wa.me/?text=${encodeURIComponent(textoCompleto)}`, '_blank');
+},
 
     cerrarDetalle() {
         document.getElementById('modal-detalle').setAttribute('hidden', '');

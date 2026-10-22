@@ -1,5 +1,5 @@
 // sw.js - Estrategia híbrida: admin.html siempre de red, el resto cache-first
-const CACHE_NAME = 'v17';
+const CACHE_NAME = 'v19';
 const STATIC_ASSETS = [
     '/style.css',
     '/manifest.json',
