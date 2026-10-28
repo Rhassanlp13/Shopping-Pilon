@@ -684,33 +684,24 @@ export const UI = {
     const moneda = producto.moneda || 'CUP';
     const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
     
-    // URL que usa la función de Cloudflare para generar la vista previa
+    // Esta URL es la que WhatsApp leerá para mostrar la foto
     const url = `${window.location.origin}/producto/${this.productoActualId}`;
     
     const texto = `🛍️ *${producto.nombre}*\n💰 $${precioFinal.toLocaleString('es')} ${textoMoneda}\n📍 ${producto.municipio || 'Granma'}\n\nMira este producto en Granma Market:`;
 
-    // Usar la API nativa de compartir (móviles)
+    // Si el navegador soporta la API nativa (móviles modernos)
     if (navigator.share) {
         navigator.share({
             title: producto.nombre,
             text: texto,
             url: url
         }).catch((error) => {
-            console.log('Error al compartir:', error);
-            // Fallback si el usuario cancela o falla
-            this._compartirFallback(texto, url);
+            console.log('Compartir cancelado o fallido', error);
         });
     } else {
-        // Fallback para PC o navegadores que no soportan navigator.share
-        this._compartirFallback(texto, url);
+        // En PC (o navegadores viejos) abrimos WhatsApp Web directamente
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto + '\n' + url)}`, '_blank');
     }
-},
-
-// Nueva función auxiliar para PC
-_compartirFallback(texto, url) {
-    const textoCompleto = `${texto}\n${url}`;
-    // Si no es móvil, abrimos WhatsApp Web por defecto
-    window.open(`https://wa.me/?text=${encodeURIComponent(textoCompleto)}`, '_blank');
 },
 
     cerrarDetalle() {
