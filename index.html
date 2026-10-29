@@ -6,6 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Granma Market | El Marketplace de Granma</title>
 
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://granma-market.pages.dev/" />
+    <meta property="og:title" content="Granma Market | El Marketplace de Granma" />
+    <meta property="og:description" content="Compra y vende en toda la provincia. Electrodomésticos, hogar y más con envío a los 13 municipios." />
+    <meta property="og:image" content="https://granma-market.pages.dev/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+
+    <!-- Twitter (X) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://granma-market.pages.dev/" />
+    <meta name="twitter:title" content="Granma Market | El Marketplace de Granma" />
+    <meta name="twitter:description" content="Compra y vende en toda la provincia. Electrodomésticos, hogar y más con envío a los 13 municipios." />
+    <meta name="twitter:image" content="https://granma-market.pages.dev/icon-512.png" />
+
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -80,6 +96,9 @@
         <i class="fas fa-exchange-alt"></i>
         <span>Tasa del día: 1 USD = <strong id="tasa-valor">--</strong> CUP</span>
         <span class="tasa-fecha" id="tasa-fecha"></span>
+        <button id="tasa-refresh" style="background:none; border:none; color:#78350f; cursor:pointer; font-size:0.85rem; padding:2px 5px; margin-left:4px;" title="Actualizar tasa">
+            <i class="fas fa-sync-alt"></i>
+        </button>
     </div>
 
     <!-- ========== HERO ========== -->
@@ -475,7 +494,7 @@
             <div class="footer-brand">
                 <div class="footer-logo">GRANMA <span>MARKET</span></div>
                 <p class="footer-desc">El mercado digital de Granma. Compra y vende desde casa, rápido y seguro.</p>
-                <a href="https://wa.me/5356195243" class="footer-wa" target="_blank">
+                <a href="https://wa.me/5351271278" class="footer-wa" target="_blank">
                     <i class="fab fa-whatsapp"></i> Escríbenos
                 </a>
             </div>
@@ -483,13 +502,13 @@
                 <h4>Navegación</h4>
                 <a href="index.html"><i class="fas fa-home"></i> Inicio</a>
                 <a href="#" id="footer-registro"><i class="fas fa-store"></i> Vender aquí</a>
-                <a href="https://wa.me/5356195243" target="_blank"><i class="fas fa-headset"></i> Soporte</a>
+                <a href="https://wa.me/5351271278" target="_blank"><i class="fas fa-headset"></i> Soporte</a>
             </div>
             <div class="footer-info">
                 <h4>Información</h4>
                 <p><i class="fas fa-map-marker-alt"></i> Bayamo, Granma, Cuba</p>
                 <p><i class="fas fa-clock"></i> Lun–Sáb: 8am – 8pm</p>
-                <p><i class="fab fa-whatsapp"></i> +53 561 95243</p>
+                <p><i class="fab fa-whatsapp"></i> +53 51271278</p>
             </div>
         </div>
         <div class="footer-bottom">
@@ -499,7 +518,7 @@
     </footer>
 
     <!-- WhatsApp flotante -->
-    <a href="https://wa.me/5356195243?text=Hola%20Granma%20Market,%20quiero%20información%20sobre%20un%20producto"
+    <a href="https://wa.me/5351271278?text=Hola%20Granma%20Market,%20quiero%20información%20sobre%20un%20producto"
        class="whatsapp-float" target="_blank" aria-label="Contactar por WhatsApp">
         <i class="fab fa-whatsapp"></i>
         <span class="whatsapp-float-text">¿Te ayudo?</span>
