@@ -144,7 +144,7 @@ export const UI = {
         this.renderProductos(productosFiltrados);
     },
 
-    renderProductos(productosAMostrar = null) {
+        renderProductos(productosAMostrar = null) {
         const productos = productosAMostrar || this.productos;
         if (!this.grid) return;
         if (productos.length === 0) {
@@ -168,9 +168,9 @@ export const UI = {
 
             // Conversión a CUP si es USD
             let precioCUPTexto = '';
-                if (moneda === 'USD') {
-            const precioEnCUP = Math.round(precioReal * TASA_USD_CUP_GLOBAL / 100) * 100;
-                precioCUPTexto = `<div><span class="precio-cup-aprox">≈ $${precioEnCUP.toLocaleString('es')} CUP</span></div>`;
+            if (moneda === 'USD') {
+                const precioEnCUP = Math.round(precioReal * TASA_USD_CUP_GLOBAL / 100) * 100;
+                precioCUPTexto = `<div><span class="precio-cup-aprox" style="font-size: 0.65rem; padding: 2px 6px;">≈ $${precioEnCUP.toLocaleString('es')} CUP</span></div>`;
             }
 
             const municipioBadge = p.municipio
@@ -178,27 +178,32 @@ export const UI = {
                 : '';
 
             return `
-            <article class="product-card ${p.enoferta && p.preciooferta ? 'en-oferta' : ''}" data-id="${escapeHtml(p.id)}">
+            <article class="product-card" data-id="${escapeHtml(p.id)}">
                 ${descuento ? `<span class="card-badge-oferta">−${descuento}%</span>` : ''}
                 ${stockBajo && !descuento ? `<span class="card-stock-badge">¡Solo ${p.stock}!</span>` : ''}
+                
                 <img src="${escapeHtml(imgOptimizada)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.src='https://placehold.co/400x400?text=Sin+imagen'">
+                
+                <!-- Botón circular flotante -->
+                <button class="card-btn-add" data-id="${escapeHtml(p.id)}" ${agotado ? 'disabled' : ''}>
+                    ${agotado ? '<i class="fas fa-times"></i>' : '<i class="fas fa-cart-plus"></i>'}
+                </button>
+
                 <div class="product-info">
-                    <span class="vendedor">
-                        <span class="vendedor-tienda-icon"><i class="fas fa-store"></i></span>
+                    <h3>${escapeHtml(p.nombre)}</h3>
+                    
+                    <div class="price-wrap">
+                        <span class="price ${descuento ? 'price-oferta' : ''}">${simbolo}${Number(precioReal).toLocaleString('es')}${textoMoneda}</span>
+                        ${descuento ? `<span class="price-original">${simbolo}${Number(p.precio).toLocaleString('es')}</span>` : ''}
+                    </div>
+                    
+                    ${precioCUPTexto}
+                    
+                    <span class="vendedor" style="margin-top: 4px;">
+                        <span class="vendedor-tienda-icon" style="width:12px; height:12px; font-size:0.4rem;"><i class="fas fa-store"></i></span>
                         ${escapeHtml(p.vendedor)}
-                        <i class="fas fa-circle-check vendedor-verificado" title="Vendedor verificado"></i>
                     </span>
                     ${municipioBadge}
-                    <h3>${escapeHtml(p.nombre)}</h3>
-                    <div class="price-wrap">
-                        ${descuento ? `<span class="price-original">${simbolo}${Number(p.precio).toLocaleString('es')}${textoMoneda}</span>` : ''}
-                        <span class="price ${descuento ? 'price-oferta' : ''}">${simbolo}${Number(precioReal).toLocaleString('es')}${textoMoneda}</span>
-                        ${descuento ? `<span class="descuento-badge">−${descuento}%</span>` : ''}
-                    </div>
-                    ${precioCUPTexto}
-                    <button class="card-btn-add" data-id="${escapeHtml(p.id)}" ${agotado ? 'disabled' : ''}>
-                        ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Añadir'}
-                    </button>
                 </div>
             </article>`;
         };

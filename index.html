@@ -208,11 +208,8 @@
             </div>
             <div class="modal-body">
                 <div id="cart-items"></div>
-                                <div class="cliente-info" style="margin-top: 1rem;">
-                    <!-- Caja para usuarios NO logueados -->
+                <div class="cliente-info" style="margin-top: 1rem;">
                     <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
-                    
-                    <!-- Aviso verde para usuarios logueados -->
                     <div id="cliente-logueado-info" style="display: none; padding: 12px 16px; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; font-size: 0.95rem; color: #065f46; align-items: center; gap: 8px;">
                         <i class="fas fa-user-check" style="font-size: 1.2rem;"></i> 
                         <span>Pidiendo como: <strong id="cliente-nombre-mostrar">...</strong></span>
@@ -234,7 +231,7 @@
         </div>
     </div>
 
-    <!-- Modal detalle producto -->
+    <!-- Modal detalle producto (Oculto, ahora usamos producto.html) -->
     <div id="modal-detalle" class="modal-overlay" hidden>
         <div class="detalle-box">
             <button class="detalle-btn-cerrar" id="detalle-btn-cerrar"><i class="fas fa-arrow-left"></i></button>
@@ -247,46 +244,9 @@
                         <i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
                     </div>
                     <div class="detalle-nombre colapsado" id="detalle-nombre"></div>
-                    <button class="detalle-nombre-toggle" id="detalle-nombre-toggle" type="button">
-                        <span class="detalle-nombre-toggle-texto">Ver más</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
                     <div class="detalle-precio"><span id="detalle-precio"></span></div>
                     <span class="detalle-stock" id="detalle-stock"></span>
                     <div id="detalle-variantes"></div>
-                </div>
-                <div class="detalle-actions">
-                    <button class="detalle-btn-add" id="detalle-btn-add">
-                        <i class="fas fa-cart-plus"></i> Añadir al carrito
-                    </button>
-                    <button class="detalle-btn-share" id="detalle-btn-share">
-                        <i class="fab fa-whatsapp"></i> Compartir
-                    </button>
-                </div>
-                <div class="resenas-section">
-                    <h3 class="resenas-titulo">
-                        <i class="fas fa-star"></i> Reseñas
-                        <span class="resenas-count" id="resenas-count"></span>
-                    </h3>
-                    <div class="resena-form">
-                        <div class="resena-user-info" id="resena-user-info">
-                            <i class="fas fa-user-circle"></i>
-                            <span>Publicando como: <strong id="resena-user-name">Usuario</strong></span>
-                        </div>
-                        <div class="estrellas-input" id="estrellas-input">
-                            <i class="fas fa-star" data-val="1"></i>
-                            <i class="fas fa-star" data-val="2"></i>
-                            <i class="fas fa-star" data-val="3"></i>
-                            <i class="fas fa-star" data-val="4"></i>
-                            <i class="fas fa-star" data-val="5"></i>
-                        </div>
-                        <textarea id="resena-texto" placeholder="Escribe tu opinión..." maxlength="200"
-                            rows="3"></textarea>
-                        <button class="btn-enviar-resena" id="btn-enviar-resena">
-                            <i class="fas fa-paper-plane"></i> Publicar reseña
-                        </button>
-                    </div>
-                    <div id="resenas-lista"></div>
                 </div>
             </div>
         </div>
@@ -333,15 +293,10 @@
                         <option value="seller">Vendedor</option>
                     </select>
 
-                    <!-- Nombre de tienda (solo si es vendedor) -->
                     <div id="grupo-nombre-tienda" style="display: none;">
                         <input type="text" id="reg-nombre-tienda" placeholder="Nombre de tu tienda (ej: B-TECH LEADERS)" maxlength="40">
-                        <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 4px; padding-left: 4px;">
-                            Así verán los clientes tu negocio
-                        </small>
                     </div>
 
-                    <!-- Municipio (solo si es vendedor) -->
                     <div id="grupo-municipio" style="display: none;">
                         <select id="reg-municipio">
                             <option value="">-- Selecciona tu municipio --</option>
@@ -363,11 +318,7 @@
 
                     <button id="register-submit" class="btn-primary">Crear cuenta</button>
                     <p id="register-error" class="error-msg" style="display:none"></p>
-                    <div id="register-info" class="register-info"
-                        style="display:none; margin-top: 0.5rem; color: #2e7d32;"></div>
-                    <div class="auth-links register-link">
-                        <a href="#" id="resend-confirm-register">Reenviar correo de verificación</a>
-                    </div>
+                    <div id="register-info" class="register-info" style="display:none; margin-top: 0.5rem; color: #2e7d32;"></div>
                 </div>
 
                 <div class="social-login">
@@ -405,14 +356,6 @@
                     <h3>4. Accede al panel de vendedor</h3>
                     <p>Inicia sesión y haz clic en el icono de usuario → <strong>"Panel de vendedor"</strong>.</p>
                 </div>
-                <div class="tutorial-step">
-                    <h3>5. Publica tu primer producto</h3>
-                    <p>En el panel, ve a "Productos" → "Nuevo producto".</p>
-                </div>
-                <div class="tutorial-step">
-                    <h3>6. Configura tu tasa de cambio</h3>
-                    <p>En "Mi tienda" puedes poner la tasa de cambio USD → CUP que uses. Los productos en USD mostrarán el precio aproximado en CUP.</p>
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-primary" id="close-tutorial-seller-btn">Entendido</button>
@@ -438,18 +381,15 @@
 
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Nombre completo *</label>
-                    <input type="text" id="envio-nombre" placeholder="Tu nombre completo"
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
+                    <input type="text" id="envio-nombre" placeholder="Tu nombre completo" class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Teléfono (WhatsApp) *</label>
-                    <input type="tel" id="envio-telefono" placeholder="Ej: 55512345"
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
+                    <input type="tel" id="envio-telefono" placeholder="Ej: 55512345" class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Municipio de entrega *</label>
-                    <select id="envio-municipio"
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
+                    <select id="envio-municipio" class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
                         <option value="">-- Selecciona tu municipio --</option>
                         <option value="Bayamo">Bayamo</option>
                         <option value="Bartolomé Masó">Bartolomé Masó</option>
@@ -468,30 +408,21 @@
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Dirección exacta *</label>
-                    <input type="text" id="envio-direccion" placeholder="Calle, número, reparto..."
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
+                    <input type="text" id="envio-direccion" placeholder="Calle, número, reparto..." class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Punto de referencia</label>
-                    <input type="text" id="envio-referencia" placeholder="Ej: cerca del parque, escuela..."
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
+                    <input type="text" id="envio-referencia" placeholder="Ej: cerca del parque, escuela..." class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition">
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide">Notas adicionales (opcional)</label>
-                    <textarea id="envio-notas" rows="2" placeholder="Alguna indicación especial..."
-                        class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition resize-y min-h-[60px]"></textarea>
+                    <textarea id="envio-notas" rows="2" placeholder="Alguna indicación especial..." class="w-full px-3.5 py-3 border-[1.5px] border-gray-200 rounded-lg text-[0.95rem] bg-gray-50 focus:border-primary focus:bg-white outline-none transition resize-y min-h-[60px]"></textarea>
                 </div>
             </div>
 
             <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
-                <button id="envio-cancelar"
-                    class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary transition">
-                    Cancelar
-                </button>
-                <button id="envio-confirmar"
-                    class="bg-primary text-white border-0 rounded-lg px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition shadow-md">
-                    <i class="fas fa-paper-plane"></i> Enviar pedido
-                </button>
+                <button id="envio-cancelar" class="bg-white text-gray-700 border-[1.5px] border-gray-200 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary transition">Cancelar</button>
+                <button id="envio-confirmar" class="bg-primary text-white border-0 rounded-lg px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition shadow-md"><i class="fas fa-paper-plane"></i> Enviar pedido</button>
             </div>
         </div>
     </div>
