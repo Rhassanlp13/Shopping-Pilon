@@ -1087,7 +1087,10 @@ export const UI = {
                 return;
             }
             const card = e.target.closest('.product-card');
-            if (card) this.abrirDetalle(card.dataset.id);
+            if (card) {
+                // Redirigir a la página completa del producto
+                window.location.href = `producto.html?id=${card.dataset.id}`;
+            }
         });
 
         this.cartItems?.addEventListener('click', e => {

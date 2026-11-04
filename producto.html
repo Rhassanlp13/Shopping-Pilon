@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del Producto | Granma Market</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
+        .producto-container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-wrap: wrap; gap: 2rem; }
+        .prod-imagenes { flex: 1; min-width: 300px; max-width: 500px; background: white; border-radius: 20px; padding: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
+        .prod-imagenes img { width: 100%; max-height: 500px; object-fit: contain; border-radius: 12px; }
+        .prod-detalles { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 1rem; }
+        .prod-titulo { font-family: 'Outfit', sans-serif; font-size: 2rem; color: var(--primary); font-weight: 800; margin: 0; line-height: 1.2; }
+        .prod-precio { font-size: 2.2rem; font-weight: 800; color: var(--primary); }
+        .prod-vendedor { display: inline-flex; align-items: center; gap: 8px; background: white; padding: 8px 16px; border-radius: 50px; font-size: 0.9rem; color: var(--text-muted); text-decoration: none; width: fit-content; border: 1px solid var(--border); }
+        .btn-accion { padding: 16px 24px; border-radius: 50px; font-size: 1.1rem; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s; width: 100%; text-decoration: none; }
+        .btn-accion:hover { transform: translateY(-2px); }
+        .btn-comprar { background: var(--primary); color: white; box-shadow: 0 8px 20px rgba(6, 78, 59, 0.2); }
+        .btn-compartir { background: white; color: var(--primary); border: 2px solid var(--primary); }
+        
+        .variante-card { border: 2px solid transparent; border-radius: 10px; padding: 4px; cursor: pointer; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; width: 70px; }
+        .variante-card.selected { border-color: var(--primary); }
+        .variante-card img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; margin-bottom: 4px; }
+        .variante-card span { font-size: 0.7rem; font-weight: 600; text-align: center; line-height: 1; color: var(--text); }
+
+        /* Reseñas */
+        .resenas-box { margin-top: 2rem; background: white; border-radius: 20px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        @media(max-width: 768px) {
+            .producto-container { flex-direction: column; margin: 1rem auto; }
+            .prod-titulo { font-size: 1.5rem; }
+            .prod-precio { font-size: 1.8rem; }
+            .resenas-box { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <header class="gm-navbar">
+        <div class="gm-navbar-inner">
+            <a href="index.html" class="gm-logo">
+                <span class="gm-logo-icon"><i class="fas fa-store"></i></span>
+                <span class="gm-logo-text">GRANMA<span>MARKET</span></span>
+            </a>
+            <div class="nav-buttons">
+                <a href="index.html" class="cart-btn" aria-label="Volver"><i class="fas fa-arrow-left"></i></a>
+                <button class="cart-btn" id="cart-btn">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR DEL PRODUCTO -->
+    <main class="producto-container" id="producto-main">
+        <div style="text-align:center; width:100%; padding: 3rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+            <p style="margin-top: 1rem; color: var(--text-muted);">Cargando producto...</p>
+        </div>
+    </main>
+
+    <!-- MODAL DE CARRITO (Requerido por ui.js) -->
+    <div id="cart-modal" class="modal-overlay" role="dialog" hidden>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i class="fas fa-shopping-bag"></i> Tu Pedido</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cart-items"></div>
+                <div class="cliente-info" id="cliente-info-container" style="margin-top: 1rem;">
+                    <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
+                    <div id="cliente-logueado-info" style="display: none; padding: 12px 16px; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; font-size: 0.95rem; color: #065f46; align-items: center; gap: 8px;">
+                        <i class="fas fa-user-check" style="font-size: 1.2rem;"></i> 
+                        <span>Pidiendo como: <strong id="cliente-nombre-mostrar">...</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="total-row">
+                    <span>Total:</span>
+                    <strong><span id="cart-total">0</span></strong>
+                </div>
+                <button class="btn-whatsapp" id="btn-whatsapp"><i class="fab fa-whatsapp"></i> Confirmar pedido</button>
+                <button class="btn-clear" id="btn-clear"><i class="fas fa-trash"></i> Vaciar carrito</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE AUTH (Requerido) -->
+    <div id="auth-modal" class="modal-overlay" hidden>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Granma Market</h2>
+                <button class="modal-close" id="auth-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="text-align: center; padding: 2rem;">Cargando sistema de login...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script type="module" src="js/producto.js"></script>
+</body>
+</html>

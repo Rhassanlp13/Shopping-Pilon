@@ -12,7 +12,7 @@ export async function onRequest(context) {
         
         const productos = await response.json();
         
-        // Si el producto no existe, devolvemos el index pero con etiquetas básicas
+        // Si el producto no existe, redirigimos al index
         if (!productos || productos.length === 0) {
             return Response.redirect(`${YOUR_DOMAIN}/`, 302);
         }
@@ -21,8 +21,8 @@ export async function onRequest(context) {
         const precioFinal = p.enoferta && p.preciooferta ? p.preciooferta : p.precio;
         const textoMoneda = (p.moneda === 'USD') ? 'USD' : 'CUP';
 
-        // 2. Generar imagen optimizada (JPG cuadrado de 800x800 para WhatsApp)
-        // Si la imagen falla, usamos el logo de la tienda
+        // 2. Generar imagen optimizada para WhatsApp (800x800 JPG)
+        // Si el producto no tiene imagen, usamos el logo de la tienda
         const rawImage = p.imagen || `${YOUR_DOMAIN}/icon-512.png`;
         const imagenOG = `https://images.weserv.nl/?url=${encodeURIComponent(rawImage)}&w=800&h=800&fit=cover&output=jpg&q=75`;
 
@@ -33,9 +33,9 @@ export async function onRequest(context) {
     <meta charset="UTF-8">
     <title>${p.nombre} - Granma Market</title>
     
-    <!-- Etiquetas para WhatsApp y Redes Sociales -->
+    <!-- Etiquetas para la tarjeta de WhatsApp y Redes Sociales -->
     <meta property="og:title" content="${p.nombre}" />
-    <meta property="og:description" content="💰 $${precioFinal} ${textoMoneda} | Vendido por ${p.vendedor}" />
+    <meta property="og:description" content="💰 $${precioFinal} ${textoMoneda} | Vendido por ${p.vendedor} en Granma Market" />
     <meta property="og:image" content="${imagenOG}" />
     <meta property="og:image:secure_url" content="${imagenOG}" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -44,16 +44,18 @@ export async function onRequest(context) {
     <meta property="og:url" content="${YOUR_DOMAIN}/producto/${id}" />
     <meta property="og:type" content="product" />
 
-    <!-- Redirección para humanos (los bots leen el og:image y luego ignoran esto) -->
-    <meta http-equiv="refresh" content="0; url=${YOUR_DOMAIN}/?producto=${id}">
-    <script>window.location.href = "${YOUR_DOMAIN}/?producto=${id}";</script>
+    <!-- REDIRECCIÓN A LA NUEVA PÁGINA DEL PRODUCTO -->
+    <meta http-equiv="refresh" content="0; url=${YOUR_DOMAIN}/producto.html?id=${id}">
+    <script>
+        window.location.href = "${YOUR_DOMAIN}/producto.html?id=${id}";
+    </script>
 </head>
-<body>
+<body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
     <p>Redirigiendo a Granma Market...</p>
 </body>
 </html>`;
 
-        // 4. Devolver la respuesta SIN CACHÉ para que WhatsApp siempre lea lo último
+        // 4. Devolver la respuesta SIN CACHÉ
         return new Response(html, {
             headers: { 
                 'Content-Type': 'text/html; charset=utf-8',
@@ -62,7 +64,7 @@ export async function onRequest(context) {
         });
 
     } catch (error) {
-        // Si hay un error grave, mandamos al index
+        // Si hay un error crítico, mandamos al index
         return Response.redirect(`${YOUR_DOMAIN}/`, 302);
     }
 }
