@@ -3160,3 +3160,6 @@ body.admin-page .whatsapp-float {
     .sticky-bottom-bar { border-radius: 0; padding: 10px 16px; }
     body.pagina-producto { padding-bottom: 90px; }
 }
+
+/* Asegurar que el Lightbox esté por encima de todo */
+.lightbox-overlay { z-index: 99999 !important; }
