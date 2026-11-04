@@ -119,9 +119,40 @@
         .logo-remove-btn:hover { background: var(--danger); color: white; }
         .logo-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
 
+                /* ========== ESTILOS PARA MÓVIL ========== */
+        .mobile-header { display: none; }
+        .sidebar-overlay { display: none; }
+
         @media (max-width: 700px) {
             .shell.visible { grid-template-columns: 1fr; }
-            .sidebar { display: none; }
+            
+            .mobile-header {
+                display: flex; align-items: center; gap: 15px;
+                background: var(--primary); color: white;
+                padding: 12px 15px; position: sticky; top: 0; z-index: 100;
+            }
+            .mobile-logo { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 1.1rem; }
+            .mobile-logo span { color: var(--accent); }
+            .btn-menu-movil { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; padding: 0; }
+            
+            /* El menú lateral se desliza desde la izquierda */
+            .sidebar {
+                display: flex !important; 
+                position: fixed; left: 0; top: 0; bottom: 0;
+                width: 250px; z-index: 1050;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.active { transform: translateX(0); }
+            
+            /* Fondo oscuro al abrir el menú */
+            .sidebar-overlay {
+                display: block; position: fixed; inset: 0;
+                background: rgba(0,0,0,0.5); z-index: 1040;
+                opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            }
+            .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+
             .main { padding: 1rem; }
             .form-row { grid-template-columns: 1fr; }
             .variante-fila { grid-template-columns: 1fr; }
@@ -130,6 +161,17 @@
 </head>
 
 <body>
+
+        <!-- Botón de menú para móviles -->
+    <div class="mobile-header">
+        <button id="btn-menu-movil" class="btn-menu-movil">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="mobile-logo">GRANMA <span>MARKET</span></div>
+    </div>
+    
+    <!-- Capa oscura para cerrar el menú -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
     <div class="shell" id="shell">
         <aside class="sidebar">

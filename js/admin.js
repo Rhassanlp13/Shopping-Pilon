@@ -335,6 +335,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shell = document.getElementById('shell');
     if (shell) shell.classList.add('visible');
 
+    // ========== NUEVO: LÓGICA DEL MENÚ MÓVIL ==========
+    const btnMenu = document.getElementById('btn-menu-movil');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    if (btnMenu && sidebar && overlay) {
+        btnMenu.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            overlay.classList.add('active');
+        });
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+    }
+    // ==========================================
+
     try {
         // 2. VERIFICAR SESIÓN
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -376,6 +393,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                 item.classList.add('active');
                 document.getElementById(`page-${item.dataset.page}`).classList.add('active');
+
+                // Cerrar menú en móvil al tocar una opción
+                if (window.innerWidth <= 700) {
+                    sidebar?.classList.remove('active');
+                    overlay?.classList.remove('active');
+                }
 
                 if (item.dataset.page === 'resenas') cargarResenas();
                 if (item.dataset.page === 'pedidos') cargarPedidos();

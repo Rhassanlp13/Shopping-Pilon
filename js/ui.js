@@ -226,12 +226,37 @@ export const UI = {
         setTimeout(() => this.cartCount.classList.remove('pop'), 300);
     },
 
-    abrirModal() {
+        async abrirModal() {
         this.renderCarrito();
         this.cartModal.removeAttribute('hidden');
         document.body.style.overflow = 'hidden';
-    },
 
+        // NUEVO: Verificar si el usuario está logueado
+        const { data: { session } } = await supabase.auth.getSession();
+        const inputNombre = document.getElementById('cliente-nombre');
+        const infoLogueado = document.getElementById('cliente-logueado-info');
+        const mostrarNombre = document.getElementById('cliente-nombre-mostrar');
+
+        if (session) {
+            const user = session.user;
+            const nombre = user.user_metadata?.nombre 
+                || user.user_metadata?.full_name 
+                || user.email?.split('@')[0] 
+                || 'Usuario';
+            
+            // Ocultar input, mostrar mensaje verde
+            if (inputNombre) inputNombre.style.display = 'none';
+            if (infoLogueado) infoLogueado.style.display = 'flex';
+            if (mostrarNombre) mostrarNombre.textContent = nombre;
+            
+            // Guardar en memoria
+            this._nombreClienteLogueado = nombre; 
+        } else {
+            if (inputNombre) inputNombre.style.display = 'block';
+            if (infoLogueado) infoLogueado.style.display = 'none';
+            this._nombreClienteLogueado = null;
+        }
+    },
     cerrarModal() {
         this.cartModal.setAttribute('hidden', '');
         document.body.style.overflow = '';
@@ -913,7 +938,7 @@ export const UI = {
             mostrarToast('⚠️ Tu carrito está vacío', 'warning');
             return;
         }
-        const clienteNombre = document.getElementById('cliente-nombre')?.value.trim();
+        const clienteNombre = this._nombreClienteLogueado || document.getElementById('cliente-nombre')?.value.trim();
         if (!clienteNombre) {
             mostrarToast('📝 Por favor, ingresa tu nombre primero', 'error');
             return;
