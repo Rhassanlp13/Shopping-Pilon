@@ -14,6 +14,27 @@ function optimizarImagen(url, ancho = 600, alto = 600) {
     return url;
 }
 
+// ==================== LIGHTBOX (ZOOM DE IMAGEN) ====================
+function abrirLightbox(url) {
+    let overlay = document.getElementById('lightbox-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'lightbox-overlay';
+        overlay.className = 'lightbox-overlay';
+        overlay.innerHTML = `<span class="lightbox-close">&times;</span><img class="lightbox-img" src="">`;
+        document.body.appendChild(overlay);
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay || e.target.classList.contains('lightbox-close')) {
+                overlay.classList.remove('active');
+            }
+        });
+    }
+    const imgZoom = overlay.querySelector('.lightbox-img');
+    imgZoom.src = url;
+    overlay.classList.add('active');
+}
+
 // 1. Cargar datos del producto
 async function cargarProducto() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -30,7 +51,6 @@ async function cargarProducto() {
 
         productoActual = p;
         
-        // Cargar tasa de cambio
         const { data: profileData } = await supabase.from('profiles').select('tasa_cambio').eq('id', p.seller_id).single();
         if (profileData?.tasa_cambio) TASA_USD_CUP = profileData.tasa_cambio;
 
@@ -54,13 +74,12 @@ function renderProducto(p) {
     const precioReal = (p.enoferta && p.preciooferta) ? p.preciooferta : p.precio;
     const moneda = p.moneda || 'CUP';
     const textoMoneda = moneda === 'USD' ? 'USD' : 'CUP';
-    const precioCUP = moneda === 'USD' ? `<div style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">≈ $${(precioReal * TASA_USD_CUP).toLocaleString('es')} CUP</div>` : '';
-    const enCarrito = carrito.cantidadDe(p.id, null);
+    const precioCUP = moneda === 'USD' ? `<div class="prod-precio-cup">≈ $${(precioReal * TASA_USD_CUP).toLocaleString('es')} CUP</div>` : '';
     const agotado = p.stock <= 0;
 
     const html = `
         <div class="prod-imagenes">
-            <img src="${escapeHtml(optimizarImagen(p.imagen))}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/600x600?text=Sin+imagen'">
+            <img id="main-product-img" src="${escapeHtml(optimizarImagen(p.imagen))}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/600x600?text=Sin+imagen'">
         </div>
         <div class="prod-detalles">
             <a href="tienda.html?vendedor=${p.seller_id}" class="prod-vendedor">
@@ -72,18 +91,19 @@ function renderProducto(p) {
             
             <h1 class="prod-titulo">${escapeHtml(p.nombre)}</h1>
             
-            <div class="prod-precio">
-                $${Number(precioReal).toLocaleString('es')} ${textoMoneda}
+            <div>
+                <div class="prod-precio">$${Number(precioReal).toLocaleString('es')} ${textoMoneda}</div>
                 ${precioCUP}
             </div>
 
-            <div style="font-size: 0.9rem; font-weight: 600; color: ${agotado ? 'var(--danger)' : 'var(--success)'};">
+            <div style="font-size: 0.85rem; font-weight: 600; color: ${agotado ? 'var(--danger)' : 'var(--success)'};">
                 ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : `<i class="fas fa-check-circle"></i> ${p.stock} disponibles`}
+                ${p.municipio ? `<span style="color:var(--text-muted); font-weight:400; margin-left: 8px;">📍 ${escapeHtml(p.municipio)}</span>` : ''}
             </div>
 
             <!-- Variantes -->
-            <div id="variantes-container" style="margin-top: 1rem; display: ${p.variantes?.length > 0 ? 'block' : 'none'};">
-                <p style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">Opciones disponibles:</p>
+            <div id="variantes-container" style="margin-top: 0.5rem; display: ${p.variantes?.length > 0 ? 'block' : 'none'};">
+                <p style="font-size: 0.85rem; font-weight: 700; color: #000; margin-bottom: 8px;">Opciones:</p>
                 <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;" id="variantes-list">
                     <div class="variante-card selected" data-index="-1">
                         <img src="${escapeHtml(optimizarImagen(p.imagen, 80, 80))}">
@@ -97,22 +117,38 @@ function renderProducto(p) {
                     `).join('')}
                 </div>
             </div>
-
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 1rem;">
-                <button class="btn-accion btn-comprar" id="btn-add-cart" ${agotado ? 'disabled style="background:#ccc;cursor:not-allowed;"' : ''}>
-                    <i class="fas fa-cart-plus"></i> ${agotado ? 'Sin stock' : 'Añadir al carrito'}
-                </button>
-                <button class="btn-accion btn-compartir" id="btn-share">
-                    <i class="fab fa-whatsapp"></i> Compartir con un amigo
-                </button>
-            </div>
         </div>
     `;
 
-    document.getElementById('producto-main').innerHTML = html;
-    document.getElementById('producto-main').innerHTML += `<div class="resenas-box" style="width: 100%;" id="resenas-wrapper"><h3 class="resenas-titulo"><i class="fas fa-star"></i> Reseñas</h3><div id="resenas-lista">Cargando...</div></div>`;
+    const resenasHtml = `
+        <div class="resenas-box" style="width: 100%;" id="resenas-wrapper">
+            <h3 class="resenas-titulo"><i class="fas fa-star" style="color:var(--accent);"></i> Reseñas de compradores</h3>
+            <div id="resenas-lista">Cargando...</div>
+        </div>
+    `;
+
+    const stickyBarHtml = `
+        <div class="sticky-bottom-bar">
+            <button class="btn-accion btn-compartir" id="btn-share">
+                <i class="fab fa-whatsapp"></i>
+            </button>
+            <button class="btn-accion btn-comprar" id="btn-add-cart" ${agotado ? 'disabled style="background:#ccc;cursor:not-allowed;"' : ''}>
+                <i class="fas fa-shopping-bag"></i> ${agotado ? 'Sin stock' : 'Añadir al carrito'}
+            </button>
+        </div>
+    `;
+
+    const mainContainer = document.getElementById('producto-main');
+    mainContainer.innerHTML = html + resenasHtml;
+    document.body.insertAdjacentHTML('beforeend', stickyBarHtml);
 
     // Eventos
+    const imgElement = document.getElementById('main-product-img');
+    if (imgElement) {
+        imgElement.style.cursor = 'zoom-in';
+        imgElement.addEventListener('click', () => abrirLightbox(imgElement.src));
+    }
+
     document.getElementById('btn-add-cart')?.addEventListener('click', () => {
         const res = carrito.agregar(p.id, varianteSeleccionada, [p]);
         if (res.ok) {
@@ -120,7 +156,7 @@ function renderProducto(p) {
             mostrarToast('🛒 Añadido al carrito', 'ok');
             const btn = document.getElementById('btn-add-cart');
             btn.innerHTML = '<i class="fas fa-check"></i> ¡Añadido!';
-            setTimeout(() => { btn.innerHTML = '<i class="fas fa-cart-plus"></i> Añadir al carrito'; }, 1500);
+            setTimeout(() => { btn.innerHTML = '<i class="fas fa-shopping-bag"></i> Añadir al carrito'; }, 1500);
         } else {
             mostrarToast(`❌ ${res.msg}`, 'error');
         }
@@ -136,16 +172,12 @@ function renderProducto(p) {
         }
     });
 
-    // Lógica de Variantes
     document.querySelectorAll('.variante-card').forEach(card => {
         card.addEventListener('click', () => {
             document.querySelectorAll('.variante-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             const idx = parseInt(card.dataset.index);
             varianteSeleccionada = idx === -1 ? null : idx;
-            
-            const btn = document.getElementById('btn-add-cart');
-            if (btn) btn.disabled = false; // En una app real validaríamos el stock de la variante aquí
         });
     });
 }
@@ -183,11 +215,37 @@ document.addEventListener('DOMContentLoaded', () => {
     actualizarContador();
     cargarProducto();
 
-    // Modal carrito (básico para esta página)
-    document.getElementById('cart-btn')?.addEventListener('click', () => {
+    // Modal carrito (CON LÓGICA DE USUARIO LOGUEADO)
+    document.getElementById('cart-btn')?.addEventListener('click', async () => {
         document.getElementById('cart-modal').removeAttribute('hidden');
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        const inputNombre = document.getElementById('cliente-nombre');
+        const infoLogueado = document.getElementById('cliente-logueado-info');
+        const mostrarNombre = document.getElementById('cliente-nombre-mostrar');
+
+        if (session) {
+            const user = session.user;
+            const nombre = user.user_metadata?.nombre 
+                || user.user_metadata?.full_name 
+                || user.email?.split('@')[0] 
+                || 'Usuario';
+            
+            if (inputNombre) inputNombre.style.display = 'none';
+            if (infoLogueado) infoLogueado.style.display = 'flex';
+            if (mostrarNombre) mostrarNombre.textContent = nombre;
+        } else {
+            if (inputNombre) inputNombre.style.display = 'block';
+            if (infoLogueado) infoLogueado.style.display = 'none';
+        }
     });
+
     document.getElementById('modal-close')?.addEventListener('click', () => {
         document.getElementById('cart-modal').setAttribute('hidden', '');
+    });
+
+    document.getElementById('btn-whatsapp')?.addEventListener('click', () => {
+        mostrarToast('Redirigiendo para completar los datos de envío...', 'info');
+        setTimeout(() => window.location.href = 'index.html', 1000);
     });
 });

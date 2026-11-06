@@ -125,7 +125,8 @@
 
             <div class="gm-hero-search">
                 <i class="fas fa-search gm-search-icon"></i>
-                <input type="search" id="gm-buscador-hero" name="search" autocomplete="off" spellcheck="false" placeholder="¿Qué estás buscando hoy?">
+                <!-- SEARCH BAR BLINDADO CONTRA AUTOCOMPLETADO -->
+                <input type="text" id="gm-buscador-hero" name="gm_search_box_x1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="¿Qué estás buscando hoy?">
                 <button class="gm-search-btn">
                     <i class="fas fa-arrow-right"></i>
                 </button>
@@ -138,6 +139,11 @@
                 <button id="help-seller-btn" class="gm-btn gm-btn-ghost">
                     <i class="fas fa-play-circle"></i> Cómo funciona
                 </button>
+                
+                <!-- BOTÓN DE DESCARGA DE LA APP -->
+                <a href="app-release.apk" download class="gm-btn gm-btn-primary" style="background: #0f172a; border: 2px solid #334155; color: white;">
+                    <i class="fab fa-android"></i> Descargar App
+                </a>
             </div>
 
             <div class="hero-welcome" id="hero-welcome" style="display: none;">
@@ -209,7 +215,10 @@
             <div class="modal-body">
                 <div id="cart-items"></div>
                 <div class="cliente-info" style="margin-top: 1rem;">
+                    <!-- Caja para usuarios NO logueados -->
                     <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
+                    
+                    <!-- Aviso verde para usuarios logueados -->
                     <div id="cliente-logueado-info" style="display: none; padding: 12px 16px; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; font-size: 0.95rem; color: #065f46; align-items: center; gap: 8px;">
                         <i class="fas fa-user-check" style="font-size: 1.2rem;"></i> 
                         <span>Pidiendo como: <strong id="cliente-nombre-mostrar">...</strong></span>
@@ -443,9 +452,33 @@
 
     <script type="module" src="js/app.js"></script>
     <script type="module">
-        // Forzar a que el buscador esté vacío al cargar la página (Evita autocompletado del navegador)
+        // ==========================================
+        // TRUCO ANTI-AUTOCOMPLETADO DEL NAVEGADOR
+        // ==========================================
         const buscadorHero = document.getElementById('gm-buscador-hero');
+        
+        const limpiarBuscador = () => {
+            if (buscadorHero && (buscadorHero.value.includes('@') || buscadorHero.value.includes('.com'))) {
+                buscadorHero.value = ''; // Si tiene un correo, lo borra
+            }
+        };
+
+        // Limpiar al cargar el HTML
         if (buscadorHero) buscadorHero.value = '';
+
+        // Limpiar cuando el navegador termine de cargar (por si autocompleta al final)
+        window.addEventListener('load', () => {
+            if (buscadorHero) buscadorHero.value = '';
+            // Un pequeño retraso para vencer al autocompletado terco de los móviles
+            setTimeout(limpiarBuscador, 150);
+            setTimeout(limpiarBuscador, 500);
+        });
+
+        // Si el navegador lo rellena justo cuando el usuario toca la caja, lo borramos
+        if (buscadorHero) {
+            buscadorHero.addEventListener('focus', limpiarBuscador);
+        }
+        // ==========================================
 
         const helpBtn = document.getElementById('help-seller-btn');
         const modal = document.getElementById('tutorial-seller-modal');
