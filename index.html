@@ -66,6 +66,20 @@
 
 <body>
 
+    <!-- ========== BANNER DE OFERTA FLASH CON CRONÓMETRO ========== -->
+    <div id="flash-offer-banner" class="flash-offer-banner" style="display: none;">
+        <div class="flash-offer-content">
+            <span class="flash-icon">⚡</span>
+            <span class="flash-text">OFERTA FLASH: Hasta 50% de descuento</span>
+            <div class="flash-timer" id="flash-timer">
+                <span class="time-box" id="hours">00</span>:
+                <span class="time-box" id="minutes">00</span>:
+                <span class="time-box" id="seconds">00</span>
+            </div>
+            <button class="flash-close" id="close-flash-offer" aria-label="Cerrar oferta">&times;</button>
+        </div>
+    </div>
+
     <!-- ========== NAVBAR FLOTANTE ========== -->
     <header class="gm-navbar">
         <div class="gm-navbar-inner">
@@ -453,6 +467,57 @@
     <script type="module" src="js/app.js"></script>
     <script type="module">
         // ==========================================
+        // LÓGICA DEL BANNER DE OFERTA FLASH
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const banner = document.getElementById('flash-offer-banner');
+            const closeBtn = document.getElementById('close-flash-offer');
+            
+            // 1. Verificar si el usuario ya cerró el banner
+            if (localStorage.getItem('flash_offer_closed') === 'true') {
+                return; 
+            }
+
+            // 2. Definir la fecha de finalización de la oferta (Ej: 24 horas desde que carga)
+            const endDate = new Date();
+            endDate.setHours(endDate.getHours() + 24); 
+
+            // 3. Mostrar el banner
+            if (banner) banner.style.display = 'flex';
+
+            // 4. Función para actualizar el cronómetro
+            function updateTimer() {
+                const now = new Date().getTime();
+                const distance = endDate - now;
+
+                if (distance < 0) {
+                    document.getElementById('flash-timer').innerHTML = "<span>¡Oferta Finalizada!</span>";
+                    clearInterval(timerInterval);
+                    setTimeout(() => { banner.style.display = 'none'; }, 3000);
+                    return;
+                }
+
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('hours').innerText = String(hours).padStart(2, '0');
+                document.getElementById('minutes').innerText = String(minutes).padStart(2, '0');
+                document.getElementById('seconds').innerText = String(seconds).padStart(2, '0');
+            }
+
+            updateTimer(); 
+            const timerInterval = setInterval(updateTimer, 1000); 
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    banner.style.display = 'none';
+                    localStorage.setItem('flash_offer_closed', 'true'); 
+                });
+            }
+        });
+
+        // ==========================================
         // TRUCO ANTI-AUTOCOMPLETADO DEL NAVEGADOR
         // ==========================================
         const buscadorHero = document.getElementById('gm-buscador-hero');
@@ -463,18 +528,14 @@
             }
         };
 
-        // Limpiar al cargar el HTML
         if (buscadorHero) buscadorHero.value = '';
 
-        // Limpiar cuando el navegador termine de cargar (por si autocompleta al final)
         window.addEventListener('load', () => {
             if (buscadorHero) buscadorHero.value = '';
-            // Un pequeño retraso para vencer al autocompletado terco de los móviles
             setTimeout(limpiarBuscador, 150);
             setTimeout(limpiarBuscador, 500);
         });
 
-        // Si el navegador lo rellena justo cuando el usuario toca la caja, lo borramos
         if (buscadorHero) {
             buscadorHero.addEventListener('focus', limpiarBuscador);
         }

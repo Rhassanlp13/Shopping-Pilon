@@ -3163,3 +3163,92 @@ body.admin-page .whatsapp-float {
 
 /* Asegurar que el Lightbox esté por encima de todo */
 .lightbox-overlay { z-index: 99999 !important; }
+
+/* ============================================
+   BANNER DE OFERTA FLASH CON CRONÓMETRO
+   ============================================ */
+.flash-offer-banner {
+    background: linear-gradient(90deg, #b91c1c, #ef4444, #b91c1c); /* Degradado rojo intenso */
+    background-size: 200% auto;
+    color: white;
+    text-align: center;
+    padding: 8px 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 200; /* Por encima del navbar */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
+    animation: flash-bg 3s linear infinite; /* Animación de fondo */
+}
+
+@keyframes flash-bg {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+.flash-offer-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    padding-right: 30px; /* Espacio para la X */
+}
+
+.flash-icon {
+    font-size: 1.1rem;
+    animation: flash-pulse 1s infinite alternate; /* Icono parpadeante */
+}
+
+@keyframes flash-pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.2); }
+}
+
+.flash-timer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: 'Outfit', monospace;
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.time-box {
+    background: white;
+    color: #b91c1c;
+    padding: 1px 5px;
+    border-radius: 4px;
+    min-width: 22px;
+    text-align: center;
+}
+
+.flash-close {
+    position: absolute;
+    right: 0;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.flash-close:hover {
+    opacity: 1;
+}
+
+/* Ocultar en móviles muy pequeños para no saturar */
+@media (max-width: 480px) {
+    .flash-text { font-size: 0.75rem; }
+    .flash-timer { font-size: 0.8rem; padding: 2px 6px; }
+    .time-box { min-width: 18px; padding: 1px 3px; }
+}
