@@ -125,7 +125,7 @@
 
             <div class="gm-hero-search">
                 <i class="fas fa-search gm-search-icon"></i>
-                <input type="search" id="gm-buscador-hero" name="search" autocomplete="off" spellcheck="false" placeholder="¿Qué estás buscando hoy?"><input type="text" id="gm-buscador-hero" placeholder="¿Qué estás buscando hoy?">
+                <input type="search" id="gm-buscador-hero" name="search" autocomplete="off" spellcheck="false" placeholder="¿Qué estás buscando hoy?">
                 <button class="gm-search-btn">
                     <i class="fas fa-arrow-right"></i>
                 </button>
@@ -227,27 +227,6 @@
                 <button class="btn-clear" id="btn-clear">
                     <i class="fas fa-trash"></i> Vaciar carrito
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal detalle producto (Oculto, ahora usamos producto.html) -->
-    <div id="modal-detalle" class="modal-overlay" hidden>
-        <div class="detalle-box">
-            <button class="detalle-btn-cerrar" id="detalle-btn-cerrar"><i class="fas fa-arrow-left"></i></button>
-            <div class="detalle-img-wrap">
-                <img id="detalle-img" src="" alt="">
-            </div>
-            <div class="detalle-scroll">
-                <div class="detalle-info">
-                    <div class="detalle-vendedor">
-                        <i class="fas fa-user-circle"></i> <span id="detalle-vendedor"></span>
-                    </div>
-                    <div class="detalle-nombre colapsado" id="detalle-nombre"></div>
-                    <div class="detalle-precio"><span id="detalle-precio"></span></div>
-                    <span class="detalle-stock" id="detalle-stock"></span>
-                    <div id="detalle-variantes"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -464,6 +443,10 @@
 
     <script type="module" src="js/app.js"></script>
     <script type="module">
+        // Forzar a que el buscador esté vacío al cargar la página (Evita autocompletado del navegador)
+        const buscadorHero = document.getElementById('gm-buscador-hero');
+        if (buscadorHero) buscadorHero.value = '';
+
         const helpBtn = document.getElementById('help-seller-btn');
         const modal = document.getElementById('tutorial-seller-modal');
         const closeModalBtn = document.getElementById('close-tutorial-seller-modal');
