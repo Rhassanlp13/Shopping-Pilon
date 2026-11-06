@@ -139,8 +139,13 @@
 
             <div class="gm-hero-search">
                 <i class="fas fa-search gm-search-icon"></i>
-                <!-- SEARCH BAR BLINDADO CONTRA AUTOCOMPLETADO -->
-                <input type="text" id="gm-buscador-hero" name="gm_search_box_x1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="¿Qué estás buscando hoy?">
+                
+                <!-- TRUCO ANTI-AUTOCOMPLETADO: Campo Fantasma (Oculto) -->
+                <input type="email" name="fake_email_xyz" style="display:none !important;" tabindex="-1" autocomplete="email">
+                
+                <!-- BUSCADOR REAL: readonly evita que el navegador lo rellene al cargar -->
+                <input type="text" id="gm-buscador-hero" name="gm_search_x9" autocomplete="new-password" readonly placeholder="¿Qué estás buscando hoy?">
+                
                 <button class="gm-search-btn">
                     <i class="fas fa-arrow-right"></i>
                 </button>
@@ -473,19 +478,15 @@
             const banner = document.getElementById('flash-offer-banner');
             const closeBtn = document.getElementById('close-flash-offer');
             
-            // 1. Verificar si el usuario ya cerró el banner
             if (localStorage.getItem('flash_offer_closed') === 'true') {
                 return; 
             }
 
-            // 2. Definir la fecha de finalización de la oferta (Ej: 24 horas desde que carga)
             const endDate = new Date();
             endDate.setHours(endDate.getHours() + 24); 
 
-            // 3. Mostrar el banner
             if (banner) banner.style.display = 'flex';
 
-            // 4. Función para actualizar el cronómetro
             function updateTimer() {
                 const now = new Date().getTime();
                 const distance = endDate - now;
@@ -518,26 +519,28 @@
         });
 
         // ==========================================
-        // TRUCO ANTI-AUTOCOMPLETADO DEL NAVEGADOR
+        // TRUCO DEFINITIVO ANTI-AUTOCOMPLETADO
         // ==========================================
         const buscadorHero = document.getElementById('gm-buscador-hero');
         
-        const limpiarBuscador = () => {
-            if (buscadorHero && (buscadorHero.value.includes('@') || buscadorHero.value.includes('.com'))) {
-                buscadorHero.value = ''; // Si tiene un correo, lo borra
-            }
-        };
-
-        if (buscadorHero) buscadorHero.value = '';
-
-        window.addEventListener('load', () => {
-            if (buscadorHero) buscadorHero.value = '';
-            setTimeout(limpiarBuscador, 150);
-            setTimeout(limpiarBuscador, 500);
-        });
-
         if (buscadorHero) {
-            buscadorHero.addEventListener('focus', limpiarBuscador);
+            buscadorHero.addEventListener('focus', () => {
+                buscadorHero.removeAttribute('readonly');
+            });
+
+            const limpiarBuscador = () => {
+                if (buscadorHero.value.includes('@') || buscadorHero.value.includes('.com')) {
+                    buscadorHero.value = '';
+                }
+            };
+
+            window.addEventListener('load', () => {
+                limpiarBuscador();
+                setTimeout(limpiarBuscador, 300);
+                setTimeout(limpiarBuscador, 1000);
+            });
+
+            buscadorHero.addEventListener('click', limpiarBuscador);
         }
         // ==========================================
 
