@@ -130,13 +130,17 @@ export const UI = {
         return true;
     },
 
-    filtrarProductos() {
+        filtrarProductos() {
         let productosFiltrados = this.productos;
 
-        if (this.categoriaActual !== 'todos') {
+        // Si el usuario elige ver solo ofertas
+        if (this.categoriaActual === 'ofertas_flash') {
+            productosFiltrados = productosFiltrados.filter(p => p.enoferta && p.preciooferta);
+        } else if (this.categoriaActual !== 'todos') {
             productosFiltrados = productosFiltrados.filter(p => p.categoria === this.categoriaActual);
         }
 
+        // Filtro de municipio
         if (this.municipioActual !== 'todos') {
             productosFiltrados = productosFiltrados.filter(p => p.municipio === this.municipioActual);
         }

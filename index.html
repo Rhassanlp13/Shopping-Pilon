@@ -66,17 +66,12 @@
 
 <body>
 
-    <!-- ========== BANNER DE OFERTA FLASH CON CRONÓMETRO ========== -->
-    <div id="flash-offer-banner" class="flash-offer-banner" style="display: none;">
+    <!-- ========== BANNER DE OFERTA FLASH ========== -->
+    <div id="flash-offer-banner" class="flash-offer-banner" style="display: none; cursor: pointer;" onclick="irAOfertasFlash()">
         <div class="flash-offer-content">
             <span class="flash-icon">⚡</span>
-            <span class="flash-text">OFERTA FLASH: Hasta 50% de descuento</span>
-            <div class="flash-timer" id="flash-timer">
-                <span class="time-box" id="hours">00</span>:
-                <span class="time-box" id="minutes">00</span>:
-                <span class="time-box" id="seconds">00</span>
-            </div>
-            <button class="flash-close" id="close-flash-offer" aria-label="Cerrar oferta">&times;</button>
+            <span class="flash-text">OFERTAS ESPECIALES: ¡Toca aquí para ver los descuentos!</span>
+            <button class="flash-close" id="close-flash-offer" aria-label="Cerrar oferta" onclick="event.stopPropagation();">&times;</button>
         </div>
     </div>
 
@@ -198,6 +193,7 @@
     <!-- Filtros por categoría -->
     <section class="filtros-section">
         <div class="filtros-container">
+            <button class="filtro-btn" data-categoria="ofertas_flash" style="color: #b91c1c; border-color: #b91c1c; font-weight: 800;">⚡ Ofertas</button>
             <button class="filtro-btn active" data-categoria="todos">Todos</button>
             <button class="filtro-btn" data-categoria="Ropa">👕 Ropa</button>
             <button class="filtro-btn" data-categoria="Calzado">👟 Calzado</button>
@@ -478,45 +474,42 @@
             const banner = document.getElementById('flash-offer-banner');
             const closeBtn = document.getElementById('close-flash-offer');
             
-            if (localStorage.getItem('flash_offer_closed') === 'true') {
-                return; 
+            // Si no lo ha cerrado, mostramos el banner
+            if (localStorage.getItem('flash_offer_closed') !== 'true' && banner) {
+                banner.style.display = 'flex';
             }
 
-            const endDate = new Date();
-            endDate.setHours(endDate.getHours() + 24); 
-
-            if (banner) banner.style.display = 'flex';
-
-            function updateTimer() {
-                const now = new Date().getTime();
-                const distance = endDate - now;
-
-                if (distance < 0) {
-                    document.getElementById('flash-timer').innerHTML = "<span>¡Oferta Finalizada!</span>";
-                    clearInterval(timerInterval);
-                    setTimeout(() => { banner.style.display = 'none'; }, 3000);
-                    return;
-                }
-
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                document.getElementById('hours').innerText = String(hours).padStart(2, '0');
-                document.getElementById('minutes').innerText = String(minutes).padStart(2, '0');
-                document.getElementById('seconds').innerText = String(seconds).padStart(2, '0');
-            }
-
-            updateTimer(); 
-            const timerInterval = setInterval(updateTimer, 1000); 
-
+            // Cerrar el banner
             if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evita que se ejecute el clic del banner
                     banner.style.display = 'none';
                     localStorage.setItem('flash_offer_closed', 'true'); 
                 });
             }
         });
+
+        // Función global para cuando tocan el banner rojo
+        window.irAOfertasFlash = function() {
+            if (window.UI) {
+                // 1. Bajar a los productos
+                document.getElementById('productos').scrollIntoView({ behavior: 'smooth' });
+                
+                // 2. Activar el filtro de ofertas
+                window.UI.categoriaActual = 'ofertas_flash';
+                
+                // 3. Quitar el color verde de otros botones y ponerlo en el nuestro
+                document.querySelectorAll('.filtro-btn[data-categoria]').forEach(b => {
+                    b.classList.remove('active');
+                    if(b.dataset.categoria === 'ofertas_flash') b.style.color = '#b91c1c';
+                });
+                const btnOfertas = document.querySelector('.filtro-btn[data-categoria="ofertas_flash"]');
+                if (btnOfertas) btnOfertas.classList.add('active');
+                
+                // 4. Refrescar la pantalla
+                window.UI.filtrarProductos();
+            }
+        };
 
         // ==========================================
         // TRUCO DEFINITIVO ANTI-AUTOCOMPLETADO

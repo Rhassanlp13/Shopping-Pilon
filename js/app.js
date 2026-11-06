@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     carrito.init();
     const { ok, data: productos } = await cargarProductos();
     UI.init(productos);
+    window.UI = UI; // <--- ESTA ES LA LÍNEA QUE FALTABA
     if (!ok) UI.mostrarError();
     await initAuth();
     bindAuthEvents();
